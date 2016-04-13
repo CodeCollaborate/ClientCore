@@ -1,0 +1,30 @@
+group 'io.codecollaborate'
+version '0.00'
+
+apply plugin: 'java'
+apply plugin: 'eu.appsatori.fatjar'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'eu.appsatori:gradle-fatjar-plugin:0.3'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+fatJar {
+    archiveName "${baseName}.${extension}"
+}

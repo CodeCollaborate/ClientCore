@@ -23,6 +23,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile 'org.eclipse.jetty.websocket:websocket-client:9.3.8.v20160314'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.3'
 }
 
 fatJar {

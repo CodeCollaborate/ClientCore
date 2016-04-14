@@ -1,0 +1,33 @@
+package websocket.models;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+/**
+ * Created by fahslaj on 4/14/2016.
+ */
+@JsonIgnoreProperties(ignoreUnknown=true)
+public abstract class AbstractNotification extends AbstractServerMessage {
+
+    @JsonProperty("Resource")
+    protected String resource;
+
+    @JsonProperty("Method")
+    protected String method;
+
+    public String getResource() {
+        return resource;
+    }
+
+    public void setResource(String resource) {
+        this.resource = resource;
+    }
+
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+}

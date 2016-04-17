@@ -172,7 +172,7 @@ public class TestWSConnection {
         Future testFuture = mock(VoidFuture.class);
         when(conn.session.getRemote()).thenReturn(testEndpoint);
         when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
-        try{
+        try {
             when(testFuture.get()).thenThrow(new ExecutionException(new Exception("test")));
             when(testFuture.get(anyLong(), anyObject())).thenThrow(new ExecutionException(new Exception("test")));
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -228,7 +228,7 @@ public class TestWSConnection {
         Future<Void> testFuture = mock(VoidFuture.class);
         when(conn.session.getRemote()).thenReturn(testEndpoint);
         when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
-        try{
+        try {
             when(testFuture.get()).thenThrow(new ExecutionException(new Exception("test")));
             when(testFuture.get(anyLong(), anyObject())).thenThrow(new ExecutionException(new Exception("test")));
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -264,7 +264,7 @@ public class TestWSConnection {
         Future testFuture = mock(VoidFuture.class);
         when(conn.session.getRemote()).thenReturn(testEndpoint);
         when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
-        try{
+        try {
             when(testFuture.get()).thenReturn(null);
             when(testFuture.get(anyLong(), anyObject())).thenReturn(null);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -511,8 +511,8 @@ public class TestWSConnection {
     }
 
     private void waitForNotifies(Object obj, int num, long timeout) throws InterruptedException {
-        synchronized (obj){
-            for (int i = 0; i < num; i++){
+        synchronized (obj) {
+            for (int i = 0; i < num; i++) {
                 obj.wait(timeout);
             }
         }

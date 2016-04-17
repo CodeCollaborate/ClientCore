@@ -8,11 +8,11 @@ import org.eclipse.jetty.servlet.ServletHolder;
  * Created by fahslaj on 4/16/2016.
  */
 public class ServerRunner {
+    private static boolean isRunning = false;
+
     public static void main(String[] args) {
         runEchoServer(10240);
     }
-
-    private static boolean isRunning = false;
 
     public static void runEchoServer(int port) {
         if (isRunning)

@@ -9,7 +9,7 @@ import websocket.IResponseHandler;
 /**
  * Created by fahslaj on 4/14/2016.
  */
-@JsonIgnoreProperties(ignoreUnknown=true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Request {
 
     @JsonProperty("Tag")

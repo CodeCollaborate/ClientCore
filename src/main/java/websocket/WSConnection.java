@@ -38,14 +38,11 @@ public class WSConnection {
 
     // List of handlers that incoming messages should be sent to.
     final List<IMessageHandler> incomingMessageHandlers = new ArrayList<>();
-
-    // State of program
-    private volatile State state;
-
     // Jetty objects
     WebSocketClient client;
     Session session;
-
+    // State of program
+    private volatile State state;
     // Configuration
     private ConnectionConfig config;
 
@@ -76,7 +73,7 @@ public class WSConnection {
             setState(State.CONNECT);
             Future<Session> fut = this.client.connect(this, uri, new ClientUpgradeRequest());
             fut.get();
-        } catch (Exception e){
+        } catch (Exception e) {
             setState(State.ERROR);
             throw e;
         }
@@ -134,7 +131,7 @@ public class WSConnection {
         logger.info(String.format("Connection closed - Reason: %s", reason));
         this.session = null;
         if (getState() != State.CLOSE && config.isReconnect()) {
-            for(int i = 0; i < config.getMaxRetryCount(); i++) {
+            for (int i = 0; i < config.getMaxRetryCount(); i++) {
                 try {
                     connect();
                     return;
@@ -158,9 +155,9 @@ public class WSConnection {
     /**
      * Continually loop through message queue, sending messages as they are inserted. If no messages are in the queue,
      * wait on the message queue; enqueueMessage will notifyAll when a new item is added.
-     *
+     * <p>
      * This MUST be run on a separate thread to prevent blocking of main thread.
-     *
+     * <p>
      * Will exit if state is not ready at any point.
      */
     void messageLoop() {
@@ -188,6 +185,7 @@ public class WSConnection {
 
     /**
      * Sends the message through the websocket. Will exit without doing anything if state is CLOSE or EXIT.
+     *
      * @param msg Message to be sent
      * @return true if message was sent successfully, false otherwise.
      * @throws IllegalStateException if no connection found.
@@ -248,7 +246,7 @@ public class WSConnection {
     }
 
     State getState() {
-        synchronized (this){
+        synchronized (this) {
             return this.state;
         }
     }

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 /**
  * Created by fahslaj on 4/14/2016.
  */
-@JsonIgnoreProperties(ignoreUnknown=true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class AbstractServerMessage {
 
     @JsonProperty("Data")

@@ -18,8 +18,8 @@ public class ConnectionConfig {
 
     public ConnectionConfig(
             @JsonProperty("URIString") String uriString,
-            @JsonProperty("Reconnect")boolean reconnect,
-            @JsonProperty("MaxRetryCount")int maxRetryCount) {
+            @JsonProperty("Reconnect") boolean reconnect,
+            @JsonProperty("MaxRetryCount") int maxRetryCount) {
         this.maxRetryCount = maxRetryCount;
         this.reconnect = reconnect;
         this.uriString = uriString;

@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 public class TestWSConnection {
     private static final int TEST_PORT = 10240;
     private static final ConnectionConfig TEST_CONFIG = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 5);
+    private static final ConnectionConfig TEST_CONFIG_ERROR = new ConnectionConfig("ws://testhost:1", false, 5);
     private static final ConnectionConfig TEST_CONFIG_NO_RETRY = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 0);
     private static final ConnectionConfig TEST_CONFIG_RECONNECT = new ConnectionConfig("ws://localhost:" + TEST_PORT, true, 5);
 
@@ -52,17 +53,17 @@ public class TestWSConnection {
             }
         };
 
-        Assert.assertEquals(conn.incomingMessageHandlers.size(), 0);
+        Assert.assertEquals(0, conn.incomingMessageHandlers.size());
         Assert.assertEquals(receivedItems.size(), 0);
 
         conn.registerIncomingMessageHandler(handler);
         conn.onMessage("test");
-        Assert.assertEquals(conn.incomingMessageHandlers.size(), 1);
+        Assert.assertEquals(1, conn.incomingMessageHandlers.size());
         Assert.assertEquals(receivedItems.size(), 1);
 
         conn.deregisterIncomingMessageHandler(handler);
         conn.onMessage("test");
-        Assert.assertEquals(conn.incomingMessageHandlers.size(), 0);
+        Assert.assertEquals(0, conn.incomingMessageHandlers.size());
         Assert.assertEquals(receivedItems.size(), 1);
     }
 
@@ -70,14 +71,14 @@ public class TestWSConnection {
     public void testMessageQueue() {
         WSConnection conn = new WSConnection(TEST_CONFIG);
 
-        Assert.assertEquals(conn.messageQueue.size(), 0);
+        Assert.assertEquals(0, conn.messageQueue.size());
 
         conn.enqueueMessage("Test1");
-        Assert.assertEquals(conn.messageQueue.size(), 1);
+        Assert.assertEquals(1, conn.messageQueue.size());
         conn.enqueueMessage("Test2");
-        Assert.assertEquals(conn.messageQueue.size(), 2);
+        Assert.assertEquals(2, conn.messageQueue.size());
         conn.enqueueMessage("Test3");
-        Assert.assertEquals(conn.messageQueue.size(), 3);
+        Assert.assertEquals(3, conn.messageQueue.size());
 
         WSConnection.WSMessage retriedMessage1 = new WSConnection.WSMessage("RetryTest1");
         retriedMessage1.incrementRetryCount();
@@ -104,11 +105,11 @@ public class TestWSConnection {
     public void testSendMessageStateChecker() {
         WSConnection conn = new WSConnection(TEST_CONFIG);
 
-        Assert.assertEquals(conn.messageQueue.size(), 0);
+        Assert.assertEquals(0, conn.messageQueue.size());
 
         WSConnection.WSMessage msg = new WSConnection.WSMessage("msg");
 
-        Assert.assertEquals(conn.getState(), WSConnection.State.CREATED);
+        Assert.assertEquals(WSConnection.State.CREATED, conn.getState());
         try {
             conn.sendMessage(msg);
             Assert.fail("Should be in incorrect state; should have failed.");
@@ -181,19 +182,19 @@ public class TestWSConnection {
         conn.setState(WSConnection.State.READY);
         WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
 
-        Assert.assertEquals(message.getRetryCount(), 0);
-        Assert.assertEquals(conn.messageQueue.size(), 0);
+        Assert.assertEquals(0, message.getRetryCount());
+        Assert.assertEquals(0, conn.messageQueue.size());
 
         conn.messageQueue.offer(message);
 
         for (int i = 1; i <= 6; i++) {
             conn.sendMessage(conn.messageQueue.poll());
             if (i <= 5) {
-                Assert.assertEquals(message.getRetryCount(), i);
-                Assert.assertEquals(conn.messageQueue.size(), 1);
+                Assert.assertEquals(i, message.getRetryCount());
+                Assert.assertEquals(1, conn.messageQueue.size());
             } else {
-                Assert.assertEquals(message.getRetryCount(), 5);
-                Assert.assertEquals(conn.messageQueue.size(), 0);
+                Assert.assertEquals(5, message.getRetryCount());
+                Assert.assertEquals(0, conn.messageQueue.size());
             }
         }
 
@@ -238,8 +239,8 @@ public class TestWSConnection {
         conn.setState(WSConnection.State.READY);
         WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
 
-        Assert.assertEquals(message.getRetryCount(), 0);
-        Assert.assertEquals(conn.messageQueue.size(), 0);
+        Assert.assertEquals(0, message.getRetryCount());
+        Assert.assertEquals(0, conn.messageQueue.size());
 
         conn.messageQueue.offer(message);
 
@@ -251,7 +252,7 @@ public class TestWSConnection {
         conn.close();
 
         synchronized (erroredMessages) {
-            Assert.assertEquals(erroredMessages.size(), 1);
+            Assert.assertEquals(1, erroredMessages.size());
         }
     }
 
@@ -274,49 +275,49 @@ public class TestWSConnection {
         conn.setState(WSConnection.State.READY);
         WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
 
-        Assert.assertEquals(message.getRetryCount(), 0);
-        Assert.assertEquals(conn.messageQueue.size(), 0);
+        Assert.assertEquals(0, message.getRetryCount());
+        Assert.assertEquals(0, conn.messageQueue.size());
 
         conn.messageQueue.offer(message);
         conn.sendMessage(conn.messageQueue.poll());
 
-        Assert.assertEquals(message.getRetryCount(), 0);
-        Assert.assertEquals(conn.messageQueue.size(), 0);
+        Assert.assertEquals(0, message.getRetryCount());
+        Assert.assertEquals(0, conn.messageQueue.size());
     }
 
     @Test
     public void testStateChanges() {
         WSConnection conn = new WSConnection(TEST_CONFIG);
 
-        Assert.assertEquals(conn.getState(), WSConnection.State.CREATED);
+        Assert.assertEquals(WSConnection.State.CREATED, conn.getState());
 
         Thread t = new Thread(() -> {
             conn.setState(WSConnection.State.CONNECT);
         });
         t.start();
         conn.waitForNextState(WSConnection.State.CONNECT, 150);
-        Assert.assertEquals(conn.getState(), WSConnection.State.CONNECT);
+        Assert.assertEquals(WSConnection.State.CONNECT, conn.getState());
 
         t = new Thread(() -> {
             conn.setState(WSConnection.State.READY);
         });
         t.start();
         conn.waitForNextState(WSConnection.State.READY, 150);
-        Assert.assertEquals(conn.getState(), WSConnection.State.READY);
+        Assert.assertEquals(WSConnection.State.READY, conn.getState());
 
         t = new Thread(() -> {
             conn.setState(WSConnection.State.CLOSE);
         });
         t.start();
         conn.waitForNextState(WSConnection.State.CLOSE, 150);
-        Assert.assertEquals(conn.getState(), WSConnection.State.CLOSE);
+        Assert.assertEquals(WSConnection.State.CLOSE, conn.getState());
 
         t = new Thread(() -> {
             conn.setState(WSConnection.State.EXIT);
         });
         t.start();
         conn.waitForNextState(WSConnection.State.EXIT, 150);
-        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
+        Assert.assertEquals(WSConnection.State.EXIT, conn.getState());
     }
 
     @Test
@@ -327,14 +328,14 @@ public class TestWSConnection {
         // Simulate error in connection. Should exit anyways, since reconnect flag is false
         conn.setState(WSConnection.State.READY);
         conn.onClose(1001, "SHUTDOWN");
-        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
+        Assert.assertEquals(WSConnection.State.EXIT, conn.getState());
 
         // Simulate normal closing of connection without client set. Should exit, and go into EXIT state.
         conn.setState(WSConnection.State.READY);
         conn.close();
-        Assert.assertEquals(conn.getState(), WSConnection.State.CLOSE);
+        Assert.assertEquals(WSConnection.State.CLOSE, conn.getState());
         conn.onClose(1001, "SHUTDOWN");
-        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
+        Assert.assertEquals(WSConnection.State.EXIT, conn.getState());
 
         // Simulate normal closing of connection with client set. Should exit, and go into EXIT state.
         conn.setState(WSConnection.State.READY);
@@ -346,9 +347,9 @@ public class TestWSConnection {
         };
         conn.client.start();
         conn.close();
-        Assert.assertEquals(conn.getState(), WSConnection.State.CLOSE);
+        Assert.assertEquals(WSConnection.State.CLOSE, conn.getState());
         conn.onClose(1001, "SHUTDOWN");
-        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
+        Assert.assertEquals(WSConnection.State.EXIT, conn.getState());
 
         // Simulate normal closing of connection with client set, which will fail to stop. Should cause an exception.
         conn.setState(WSConnection.State.READY);
@@ -366,7 +367,7 @@ public class TestWSConnection {
         } catch (IllegalStateException e) {
             // Should have thrown error. Continue.
         }
-        Assert.assertEquals(conn.getState(), WSConnection.State.CLOSE);
+        Assert.assertEquals(WSConnection.State.CLOSE, conn.getState());
 
         // Simulate errored closing of connection with client set. Should exit, and go into EXIT state.
         conn.setState(WSConnection.State.READY);
@@ -378,7 +379,7 @@ public class TestWSConnection {
         };
         conn.client.start();
         conn.onClose(1001, "SHUTDOWN");
-        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
+        Assert.assertEquals(WSConnection.State.EXIT, conn.getState());
 
         // Simulate errored closing of connection with client set, which will fail to stop. Should cause an exception.
         conn.setState(WSConnection.State.READY);
@@ -394,7 +395,7 @@ public class TestWSConnection {
         } catch (IllegalStateException e) {
             Assert.fail("Should not have thrown an error; should not crash a background thread.");
         }
-        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
+        Assert.assertEquals(WSConnection.State.EXIT, conn.getState());
     }
 
     @Test
@@ -505,6 +506,25 @@ public class TestWSConnection {
         }
 
         Assert.assertEquals(receivedMessages.size(), 5);
+    }
+
+    @Test
+    public void testConnectAndReconnectError() {
+        WSConnection conn = new WSConnection(TEST_CONFIG_ERROR);
+
+        try {
+            conn.connect();
+            Assert.fail("Should have failed on invalid host");
+        } catch (Exception e) {
+            // Pass.
+        }
+
+        Assert.assertEquals(WSConnection.State.ERROR, conn.getState());
+
+        conn.setState(WSConnection.State.READY);
+        conn.onClose(1001, "FORCE ERROR");
+
+        Assert.assertEquals(WSConnection.State.ERROR, conn.getState());
     }
 
     private void waitForNotifies(Object obj, int num, long timeout) throws InterruptedException {

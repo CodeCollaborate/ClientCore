@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Created by fahslaj on 4/14/2016.
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public abstract class AbstractNotification extends AbstractServerMessage {
+public class Notification extends AbstractServerMessage {
 
     @JsonProperty("Resource")
     protected String resource;

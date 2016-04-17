@@ -1,13 +1,15 @@
 package websocket.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IResponseHandler;
 
 /**
  * Created by fahslaj on 4/14/2016.
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class AbstractRequest {
+public class Request {
 
     @JsonProperty("Tag")
     protected long tag;
@@ -29,6 +31,9 @@ public class AbstractRequest {
 
     @JsonProperty("Data")
     protected IRequestData data;
+
+    @JsonIgnore
+    private IResponseHandler handler;
 
     public long getTag() {
         return tag;
@@ -84,5 +89,13 @@ public class AbstractRequest {
 
     public void setData(IRequestData data) {
         this.data = data;
+    }
+
+    public IResponseHandler getHandler() {
+        return handler;
+    }
+
+    public void setHandler(IResponseHandler handler) {
+        this.handler = handler;
     }
 }

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Created by fahslaj on 4/14/2016.
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public abstract class AbstractResponse extends AbstractServerMessage{
+public abstract class Response extends AbstractServerMessage{
 
     @JsonProperty("Tag")
     protected long tag;

@@ -41,10 +41,10 @@ public class WSConnection {
     // Jetty objects
     WebSocketClient client;
     Session session;
+    // Configuration
+    ConnectionConfig config;
     // State of program
     private volatile State state;
-    // Configuration
-    private ConnectionConfig config;
 
     /**
      * Creates a new WSConnection, but does not initialize the connection

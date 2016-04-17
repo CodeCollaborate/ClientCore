@@ -14,16 +14,15 @@ import java.util.HashMap;
  * Created by fahslaj on 4/14/2016.
  */
 public class WSManager implements IMessageHandler {
-    private static final Logger logger = LoggerFactory.getLogger("websocket");
+    static Logger logger = LoggerFactory.getLogger("websocket");
     // HashMap for keeping track of sent requests (Tag -> Request)
     HashMap<Long, Request> requestHashMap;
     // HashMap for registered notification handlers (Resource.Method -> Handler)
-    private HashMap<String, INotificationHandler> notificationHandlerHashMap;
+    HashMap<String, INotificationHandler> notificationHandlerHashMap;
+    // WebSocket connection
+    WSConnection socket;
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
-
-    // WebSocket connection
-    private WSConnection socket;
 
     public WSManager(ConnectionConfig config) {
         this.notificationHandlerHashMap = new HashMap<>();

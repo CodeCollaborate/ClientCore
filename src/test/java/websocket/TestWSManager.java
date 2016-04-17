@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
 import websocket.ExampleEchoServer.ServerRunner;
 import websocket.models.ConnectionConfig;
 import websocket.models.Request;
@@ -28,7 +29,24 @@ public class TestWSManager {
     }
 
     @Test
-    public void testSendRequest() {
+    public void testConnectionConfigConstructor() {
+        ConnectionConfig config = new ConnectionConfig("hi", true, 2);
+        WSManager manager = new WSManager(config);
+        Assert.assertEquals(config, manager.socket.config);
+    }
+
+    @Test
+    public void testRegisterAndDeregisterNotificationHandler() {
+        WSManager manager = new WSManager(new ConnectionConfig("hi", true, 2));
+        INotificationHandler handler = mock(INotificationHandler.class);
+        manager.registerNotificationHandler("Resource.Method", handler);
+        Assert.assertEquals(handler, manager.notificationHandlerHashMap.get("Resource.Method"));
+        manager.deregisterNotificationHandler("Resource.Method");
+        Assert.assertEquals(null, manager.notificationHandlerHashMap.get("Resource.Method"));
+    }
+
+    @Test
+    public void testSendRequestSucceed() {
         WSConnection fakeConn = mock(WSConnection.class);
         WSManager manager = new WSManager(fakeConn);
         when(fakeConn.getState()).thenReturn(WSConnection.State.READY);
@@ -90,6 +108,15 @@ public class TestWSManager {
     }
 
     @Test
+    public void testHandleMessageParseFailure() {
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        String invalid = "Invalid message";
+        manager.handleMessage(invalid);
+        verify(manager.logger, times(1)).error("Malformed message from server: " + invalid);
+    }
+
+    @Test
     public void testHandleServerResponse() {
         String message = "{\n" +
                 "  \"Type\":\"Response\",\n" +
@@ -114,6 +141,60 @@ public class TestWSManager {
     }
 
     @Test
+    public void testHandleInvalidServerResponse() {
+        String message = "{\n" +
+                "  \"Type\":\"Response\",\n" +
+                "  \"ServerMessage\": \"dank\"" +
+                "}";
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        manager.handleMessage(message);
+        verify(manager.logger, times(1)).error("Malformed response from server: " + "\"dank\"");
+    }
+
+    @Test
+    public void testHandleNoRequestResponse() {
+        String message = "{\n" +
+                "  \"Type\":\"Response\",\n" +
+                "  \"ServerMessage\": {\n" +
+                "    \"Tag\":\"100\",\n" +
+                "    \"Status\":\"200\",\n" +
+                "    \"Data\":{\n" +
+                "      \"TestParameter1\":\"value1\",\n" +
+                "      \"TestParameter2\":\"value2\"\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        manager.handleMessage(message);
+        verify(manager.logger, times(1)).warn("Received extraneous response from server: " +
+                "{\"Tag\":\"100\",\"Status\":\"200\",\"Data\":{\"TestParameter1\":\"value1\",\"TestParameter2\":\"value2\"}}");
+    }
+
+    @Test
+    public void testHandleNoHandlerResponse() {
+        String message = "{\n" +
+                "  \"Type\":\"Response\",\n" +
+                "  \"ServerMessage\": {\n" +
+                "    \"Tag\":\"100\",\n" +
+                "    \"Status\":\"200\",\n" +
+                "    \"Data\":{\n" +
+                "      \"TestParameter1\":\"value1\",\n" +
+                "      \"TestParameter2\":\"value2\"\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        manager.requestHashMap.put(Long.decode("100"), new Request());
+        manager.handleMessage(message);
+        verify(manager.logger, times(1)).warn("No handler specified for request: " +
+                "{\"Tag\":\"100\",\"Status\":\"200\",\"Data\":{\"TestParameter1\":\"value1\",\"TestParameter2\":\"value2\"}}");
+
+    }
+
+    @Test
     public void testHandleServerNotification() {
         String message = "{\n" +
                 "  \"Type\":\"Notification\",\n" +
@@ -132,6 +213,40 @@ public class TestWSManager {
         manager.registerNotificationHandler("TestResource.TestMethod", mockHandler);
         manager.handleMessage(message);
         verify(mockHandler, times(1)).handleNotification(anyObject());
+    }
+
+    @Test
+    public void testHandleInvalidNotification() {
+        String message = "{\n" +
+                "  \"Type\":\"Notification\",\n" +
+                "  \"ServerMessage\": \"dank\"" +
+                "}";
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        manager.handleMessage(message);
+        verify(manager.logger, times(1)).error("Malformed notification from server: " + "\"dank\"");
+
+    }
+
+    @Test
+    public void testHandleNoHandlerNotification() {
+        String message = "{\n" +
+                "  \"Type\":\"Notification\",\n" +
+                "  \"ServerMessage\": {\n" +
+                "    \"Resource\":\"TestResource\",\n" +
+                "    \"Method\":\"TestMethod\",\n" +
+                "    \"Data\":{\n" +
+                "      \"TestParameter1\":\"value1\",\n" +
+                "      \"TestParameter2\":\"value2\"\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        manager.handleMessage(message);
+        verify(manager.logger, times(1)).warn("No handler registered for notification: " +
+                "{\"Resource\":\"TestResource\",\"Method\":\"TestMethod\",\"Data\":{\"TestParameter1\":\"value1\",\"TestParameter2\":\"value2\"}}");
+
     }
 
     @Test
@@ -203,5 +318,14 @@ public class TestWSManager {
         manager.handleMessageSendError(message);
         verify(mockRequest, times(1)).getErrorHandler();
         verify(mockHandler, times(1)).handleRequestSendError();
+    }
+
+    @Test
+    public void testHandleMessageSendErrorMalformed() {
+        String message = "malformed message";
+        WSManager manager = new WSManager(mock(WSConnection.class));
+        manager.logger = mock(Logger.class);
+        manager.handleMessageSendError(message);
+        verify(manager.logger, times(1)).error("Request that failed to send was malformed");
     }
 }

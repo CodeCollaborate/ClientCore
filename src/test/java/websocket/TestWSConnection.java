@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 public class TestWSConnection {
     private static final int TEST_PORT = 10240;
     private static final ConnectionConfig TEST_CONFIG = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 5);
-    private static final ConnectionConfig TEST_CONFIG_ERROR = new ConnectionConfig("ws://testhost:1", false, 5);
+    private static final ConnectionConfig TEST_CONFIG_ERROR = new ConnectionConfig("ws://testhost:1", true, 5);
     private static final ConnectionConfig TEST_CONFIG_NO_RETRY = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 0);
     private static final ConnectionConfig TEST_CONFIG_RECONNECT = new ConnectionConfig("ws://localhost:" + TEST_PORT, true, 5);
 

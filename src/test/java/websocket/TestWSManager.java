@@ -1,11 +1,11 @@
 package websocket;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import websocket.ExampleEchoServer.ServerRunner;
+import websocket.models.ConnectionConfig;
 import websocket.models.Request;
 import websocket.models.ServerMessageWrapper;
 
@@ -136,7 +136,7 @@ public class TestWSManager {
 
     @Test
     public void testHandleServerNotificationIntegrationTest() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(new ConnectionConfig(ECHO_WS_ADDR, false, 5));
         ServerMessageWrapper smw = null;
 
         try {
@@ -175,8 +175,6 @@ public class TestWSManager {
             synchronized (this) {
                 this.wait(1000);
             }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }

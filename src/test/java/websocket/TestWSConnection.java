@@ -1,36 +1,41 @@
 package websocket;
 
 import org.eclipse.jetty.util.component.LifeCycle;
-import org.eclipse.jetty.websocket.api.*;
+import org.eclipse.jetty.websocket.api.RemoteEndpoint;
+import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import websocket.ExampleEchoServer.ServerRunner;
+import websocket.models.ConnectionConfig;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by Benedict on 4/15/2016.
  */
-public class WSConnectionTests {
-    public static final String ECHO_WS_ADDR = "ws://echo.websocket.org";
+public class TestWSConnection {
+    public static final int TEST_PORT = 10240;
+    public static final ConnectionConfig TEST_CONFIG = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 5);
+    public static final ConnectionConfig TEST_CONFIG_NO_RETRY = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 0);
+    public static final ConnectionConfig TEST_CONFIG_RECONNECT = new ConnectionConfig("ws://localhost:" + TEST_PORT, true, 5);
 
     @BeforeClass
     public static void setup() {
-        ServerRunner.runEchoServer(10240);
+        ServerRunner.runEchoServer(TEST_PORT);
     }
 
     @Test
     public void testRegisterDeregisterHandler() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
         ArrayList<String> receivedItems = new ArrayList<>();
 
         IMessageHandler handler = new IMessageHandler() {
@@ -63,7 +68,7 @@ public class WSConnectionTests {
 
     @Test
     public void testMessageQueue() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
 
         Assert.assertEquals(conn.messageQueue.size(), 0);
 
@@ -97,7 +102,7 @@ public class WSConnectionTests {
 
     @Test
     public void testSendMessageStateChecker() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
 
         Assert.assertEquals(conn.messageQueue.size(), 0);
 
@@ -144,7 +149,7 @@ public class WSConnectionTests {
 
     @Test
     public void testSendMessageRequeue() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
 
         ArrayList<String> erroredMessages = new ArrayList<>();
         IMessageHandler handler = new IMessageHandler() {
@@ -162,27 +167,17 @@ public class WSConnectionTests {
         };
         conn.registerIncomingMessageHandler(handler);
 
-        conn.session = new testSession() {
-            @Override
-            public RemoteEndpoint getRemote() {
-                return new testRemote() {
-                    @Override
-                    public Future<Void> sendStringByFuture(String text) {
-                        return new testFuture<Void>() {
-                            @Override
-                            public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-                                throw new ExecutionException(new Exception("test"));
-                            }
-
-                            @Override
-                            public Void get() throws InterruptedException, ExecutionException {
-                                throw new ExecutionException(new Exception("test"));
-                            }
-                        };
-                    }
-                };
-            }
-        };
+        conn.session = mock(Session.class);
+        RemoteEndpoint testEndpoint = mock(RemoteEndpoint.class);
+        Future testFuture = mock(VoidFuture.class);
+        when(conn.session.getRemote()).thenReturn(testEndpoint);
+        when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
+        try{
+            when(testFuture.get()).thenThrow(new ExecutionException(new Exception("test")));
+            when(testFuture.get(anyLong(), anyObject())).thenThrow(new ExecutionException(new Exception("test")));
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        }
         conn.setState(WSConnection.State.READY);
         WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
 
@@ -209,7 +204,7 @@ public class WSConnectionTests {
 
     @Test
     public void testSendMessageLoop() throws InterruptedException {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 0);
+        WSConnection conn = new WSConnection(TEST_CONFIG_NO_RETRY);
 
         ArrayList<String> erroredMessages = new ArrayList<>();
         IMessageHandler handler = new IMessageHandler() {
@@ -222,32 +217,24 @@ public class WSConnectionTests {
             public void handleMessageSendError(String message) {
                 synchronized (erroredMessages) {
                     erroredMessages.add(message);
+                    erroredMessages.notifyAll();
                 }
             }
         };
         conn.registerIncomingMessageHandler(handler);
 
-        conn.session = new testSession() {
-            @Override
-            public RemoteEndpoint getRemote() {
-                return new testRemote() {
-                    @Override
-                    public Future<Void> sendStringByFuture(String text) {
-                        return new testFuture<Void>() {
-                            @Override
-                            public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-                                throw new ExecutionException(new Exception("test"));
-                            }
+        conn.session = mock(Session.class);
+        RemoteEndpoint testEndpoint = mock(RemoteEndpoint.class);
+        Future<Void> testFuture = mock(VoidFuture.class);
+        when(conn.session.getRemote()).thenReturn(testEndpoint);
+        when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
+        try{
+            when(testFuture.get()).thenThrow(new ExecutionException(new Exception("test")));
+            when(testFuture.get(anyLong(), anyObject())).thenThrow(new ExecutionException(new Exception("test")));
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            Assert.fail("Should not have thrown exception on mocking");
+        }
 
-                            @Override
-                            public Void get() throws InterruptedException, ExecutionException {
-                                throw new ExecutionException(new Exception("test"));
-                            }
-                        };
-                    }
-                };
-            }
-        };
         conn.setState(WSConnection.State.READY);
         WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
 
@@ -259,8 +246,7 @@ public class WSConnectionTests {
         Thread t = new Thread(conn::messageLoop);
         t.start();
 
-        Thread.currentThread();
-        Thread.sleep(500);
+        waitForNotifies(erroredMessages, 1, 1000);
 
         conn.close();
 
@@ -271,29 +257,20 @@ public class WSConnectionTests {
 
     @Test
     public void testSendMessageSucceed() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
 
-        conn.session = new testSession() {
-            @Override
-            public RemoteEndpoint getRemote() {
-                return new testRemote() {
-                    @Override
-                    public Future<Void> sendStringByFuture(String text) {
-                        return new testFuture<Void>() {
-                            @Override
-                            public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-                                return null;
-                            }
+        conn.session = mock(Session.class);
+        RemoteEndpoint testEndpoint = mock(RemoteEndpoint.class);
+        Future testFuture = mock(VoidFuture.class);
+        when(conn.session.getRemote()).thenReturn(testEndpoint);
+        when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
+        try{
+            when(testFuture.get()).thenReturn(null);
+            when(testFuture.get(anyLong(), anyObject())).thenReturn(null);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        }
 
-                            @Override
-                            public Void get() throws InterruptedException, ExecutionException {
-                                return null;
-                            }
-                        };
-                    }
-                };
-            }
-        };
         conn.setState(WSConnection.State.READY);
         WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
 
@@ -309,17 +286,11 @@ public class WSConnectionTests {
 
     @Test
     public void testStateChanges() {
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
 
         Assert.assertEquals(conn.getState(), WSConnection.State.CREATED);
 
         Thread t = new Thread(() -> {
-            try {
-                Thread.currentThread();
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             conn.setState(WSConnection.State.CONNECT);
         });
         t.start();
@@ -327,12 +298,6 @@ public class WSConnectionTests {
         Assert.assertEquals(conn.getState(), WSConnection.State.CONNECT);
 
         t = new Thread(() -> {
-            try {
-                Thread.currentThread();
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             conn.setState(WSConnection.State.READY);
         });
         t.start();
@@ -340,12 +305,6 @@ public class WSConnectionTests {
         Assert.assertEquals(conn.getState(), WSConnection.State.READY);
 
         t = new Thread(() -> {
-            try {
-                Thread.currentThread();
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             conn.setState(WSConnection.State.CLOSE);
         });
         t.start();
@@ -353,12 +312,6 @@ public class WSConnectionTests {
         Assert.assertEquals(conn.getState(), WSConnection.State.CLOSE);
 
         t = new Thread(() -> {
-            try {
-                Thread.currentThread();
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             conn.setState(WSConnection.State.EXIT);
         });
         t.start();
@@ -369,7 +322,7 @@ public class WSConnectionTests {
     @Test
     public void testClose() throws Exception {
 
-        WSConnection conn = new WSConnection(ECHO_WS_ADDR, false, 5);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
 
         // Simulate error in connection. Should exit anyways, since reconnect flag is false
         conn.setState(WSConnection.State.READY);
@@ -448,7 +401,7 @@ public class WSConnectionTests {
     public void testReconnect() throws Exception {
         ArrayList<String> receivedMessages = new ArrayList<>();
 
-        WSConnection conn = new WSConnection("ws://localhost:10240", true, 3);
+        WSConnection conn = new WSConnection(TEST_CONFIG_RECONNECT);
         conn.registerIncomingMessageHandler(new IMessageHandler() {
             @Override
             public void handleMessage(String message) {
@@ -506,8 +459,7 @@ public class WSConnectionTests {
             conn.enqueueMessage("HELLO" + i);
         }
 
-        // wait for messages to be received.
-        Thread.sleep(1000);
+        waitForNotifies(receivedMessages, 5, 1000);
 
         conn.close();
 
@@ -522,12 +474,13 @@ public class WSConnectionTests {
     public void testIntegrationAgainstEcho() throws Exception {
         ArrayList<String> receivedMessages = new ArrayList<>();
 
-        WSConnection conn = new WSConnection("ws://localhost:10240", false, 3);
+        WSConnection conn = new WSConnection(TEST_CONFIG);
         conn.registerIncomingMessageHandler(new IMessageHandler() {
             @Override
             public void handleMessage(String message) {
                 synchronized (receivedMessages) {
                     receivedMessages.add(message);
+                    receivedMessages.notifyAll();
                 }
             }
 
@@ -546,7 +499,7 @@ public class WSConnectionTests {
             conn.enqueueMessage("HELLO" + i);
         }
 
-        Thread.sleep(1000);
+        waitForNotifies(receivedMessages, 5, 1000);
 
         conn.close();
 
@@ -557,182 +510,14 @@ public class WSConnectionTests {
         Assert.assertEquals(receivedMessages.size(), 5);
     }
 
-    private abstract class testSession implements Session {
-
-        @Override
-        public void close() {
-
-        }
-
-        @Override
-        public void close(CloseStatus closeStatus) {
-
-        }
-
-        @Override
-        public void close(int statusCode, String reason) {
-
-        }
-
-        @Override
-        public void disconnect() throws IOException {
-
-        }
-
-        @Override
-        public long getIdleTimeout() {
-            return 0;
-        }
-
-        @Override
-        public void setIdleTimeout(long ms) {
-
-        }
-
-        @Override
-        public InetSocketAddress getLocalAddress() {
-            return null;
-        }
-
-        @Override
-        public WebSocketPolicy getPolicy() {
-            return null;
-        }
-
-        @Override
-        public String getProtocolVersion() {
-            return null;
-        }
-
-        @Override
-        public RemoteEndpoint getRemote() {
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getRemoteAddress() {
-            return null;
-        }
-
-        @Override
-        public UpgradeRequest getUpgradeRequest() {
-            return null;
-        }
-
-        @Override
-        public UpgradeResponse getUpgradeResponse() {
-            return null;
-        }
-
-        @Override
-        public boolean isOpen() {
-            return false;
-        }
-
-        @Override
-        public boolean isSecure() {
-            return false;
-        }
-
-        @Override
-        public SuspendToken suspend() {
-            return null;
+    private void waitForNotifies(Object obj, int num, long timeout) throws InterruptedException {
+        synchronized (obj){
+            for (int i = 0; i < num; i++){
+                obj.wait(timeout);
+            }
         }
     }
 
-    private abstract class testRemote implements RemoteEndpoint {
-
-        @Override
-        public void sendBytes(ByteBuffer data) throws IOException {
-
-        }
-
-        @Override
-        public Future<Void> sendBytesByFuture(ByteBuffer data) {
-            return null;
-        }
-
-        @Override
-        public void sendBytes(ByteBuffer data, WriteCallback callback) {
-
-        }
-
-        @Override
-        public void sendPartialBytes(ByteBuffer fragment, boolean isLast) throws IOException {
-
-        }
-
-        @Override
-        public void sendPartialString(String fragment, boolean isLast) throws IOException {
-
-        }
-
-        @Override
-        public void sendPing(ByteBuffer applicationData) throws IOException {
-
-        }
-
-        @Override
-        public void sendPong(ByteBuffer applicationData) throws IOException {
-
-        }
-
-        @Override
-        public void sendString(String text) throws IOException {
-
-        }
-
-        @Override
-        public Future<Void> sendStringByFuture(String text) {
-            return null;
-        }
-
-        @Override
-        public void sendString(String text, WriteCallback callback) {
-
-        }
-
-        @Override
-        public BatchMode getBatchMode() {
-            return null;
-        }
-
-        @Override
-        public void setBatchMode(BatchMode mode) {
-
-        }
-
-        @Override
-        public void flush() throws IOException {
-
-        }
-    }
-
-    private abstract class testFuture<V> implements Future<V> {
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            return false;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return false;
-        }
-
-        @Override
-        public boolean isDone() {
-            return false;
-        }
-
-        @Override
-        public V get() throws InterruptedException, ExecutionException {
-            return null;
-        }
-
-        @Override
-        public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-            return null;
-        }
+    interface VoidFuture extends Future<Void> {
     }
 }

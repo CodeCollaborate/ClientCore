@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import websocket.models.Request;
-import websocket.models.Notification;
-import websocket.models.Response;
-import websocket.models.ServerMessageWrapper;
+import websocket.models.*;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -20,7 +17,7 @@ public class WSManager implements IMessageHandler {
     private static final Logger logger = LoggerFactory.getLogger("websocket");
 
     // HashMap for registered notification handlers (Resource.Method -> Handler)
-    HashMap<String, INotificationHandler> notificationHandlerHashMap;
+    private HashMap<String, INotificationHandler> notificationHandlerHashMap;
 
     // HashMap for keeping track of sent requests (Tag -> Request)
     HashMap<Long, Request> requestHashMap;
@@ -31,11 +28,10 @@ public class WSManager implements IMessageHandler {
     // WebSocket connection
     private WSConnection socket;
 
-    public WSManager(IConnectionConfig config) {
+    public WSManager(ConnectionConfig config) {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
-        this.socket = new WSConnection(config.getUriString(),
-                config.getReconnect(), config.getMaxRetryCount());
+        this.socket = new WSConnection(config);
     }
 
     // used for testing

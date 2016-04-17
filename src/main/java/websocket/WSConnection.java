@@ -9,6 +9,7 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import websocket.models.ConnectionConfig;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -46,18 +47,14 @@ public class WSConnection {
     Session session;
 
     // Configuration
-    private String uriString;
-    private boolean reconnect;
-    private int maxRetryCount;
+    private ConnectionConfig config;
 
     /**
      * Creates a new WSConnection, but does not initialize the connection
      */
-    public WSConnection(String uriString, boolean reconnect, int maxRetryCount) {
+    public WSConnection(ConnectionConfig config) {
         setState(State.CREATED);
-        this.uriString = uriString;
-        this.reconnect = reconnect;
-        this.maxRetryCount = maxRetryCount;
+        this.config = config;
     }
 
     /**
@@ -74,7 +71,7 @@ public class WSConnection {
                 this.client = new WebSocketClient();
             }
             this.client.start();
-            URI uri = new URI(uriString);
+            URI uri = new URI(config.getUriString());
 
             setState(State.CONNECT);
             Future<Session> fut = this.client.connect(this, uri, new ClientUpgradeRequest());
@@ -136,8 +133,8 @@ public class WSConnection {
     public void onClose(int statusCode, String reason) {
         logger.info(String.format("Connection closed - Reason: %s", reason));
         this.session = null;
-        if (getState() != State.CLOSE && reconnect) {
-            for(int i = 0; i < maxRetryCount; i++) {
+        if (getState() != State.CLOSE && config.isReconnect()) {
+            for(int i = 0; i < config.getMaxRetryCount(); i++) {
                 try {
                     connect();
                     return;
@@ -211,7 +208,7 @@ public class WSConnection {
             logger.warn(String.format("Error sending message \"%s\" - Exception: %s", msg.getMessage(), e.getCause().getMessage()));
 
             // Insert into retry queue.
-            if (msg.getRetryCount() < maxRetryCount) {
+            if (msg.getRetryCount() < config.getMaxRetryCount()) {
                 msg.incrementRetryCount();
                 synchronized (messageQueue) {
                     this.messageQueue.offer(msg);

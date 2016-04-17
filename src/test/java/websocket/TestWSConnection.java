@@ -23,10 +23,10 @@ import static org.mockito.Mockito.when;
  * Created by Benedict on 4/15/2016.
  */
 public class TestWSConnection {
-    public static final int TEST_PORT = 10240;
-    public static final ConnectionConfig TEST_CONFIG = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 5);
-    public static final ConnectionConfig TEST_CONFIG_NO_RETRY = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 0);
-    public static final ConnectionConfig TEST_CONFIG_RECONNECT = new ConnectionConfig("ws://localhost:" + TEST_PORT, true, 5);
+    private static final int TEST_PORT = 10240;
+    private static final ConnectionConfig TEST_CONFIG = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 5);
+    private static final ConnectionConfig TEST_CONFIG_NO_RETRY = new ConnectionConfig("ws://localhost:" + TEST_PORT, false, 0);
+    private static final ConnectionConfig TEST_CONFIG_RECONNECT = new ConnectionConfig("ws://localhost:" + TEST_PORT, true, 5);
 
     @BeforeClass
     public static void setup() {
@@ -95,8 +95,8 @@ public class TestWSConnection {
 
         // Should be sorted for max-retries, then min-creation order
         String[] expected = new String[]{"RetryTest3", "RetryTest1", "RetryTest2", "Test1", "Test2", "Test3"};
-        for (int i = 0; i < expected.length; i++) {
-            Assert.assertEquals(expected[i], conn.messageQueue.poll().getMessage());
+        for (String anExpected : expected) {
+            Assert.assertEquals(anExpected, conn.messageQueue.poll().getMessage());
         }
     }
 
@@ -169,7 +169,7 @@ public class TestWSConnection {
 
         conn.session = mock(Session.class);
         RemoteEndpoint testEndpoint = mock(RemoteEndpoint.class);
-        Future testFuture = mock(VoidFuture.class);
+        Future<Void> testFuture = mock(VoidFuture.class);
         when(conn.session.getRemote()).thenReturn(testEndpoint);
         when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
         try {
@@ -261,7 +261,7 @@ public class TestWSConnection {
 
         conn.session = mock(Session.class);
         RemoteEndpoint testEndpoint = mock(RemoteEndpoint.class);
-        Future testFuture = mock(VoidFuture.class);
+        Future<Void> testFuture = mock(VoidFuture.class);
         when(conn.session.getRemote()).thenReturn(testEndpoint);
         when(testEndpoint.sendStringByFuture(anyString())).thenReturn(testFuture);
         try {
@@ -341,7 +341,7 @@ public class TestWSConnection {
         conn.client = new WebSocketClient() {
             @Override
             protected void stop(LifeCycle l) throws Exception {
-                return;
+                // Just return.
             }
         };
         conn.client.start();
@@ -373,7 +373,7 @@ public class TestWSConnection {
         conn.client = new WebSocketClient() {
             @Override
             protected void stop(LifeCycle l) throws Exception {
-                return;
+                // Just return.
             }
         };
         conn.client.start();
@@ -423,22 +423,19 @@ public class TestWSConnection {
         }
 
         conn.setState(WSConnection.State.CLOSE);
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
+        Thread t = new Thread(() -> {
 
-                synchronized (conn.messageQueue) {
-                    conn.messageQueue.notifyAll();
-                }
-                conn.setState(WSConnection.State.CREATED);
-                if (conn.client != null) {
-                    WebSocketClient client = conn.client;
-                    conn.client = null;
-                    try {
-                        client.stop();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+            synchronized (conn.messageQueue) {
+                conn.messageQueue.notifyAll();
+            }
+            conn.setState(WSConnection.State.CREATED);
+            if (conn.client != null) {
+                WebSocketClient client = conn.client;
+                conn.client = null;
+                try {
+                    client.stop();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -518,6 +515,6 @@ public class TestWSConnection {
         }
     }
 
-    interface VoidFuture extends Future<Void> {
+    private interface VoidFuture extends Future<Void> {
     }
 }

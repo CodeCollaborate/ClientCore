@@ -39,7 +39,7 @@ public class WSConnection {
     final List<IMessageHandler> incomingMessageHandlers = new ArrayList<>();
 
     // State of program
-    volatile State state;
+    private volatile State state;
 
     // Jetty objects
     WebSocketClient client;
@@ -69,15 +69,20 @@ public class WSConnection {
      * @return true if connection request sent successfully, false otherwise.
      */
     public void connect() throws Exception {
-        if (this.client == null) {
-            this.client = new WebSocketClient();
-        }
-        this.client.start();
-        URI uri = new URI(uriString);
+        try {
+            if (this.client == null) {
+                this.client = new WebSocketClient();
+            }
+            this.client.start();
+            URI uri = new URI(uriString);
 
-        setState(State.CONNECT);
-        Future<Session> fut = this.client.connect(this, uri, new ClientUpgradeRequest());
-        fut.get();
+            setState(State.CONNECT);
+            Future<Session> fut = this.client.connect(this, uri, new ClientUpgradeRequest());
+            fut.get();
+        } catch (Exception e){
+            setState(State.ERROR);
+            throw e;
+        }
     }
 
     /**
@@ -112,7 +117,6 @@ public class WSConnection {
                 this.client = null;
             }
         } catch (Exception e) {
-            setState(State.ERROR);
             logger.warn(String.format("Failed to shut down client: %s", e.getMessage()));
             throw new IllegalStateException("Could not shutdown properly");
         }
@@ -132,15 +136,17 @@ public class WSConnection {
     public void onClose(int statusCode, String reason) {
         logger.info(String.format("Connection closed - Reason: %s", reason));
         this.session = null;
-        if (this.state != State.CLOSE && reconnect) {
-            try {
-                connect();
-                return;
-            } catch (Exception e) {
-                setState(State.ERROR);
-                logger.error(String.format("Error reconnecting - Exception: %s", e.getCause().getMessage()));
-                throw new IllegalStateException(e);
+        if (getState() != State.CLOSE && reconnect) {
+            for(int i = 0; i < maxRetryCount; i++) {
+                try {
+                    connect();
+                    return;
+                } catch (Exception e) {
+                    logger.error(String.format("Error reconnecting - Exception: %s", e.getCause().getMessage()));
+                }
             }
+            setState(State.ERROR);
+            return;
         }
         setState(State.EXIT);
         try {
@@ -148,9 +154,7 @@ public class WSConnection {
                 client.stop();
             }
         } catch (Exception e) {
-            setState(State.ERROR);
-            logger.warn(String.format("Failed to shut down client: %s", e.getMessage()));
-            throw new IllegalStateException(e);
+            logger.warn(String.format("Failed to shut down client cleanly: %s", e.getMessage()));
         }
     }
 
@@ -166,7 +170,7 @@ public class WSConnection {
         WSMessage msg;
         while (true) {
             synchronized (this) {
-                if (this.state != State.READY) {
+                if (getState() != State.READY) {
                     return;
                 }
             }
@@ -225,7 +229,7 @@ public class WSConnection {
     }
 
     void enqueueMessage(String msg) {
-        if (this.state == State.CLOSE || state == State.EXIT) {
+        if (getState() == State.CLOSE || state == State.EXIT) {
             return;
         }
 
@@ -247,7 +251,9 @@ public class WSConnection {
     }
 
     State getState() {
-        return state;
+        synchronized (this){
+            return this.state;
+        }
     }
 
     void setState(State state) {
@@ -258,15 +264,15 @@ public class WSConnection {
     }
 
     boolean waitForNextState(State state, long timeout) {
-        if (this.state != state) {
+        if (getState() != state) {
             synchronized (this) {
-                if (this.state != state) {
+                if (getState() != state) {
                     try {
                         this.wait(timeout);
                     } catch (InterruptedException e) {
                         return false;
                     }
-                    return this.state == state;
+                    return getState() == state;
                 }
             }
         }

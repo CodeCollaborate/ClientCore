@@ -413,7 +413,7 @@ public class WSConnectionTests {
         } catch (IllegalStateException e) {
             // Should have thrown error. Continue.
         }
-        Assert.assertEquals(conn.getState(), WSConnection.State.ERROR);
+        Assert.assertEquals(conn.getState(), WSConnection.State.CLOSE);
 
         // Simulate errored closing of connection with client set. Should exit, and go into EXIT state.
         conn.setState(WSConnection.State.READY);
@@ -438,11 +438,10 @@ public class WSConnectionTests {
         conn.client.start();
         try {
             conn.onClose(1001, "SHUTDOWN");
-            Assert.fail("Should have thrown an error; failed to close");
         } catch (IllegalStateException e) {
-            // Should have thrown error. Continue.
+            Assert.fail("Should not have thrown an error; should not crash a background thread.");
         }
-        Assert.assertEquals(conn.getState(), WSConnection.State.ERROR);
+        Assert.assertEquals(conn.getState(), WSConnection.State.EXIT);
     }
 
     @Test

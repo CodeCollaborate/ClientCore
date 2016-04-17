@@ -1,15 +1,12 @@
 package websocket;
 
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.websocket.api.*;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import websocket.ExampleEchoServer.EchoSocketServlet;
+import websocket.ExampleEchoServer.ServerRunner;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -28,21 +25,7 @@ public class WSConnectionTests {
 
     @BeforeClass
     public static void setup() {
-        Server server = new Server(10240);
-
-        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        context.setContextPath("/");
-        server.setHandler(context);
-
-        // Add websocket servlet
-        ServletHolder wsHolder = new ServletHolder("echo", new EchoSocketServlet());
-        context.addServlet(wsHolder, "/");
-
-        try {
-            server.start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        ServerRunner.runEchoServer(10240);
     }
 
     @Test

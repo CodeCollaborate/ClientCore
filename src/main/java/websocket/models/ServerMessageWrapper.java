@@ -11,6 +11,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 @JsonIgnoreProperties(ignoreUnknown=true)
 public class ServerMessageWrapper {
 
+    // constants for the Type variable for ServerMessageWrapper
+    @JsonIgnore
+    public static final String TYPE_NOTIFICATION = "Notification";
+    @JsonIgnore
+    public static final String TYPE_RESPONSE = "Response";
+
     @JsonProperty("Type")
     protected String type;
 
@@ -19,9 +25,6 @@ public class ServerMessageWrapper {
 
     @JsonProperty("ServerMessage")
     protected JsonNode messageJson;
-
-    @JsonIgnore
-    protected AbstractServerMessage serverMessage;
 
     public String getType() {
         return type;
@@ -47,11 +50,4 @@ public class ServerMessageWrapper {
         this.messageJson = messageJson;
     }
 
-    public AbstractServerMessage getServerMessage() {
-        return serverMessage;
-    }
-
-    public void setServerMessage(AbstractServerMessage serverMessage) {
-        this.serverMessage = serverMessage;
-    }
 }

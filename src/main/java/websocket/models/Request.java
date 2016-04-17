@@ -3,6 +3,7 @@ package websocket.models;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
 import websocket.IResponseHandler;
 
 /**
@@ -29,11 +30,14 @@ public class Request {
     @JsonProperty("Timestamp")
     protected long timestamp;
 
-    @JsonProperty("Data")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     protected IRequestData data;
 
     @JsonIgnore
-    private IResponseHandler handler;
+    private IResponseHandler responseHandler;
+
+    @JsonIgnore
+    private IRequestSendErrorHandler errorHandler;
 
     public long getTag() {
         return tag;
@@ -91,11 +95,19 @@ public class Request {
         this.data = data;
     }
 
-    public IResponseHandler getHandler() {
-        return handler;
+    public IResponseHandler getResponseHandler() {
+        return responseHandler;
     }
 
-    public void setHandler(IResponseHandler handler) {
-        this.handler = handler;
+    public void setResponseHandler(IResponseHandler responseHandler) {
+        this.responseHandler = responseHandler;
+    }
+
+    public IRequestSendErrorHandler getErrorHandler() {
+        return errorHandler;
+    }
+
+    public void setErrorHandler(IRequestSendErrorHandler errorHandler) {
+        this.errorHandler = errorHandler;
     }
 }

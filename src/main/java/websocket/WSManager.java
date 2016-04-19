@@ -91,15 +91,15 @@ public class WSManager implements IMessageHandler {
         }
         switch (wobject.getType()) {
             case ServerMessageWrapper.TYPE_NOTIFICATION:
-                handleNotification(wobject);
+                pareseNotification(wobject);
                 break;
             case ServerMessageWrapper.TYPE_RESPONSE:
-                handleResponse(wobject);
+                parseResponse(wobject);
                 break;
         }
     }
 
-    private void handleNotification(ServerMessageWrapper wobject) {
+    private void pareseNotification(ServerMessageWrapper wobject) {
         Notification an;
         try {
             an = mapper.convertValue(wobject.getMessageJson(), Notification.class);
@@ -119,7 +119,7 @@ public class WSManager implements IMessageHandler {
         handler.handleNotification(an);
     }
 
-    private void handleResponse(ServerMessageWrapper wobject) {
+    private void parseResponse(ServerMessageWrapper wobject) {
         Response resp;
         try {
             resp = mapper.convertValue(wobject.getMessageJson(), Response.class);

@@ -10,6 +10,10 @@ target/*
 *.iml
 .idea
 *.project
+.classpath
 
 # Config files
 /config*
+/build/
+/bin/
+.settings/*

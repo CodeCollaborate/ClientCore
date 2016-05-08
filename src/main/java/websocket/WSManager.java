@@ -35,6 +35,11 @@ public class WSManager implements IMessageHandler {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
         this.socket = socket;
+
+        Request request = new Request();
+        request.setErrorHandler(() -> {
+
+        });
     }
 
     /**

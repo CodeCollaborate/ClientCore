@@ -19,10 +19,12 @@ public class TestPatch {
         Patch patch = new Patch(1, diffs);
         Assert.assertEquals(patch.toString(), patchString);
         Assert.assertEquals(patch.getDiffs(), diffs);
+        Assert.assertEquals(1, patch.getBaseVersion());
 
         patch = new Patch(patchString);
         Assert.assertEquals(patch.toString(), patchString);
         Assert.assertEquals(patch.getDiffs(), diffs);
+        Assert.assertEquals(1, patch.getBaseVersion());
     }
 
     @Test
@@ -47,6 +49,220 @@ public class TestPatch {
         expectedString = "v2:\n1:-8:deletion,\n1:+6:insert";
         result = patch3.transform(patch1, patch2);
         Assert.assertEquals(expectedString, result.toString());
+    }
 
+    @Test
+    public void testConvertToCRLF() {
+        Diff diff1 = new Diff("0:+4:test");
+        Patch patch = new Patch(0, Arrays.asList(diff1));
+        Patch newPatch = patch.convertToCRLF("\r\ntest");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(0, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("1:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.convertToCRLF("\r\ntest");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(1, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("2:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.convertToCRLF("\r\ntest");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(3, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("7:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.convertToCRLF("\r\ntes\r\nt");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(9, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("2:+4:test");
+        Diff diff2 = new Diff("7:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1, diff2));
+        newPatch = patch.convertToCRLF("\r\ntes\r\nt");
+        Assert.assertEquals(2, newPatch.getDiffs().size());
+        Assert.assertEquals(3, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(9, newPatch.getDiffs().get(1).getStartIndex());
+
+        diff1 = new Diff("2:+4:test");
+        diff2 = new Diff("7:+4:test");
+        Diff diff3 = new Diff("0:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1, diff2, diff3));
+        newPatch = patch.convertToCRLF("\r\ntes\r\nt");
+        Assert.assertEquals(3, newPatch.getDiffs().size());
+        Assert.assertEquals(3, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(9, newPatch.getDiffs().get(1).getStartIndex());
+        Assert.assertEquals(0, newPatch.getDiffs().get(2).getStartIndex());
+    }
+
+    @Test
+    public void testConvertToLF() {
+        Diff diff1 = new Diff("0:+4:test");
+        Patch patch = new Patch(0, Arrays.asList(diff1));
+        Patch newPatch = patch.convertToLF("\r\ntest");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(0, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("1:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.convertToLF("\r\ntest");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(1, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("2:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.convertToLF("\r\ntest");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(1, newPatch.getDiffs().get(0).getStartIndex());
+
+        diff1 = new Diff("7:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.convertToLF("\r\ntes\r\nt");
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(5, newPatch.getDiffs().get(0).getStartIndex());
+    }
+
+    @Test
+    public void testUndo() {
+        Diff diff1 = new Diff("0:+4:test");
+        Patch patch = new Patch(0, Arrays.asList(diff1));
+        Patch newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(0, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(false, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("1:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(1, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(false, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("2:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(2, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(false, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("7:+4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(7, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(false, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("0:-4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(0, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(true, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("1:-4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(1, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(true, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("2:-4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(2, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(true, newPatch.getDiffs().get(0).isInsertion());
+
+        diff1 = new Diff("7:-4:test");
+        patch = new Patch(0, Arrays.asList(diff1));
+        newPatch = patch.getUndo();
+        Assert.assertEquals(1, newPatch.getDiffs().size());
+        Assert.assertEquals(7, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(true, newPatch.getDiffs().get(0).isInsertion());
+    }
+
+
+    @Test
+    public void testTransformGeneral() {
+        Diff diff1, diff2;
+        Patch result;
+
+        // The brown fox
+        // The quick brown fox
+        // The slow brown fox
+        diff1 = new Diff(true, 4, "quick");
+        Patch patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "slow");
+        Patch patch2 = new Patch(0, Arrays.asList(diff2));
+        result = patch2.transform(Arrays.asList(patch1));
+        Assert.assertEquals(1, result.getDiffs().size());
+        Assert.assertEquals(9, result.getDiffs().get(0).getStartIndex());
+    }
+
+    @Test
+    public void testHashCode() {
+        Diff diff1, diff2;
+        Patch patch1, patch2;
+
+        diff1 = new Diff(true, 4, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertEquals(patch1.hashCode(), patch2.hashCode());
+    }
+
+    @Test
+    public void testEquals() {
+        Diff diff1, diff2;
+        Patch patch1, patch2;
+
+        diff1 = new Diff(true, 4, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertEquals(patch1, patch2);
+
+        diff1 = new Diff(true, 4, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 3, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
+
+        diff1 = new Diff(true, 3, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
+
+        diff1 = new Diff(false, 4, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
+
+        diff1 = new Diff(true, 4, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(false, 4, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
+
+        diff1 = new Diff(true, 4, "quick");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "slow");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
+
+        diff1 = new Diff(true, 4, "slow");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 4, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
+
+        diff1 = new Diff(false, 4, "slow");
+        patch1 = new Patch(0, Arrays.asList(diff1));
+        diff2 = new Diff(true, 3, "quick");
+        patch2 = new Patch(0, Arrays.asList(diff2));
+        Assert.assertNotEquals(patch1, patch2);
     }
 }

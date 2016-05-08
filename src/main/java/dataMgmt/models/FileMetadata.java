@@ -16,6 +16,9 @@ public class FileMetadata {
     @JsonProperty("Version")
     protected long version;
 
+    @JsonProperty("ProjectID")
+    protected String projectId;
+
     public long getFileId() {
         return fileId;
     }
@@ -38,6 +41,14 @@ public class FileMetadata {
 
     public void setVersion(long version) {
         this.version = version;
+    }
+
+    public String getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(String projectId) {
+        this.projectId = projectId;
     }
 
     @Override

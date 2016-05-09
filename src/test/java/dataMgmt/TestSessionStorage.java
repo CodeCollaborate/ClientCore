@@ -11,7 +11,7 @@ import java.util.Observer;
 public class TestSessionStorage {
     @Test
     public void testChangeAndRemoveProjectUserStatusNotify() {
-        SessionStorage storage = SessionStorage.getInstance();
+        SessionStorage storage = DataManager.getInstance().getSessionStorage();
         final int[] access = {0};
         Observer obs = (o, arg) -> access[0]++;
         storage.addObserver(obs);
@@ -23,7 +23,7 @@ public class TestSessionStorage {
 
     @Test
     public void testAuthToken() {
-        SessionStorage storage = SessionStorage.getInstance();
+        SessionStorage storage = DataManager.getInstance().getSessionStorage();
         Assert.assertEquals(null, storage.getAuthenticationToken());
         storage.setAuthenticationToken("Hello");
         Assert.assertEquals("Hello", storage.getAuthenticationToken());

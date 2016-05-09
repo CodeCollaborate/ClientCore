@@ -50,28 +50,28 @@ public class TestMetadataManager {
         }
         expectedMetadata.setFiles(fileMetadatas);
 
-        ProjectMetadata resultMetadata = MetadataManager.getInstance().getProjectMetadataFileSpecific(testMetadata);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testMetadata);
         Assert.assertEquals(expectedMetadata, resultMetadata);
     }
 
     @Test
     public void testGetProjectMetadataEmpty() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
-        ProjectMetadata resultMetadata = MetadataManager.getInstance().getProjectMetadataFileSpecific(testEmptyMetadata);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testEmptyMetadata);
         Assert.assertEquals(expectedMetadata, resultMetadata);
     }
 
     @Test
     public void testGetProjectMetadataMalformed() {
         MetadataManager.logger = mock(Logger.class);
-        MetadataManager.getInstance().getProjectMetadataFileSpecific(testMalformedMetadata);
+        DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testMalformedMetadata);
         verify(MetadataManager.logger, times(1)).error("IO Error on metadata read from path: "+testMalformedMetadata);
         MetadataManager.logger = LoggerFactory.getLogger("metadata");
     }
 
     @Test
     public void testNullRootPath() {
-        ProjectMetadata metadata = MetadataManager.getInstance().getProjectMetadata(null);
+        ProjectMetadata metadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(null);
         Assert.assertEquals(null, metadata);
     }
 
@@ -83,7 +83,7 @@ public class TestMetadataManager {
         expectedMetadata.setOwner("Me");
         expectedMetadata.setFiles(new FileMetadata[0]);
 
-        ProjectMetadata resultMetadata = MetadataManager.getInstance().getProjectMetadataFileSpecific(testNoFilesMetadata);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testNoFilesMetadata);
         Assert.assertEquals(expectedMetadata, resultMetadata);
     }
 
@@ -97,7 +97,7 @@ public class TestMetadataManager {
         files[0] = new FileMetadata();
         sampleMetadata.setFiles(files);
 
-        MetadataManager.getInstance().writeProjectMetadataFileSpecific(sampleMetadata, testWriteDestination);
+        DataManager.getInstance().getMetadataManager().writeProjectMetadataFileSpecific(sampleMetadata, testWriteDestination);
         File file = new File(testWriteDestination);
         ProjectMetadata result = null;
         if (!file.exists())
@@ -120,7 +120,7 @@ public class TestMetadataManager {
         sampleMetadata.setOwner("Greg");
         sampleMetadata.setFiles(new FileMetadata[0]);
 
-        MetadataManager.getInstance().writeProjectMetadataFileSpecific(sampleMetadata, testWriteDestination);
+        DataManager.getInstance().getMetadataManager().writeProjectMetadataFileSpecific(sampleMetadata, testWriteDestination);
         File file = new File(testWriteDestination);
         ProjectMetadata result = null;
         if (!file.exists())

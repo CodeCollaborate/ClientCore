@@ -12,7 +12,5 @@ public class TestFixedSizeWritingQueue {
     @Test
     public void testOfferPatchSingle() {
 
-        FixedSizeWritingQueue queue = new FixedSizeWritingQueue();
-
     }
 }

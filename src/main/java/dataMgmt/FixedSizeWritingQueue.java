@@ -20,33 +20,52 @@ public class FixedSizeWritingQueue implements IFileWritingQueue {
 
     private LinkedList<Patch> queue;
 
-    private Object lock;
-    private boolean writing = false;
+    private volatile boolean writing = false;
 
     public FixedSizeWritingQueue() {
         queue = new LinkedList<>();
     }
 
-    public boolean offerPatch(Patch e, String absolutePath) {
+    public boolean offerPatch(Patch patches, String absolutePath) {
         if (!absolutePath.equals(this.absolutePath))
             this.absolutePath = absolutePath;
 
-        if (queue.size() + 1 < FileContentWriter.WRITE_THRESHOLD)
-            return queue.offer(e);
+        boolean success = queue.offer(patches);
 
-        synchronized (lock) {
-            if (writing)
-                return queue.offer(e);
+        writePatchestoFileIfNeeded();
 
-            List<Patch> patchesToWrite = new ArrayList<>();
-            for (int i = 0; i < queue.size(); i++) {
-                patchesToWrite.add(queue.get(i));
-            }
+        return success;
+    }
 
-            writing = true;
-            new Thread(new FileWritingTask(absolutePath, patchesToWrite)).start();
+    public boolean offerPatch(Patch[] patches, String absolutePath) {
+        if (!absolutePath.equals(this.absolutePath))
+            this.absolutePath = absolutePath;
+
+        boolean success = true;
+
+        for (Patch patch : patches) {
+            success = success && queue.offer(patch);
         }
-        return queue.offer(e);
+
+        writePatchestoFileIfNeeded();
+
+        return success;
+    }
+
+    private void writePatchestoFileIfNeeded() {
+        if (queue.size() >= FileContentWriter.WRITE_THRESHOLD) {
+            synchronized (this) {
+                if (!writing) {
+                    List<Patch> patchesToWrite = new ArrayList<>();
+                    for (int i = 0; i < queue.size(); i++) {
+                        patchesToWrite.add(queue.get(i));
+                    }
+
+                    writing = true;
+                    new Thread(new FileWritingTask(absolutePath, patchesToWrite)).start();
+                }
+            }
+        }
     }
 
     private class FileWritingTask implements Runnable {
@@ -67,7 +86,7 @@ public class FixedSizeWritingQueue implements IFileWritingQueue {
                 fileContents = new Scanner(file).useDelimiter("\\Z").next();
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
-                synchronized (lock) {
+                synchronized (this) {
                     writing = false;
                 }
                 return;
@@ -81,13 +100,13 @@ public class FixedSizeWritingQueue implements IFileWritingQueue {
                 writer.close();
             } catch (IOException e) {
                 e.printStackTrace();
-                synchronized (lock) {
+                synchronized (this) {
                     writing = false;
                 }
                 return;
             }
 
-            synchronized (lock) {
+            synchronized (this) {
                 patches.forEach(s -> queue.remove(s));
                 writing = false;
             }

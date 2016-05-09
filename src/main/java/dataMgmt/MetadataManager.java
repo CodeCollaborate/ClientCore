@@ -17,19 +17,15 @@ import java.util.Map;
 public class MetadataManager {
 
     private static final String CONFIG_FILE_NAME = "CodeCollaborateConfig.json";
-
-    // Logger
-    protected static Logger logger = LoggerFactory.getLogger("metadata");
-
     // Json Object Mapper
     private static final ObjectMapper mapper = new ObjectMapper();
-
-    public static final int WRITE_THRESHOLD = 5;
-
+    // Logger
+    protected static Logger logger = LoggerFactory.getLogger("metadata");
     private static MetadataManager instance;
 
     /**
      * Get the active instance of the MetadataManager class.
+     *
      * @return the instance of the MetadataManager class
      */
     public static MetadataManager getInstance() {
@@ -43,46 +39,90 @@ public class MetadataManager {
         return instance;
     }
 
+    /**
+     * Metadata Management
+     */
+
     private Map<String, ProjectMetadata> projectCache = new HashMap<>();
+    private Map<Long, String> projectFilePathCache = new HashMap<>();
     private Map<Long, FileMetadata> fileCache = new HashMap<>();
 
     /**
+     * Returns the cached root path of a project
+     * Assumes the project metadata has been loaded in memory
+     *
+     * @param projectId the id of the project to look up
+     * @return the root path of the project.
+     */
+    public String getProjectPath(long projectId) {
+        return projectFilePathCache.get(projectId);
+    }
+
+    /**
+     * Returns the metadata object for the project with the given id.
+     * Assumes the project metadata has been loaded in memory
+     *
+     * @param projectId the id of the project to look up
+     * @return the ProjectMetadata object for the given root path's project, or null
+     * if none exists
+     */
+    public ProjectMetadata getProjectMetadata(long projectId) {
+        if (projectFilePathCache.get(projectId) == null) {
+            return null;
+        }
+        return getProjectMetadataFileSpecific(projectFilePathCache.get(projectId));
+    }
+
+    /**
      * Returns the metadata object for the project at the given root path.
+     *
      * @param rootPath the absolute path of the root directory of the project
      * @return the ProjectMetadata object for the given root path's project, or null
-     *          if none exists
+     * if none exists
      */
     public ProjectMetadata getProjectMetadata(String rootPath) {
-        return getProjectMetadataFileSpecific(rootPath+ CONFIG_FILE_NAME);
+        ProjectMetadata metadata = getProjectMetadataFileSpecific(rootPath + CONFIG_FILE_NAME);
+
+        if (metadata == null) {
+            return null;
+        }
+
+        projectFilePathCache.put(metadata.getProjectId(), rootPath);
+        return metadata;
+
     }
 
     // business logic separated for testing purposes
     protected ProjectMetadata getProjectMetadataFileSpecific(String filePath) {
-        if (projectCache.containsKey(filePath))
+        if (projectCache.containsKey(filePath)) {
             return projectCache.get(filePath);
+        }
         File file = new File(filePath);
-        if (!file.exists())
+        if (!file.exists()) {
             return null;
+        }
         ProjectMetadata metadata;
         try {
             metadata = mapper.readValue(file, ProjectMetadata.class);
         } catch (IOException e) {
-            logger.error("IO Error on metadata read from path: "+filePath);
+            logger.error("IO Error on metadata read from path: " + filePath);
             return null;
         }
         projectCache.put(filePath, metadata);
-        for (FileMetadata f : metadata.getFiles())
+        for (FileMetadata f : metadata.getFiles()) {
             fileCache.put(f.getFileId(), f);
+        }
         return metadata;
     }
 
     /**
      * Writes the metadata object for the project at the given path.
+     *
      * @param metadata the ProjectMetadata object to write
      * @param rootPath the root path of the project
      */
     public void writeProjectMetadata(ProjectMetadata metadata, String rootPath) {
-        writeProjectMetadataFileSpecific(metadata, rootPath+ CONFIG_FILE_NAME);
+        writeProjectMetadataFileSpecific(metadata, rootPath + CONFIG_FILE_NAME);
     }
 
     // business logic separated for testing purposes
@@ -96,13 +136,13 @@ public class MetadataManager {
         try {
             file.createNewFile();
         } catch (IOException e) {
-            logger.error("IO Error on file creation: "+filePath);
+            logger.error("IO Error on file creation: " + filePath);
             return;
         }
         try {
             mapper.writeValue(file, metadata);
         } catch (IOException e) {
-            logger.error("IO Error on metadata write to file: "+filePath);
+            logger.error("IO Error on metadata write to file: " + filePath);
         }
     }
 

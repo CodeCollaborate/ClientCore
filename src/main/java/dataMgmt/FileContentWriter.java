@@ -3,6 +3,7 @@ package dataMgmt;
 import patching.Patch;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,13 +36,15 @@ public class FileContentWriter {
         fileBuffers = new HashMap<>();
     }
 
-    public void enqueuePatchForWriting(long fileId, String absolutePath, Patch patch) {
+    public void enqueuePatchesForWriting(long fileId, String absolutePath, List<Patch> patches) {
         synchronized (FileContentWriter.class) {
             if (!fileBuffers.containsKey(fileId))
                 fileBuffers.put(fileId, new FixedSizeWritingQueue());
 
             IFileWritingQueue fsq = fileBuffers.get(fileId);
-            fsq.offerPatch(patch, absolutePath);
+            for (Patch patch : patches){
+                fsq.offerPatch(patch, absolutePath);
+            }
         }
     }
 }

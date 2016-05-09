@@ -7,5 +7,6 @@ import patching.Patch;
  */
 public interface IFileWritingQueue {
 
-    boolean offerPatch(Patch e, String absolutePath);
+    boolean offerPatch(Patch patches, String absolutePath);
+    boolean offerPatch(Patch[] patches, String absolutePath);
 }

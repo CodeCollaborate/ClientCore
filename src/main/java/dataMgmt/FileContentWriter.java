@@ -1,8 +1,9 @@
 package dataMgmt;
 
-import dataMgmt.models.Patch;
+import patching.Patch;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by fahslaj on 5/5/2016.
@@ -28,13 +29,13 @@ public class FileContentWriter {
         return instance;
     }
 
-    private Map<String, IFileWritingQueue> fileBuffers;
+    private Map<Long, IFileWritingQueue> fileBuffers;
 
     private FileContentWriter() {
         fileBuffers = new HashMap<>();
     }
 
-    public void enqueuePatchForWriting(String fileId, String absolutePath, Patch patch) {
+    public void enqueuePatchForWriting(long fileId, String absolutePath, Patch patch) {
         synchronized (FileContentWriter.class) {
             if (!fileBuffers.containsKey(fileId))
                 fileBuffers.put(fileId, new FixedSizeWritingQueue());

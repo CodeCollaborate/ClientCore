@@ -1,6 +1,6 @@
 package dataMgmt;
 
-import dataMgmt.models.Patch;
+import patching.Patch;
 
 /**
  * Created by fahslaj on 5/7/2016.

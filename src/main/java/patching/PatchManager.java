@@ -1,7 +1,5 @@
 package patching;
 
-import dataMgmt.models.Patch;
-
 import java.util.List;
 
 /**

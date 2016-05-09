@@ -1,6 +1,6 @@
 package dataMgmt;
 
-import dataMgmt.models.Patch;
+import patching.Patch;
 import patching.PatchManager;
 
 import java.io.File;

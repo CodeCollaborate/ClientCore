@@ -1,6 +1,7 @@
 package dataMgmt;
 
 import patching.Patch;
+import patching.PatchManager;
 
 import java.util.HashMap;
 import java.util.List;
@@ -11,35 +12,20 @@ import java.util.Map;
  */
 public class FileContentWriter {
 
-    public static final int WRITE_THRESHOLD = 5;
-
-    private static FileContentWriter instance;
-
-    /**
-     * Get the active instance of the FileContentWriter class.
-     * @return the instance of the FileContentWriter class
-     */
-    public static FileContentWriter getInstance() {
-        if (instance == null) {
-            synchronized (FileContentWriter.class) {
-                if (instance == null) {
-                    instance = new FileContentWriter();
-                }
-            }
-        }
-        return instance;
-    }
+    static final int WRITE_THRESHOLD = 5;
 
     private Map<Long, IFileWritingQueue> fileBuffers;
+    private PatchManager patchManager;
 
-    private FileContentWriter() {
+    protected FileContentWriter(PatchManager patchManager) {
         fileBuffers = new HashMap<>();
+        this.patchManager = patchManager;
     }
 
     public void enqueuePatchesForWriting(long fileId, String absolutePath, List<Patch> patches) {
         synchronized (FileContentWriter.class) {
             if (!fileBuffers.containsKey(fileId))
-                fileBuffers.put(fileId, new FixedSizeWritingQueue());
+                fileBuffers.put(fileId, new FixedSizeWritingQueue(patchManager));
 
             IFileWritingQueue fsq = fileBuffers.get(fileId);
             for (Patch patch : patches){

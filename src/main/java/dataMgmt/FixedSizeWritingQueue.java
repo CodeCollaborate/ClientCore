@@ -19,11 +19,13 @@ public class FixedSizeWritingQueue implements IFileWritingQueue {
     private String absolutePath;
 
     private LinkedList<Patch> queue;
+    private PatchManager patchManager;
 
     private volatile boolean writing = false;
 
-    public FixedSizeWritingQueue() {
+    public FixedSizeWritingQueue(PatchManager patchManager) {
         queue = new LinkedList<>();
+        this.patchManager = patchManager;
     }
 
     public boolean offerPatch(Patch patches, String absolutePath) {
@@ -91,8 +93,7 @@ public class FixedSizeWritingQueue implements IFileWritingQueue {
                 }
                 return;
             }
-            PatchManager manager = PatchManager.getInstance();
-            String resultContents = manager.applyPatch(fileContents, patches);
+            String resultContents = patchManager.applyPatch(fileContents, patches);
             try {
                 FileWriter writer = new FileWriter(file);
                 writer.write(resultContents);

@@ -21,23 +21,6 @@ public class MetadataManager {
     private static final ObjectMapper mapper = new ObjectMapper();
     // Logger
     protected static Logger logger = LoggerFactory.getLogger("metadata");
-    private static MetadataManager instance;
-
-    /**
-     * Get the active instance of the MetadataManager class.
-     *
-     * @return the instance of the MetadataManager class
-     */
-    public static MetadataManager getInstance() {
-        if (instance == null) {
-            synchronized (FileContentWriter.class) {
-                if (instance == null) {
-                    instance = new MetadataManager();
-                }
-            }
-        }
-        return instance;
-    }
 
     /**
      * Metadata Management
@@ -46,6 +29,10 @@ public class MetadataManager {
     private Map<String, ProjectMetadata> projectCache = new HashMap<>();
     private Map<Long, String> projectFilePathCache = new HashMap<>();
     private Map<Long, FileMetadata> fileCache = new HashMap<>();
+
+    protected MetadataManager() {
+
+    }
 
     /**
      * Returns the cached root path of a project

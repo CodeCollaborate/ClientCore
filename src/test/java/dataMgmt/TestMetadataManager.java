@@ -70,6 +70,12 @@ public class TestMetadataManager {
     }
 
     @Test
+    public void testNullRootPath() {
+        ProjectMetadata metadata = MetadataManager.getInstance().getProjectMetadata(null);
+        Assert.assertEquals(null, metadata);
+    }
+
+    @Test
     public void testNoFilesMetadata() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
         expectedMetadata.setProjectId(12948745);

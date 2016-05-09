@@ -43,17 +43,19 @@ public class SessionStorage extends Observable {
 
     // notifyObservers() is called to prompt the gui to change online displays
     public void changeProjectUserStatus(String projectUserKey, OnlineStatus status) {
-        synchronized (SessionStorage.class) {
+        synchronized (this) {
             projectUserStatus.put(projectUserKey, status);
         }
-        notifyObservers();
+        setChanged();
+        notifyObservers(projectUserStatus);
     }
 
     // notifyObservers() is called to prompt the gui to change online displays
     public void removeProjectUserStatus(String projectUserKey) {
-        synchronized (SessionStorage.class) {
+        synchronized (this) {
             projectUserStatus.remove(projectUserKey);
         }
-        notifyObservers();
+        setChanged();
+        notifyObservers(projectUserStatus);
     }
 }

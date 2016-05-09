@@ -109,6 +109,9 @@ public class MetadataManager {
             return null;
         }
         projectCache.put(filePath, metadata);
+        if (metadata.getFiles() == null) {
+            return metadata;
+        }
         for (FileMetadata f : metadata.getFiles()) {
             fileCache.put(f.getFileId(), f);
         }

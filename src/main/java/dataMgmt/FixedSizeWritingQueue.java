@@ -68,7 +68,7 @@ public class FixedSizeWritingQueue implements IFileWritingQueue {
         }
     }
 
-    private class FileWritingTask implements Runnable {
+    protected class FileWritingTask implements Runnable {
 
         private String filePath;
         private List<Patch> patches;

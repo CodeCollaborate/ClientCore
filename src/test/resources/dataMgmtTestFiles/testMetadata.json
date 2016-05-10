@@ -1,0 +1,22 @@
+{
+  "ProjectID": 10248523,
+  "Name": "testProject",
+  "Owner": "Austin",
+  "Files": [
+    {
+      "FileID": 123,
+      "FilePath": "./testClass.java",
+      "Version": 184
+    },
+    {
+      "FileID": 456,
+      "FilePath": "./otherStuff.txt",
+      "Version": 1
+    },
+    {
+      "FileID": 789,
+      "FilePath": "./weirdFile.dank",
+      "Version": 56
+    }
+  ]
+}

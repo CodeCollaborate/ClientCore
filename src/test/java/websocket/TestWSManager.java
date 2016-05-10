@@ -39,9 +39,9 @@ public class TestWSManager {
     public void testRegisterAndDeregisterNotificationHandler() {
         WSManager manager = new WSManager(new ConnectionConfig("hi", true, 2));
         INotificationHandler handler = mock(INotificationHandler.class);
-        manager.registerNotificationHandler("Resource.Method", handler);
+        manager.registerNotificationHandler("Resource", "Method", handler);
         Assert.assertEquals(handler, manager.notificationHandlerHashMap.get("Resource.Method"));
-        manager.deregisterNotificationHandler("Resource.Method");
+        manager.deregisterNotificationHandler("Resource", "Method");
         Assert.assertEquals(null, manager.notificationHandlerHashMap.get("Resource.Method"));
     }
 
@@ -210,7 +210,7 @@ public class TestWSManager {
         WSConnection nullConn = mock(WSConnection.class);
         WSManager manager = new WSManager(nullConn);
         INotificationHandler mockHandler = mock(INotificationHandler.class);
-        manager.registerNotificationHandler("TestResource.TestMethod", mockHandler);
+        manager.registerNotificationHandler("TestResource", "TestMethod", mockHandler);
         manager.handleMessage(message);
         verify(mockHandler, times(1)).handleNotification(anyObject());
     }
@@ -282,7 +282,7 @@ public class TestWSManager {
             }
         };
 
-        manager.registerNotificationHandler("TestResource.TestMethod", testHandler);
+        manager.registerNotificationHandler("TestResource", "TestMethod", testHandler);
 
         try {
             conn.connect();

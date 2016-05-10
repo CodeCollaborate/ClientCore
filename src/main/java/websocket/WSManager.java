@@ -45,20 +45,22 @@ public class WSManager implements IMessageHandler {
     /**
      * Register an INotificationHandler to receive notifications from the server.
      *
-     * @param type
+     * @param resource
+     * @param method
      * @param handler
      */
-    public void registerNotificationHandler(String type, INotificationHandler handler) {
-        notificationHandlerHashMap.put(type, handler);
+    public void registerNotificationHandler(String resource, String method, INotificationHandler handler) {
+        notificationHandlerHashMap.put(resource + '.' + method, handler);
     }
 
     /**
      * Deregister the INotificationHandler saved for the given type of notification.
      *
-     * @param type
+     * @param resource
+     * @param method
      */
-    public void deregisterNotificationHandler(String type) {
-        notificationHandlerHashMap.remove(type);
+    public void deregisterNotificationHandler(String resource, String method) {
+        notificationHandlerHashMap.remove(resource + '.' + method);
     }
 
     /**
@@ -96,7 +98,7 @@ public class WSManager implements IMessageHandler {
         }
         switch (wobject.getType()) {
             case ServerMessageWrapper.TYPE_NOTIFICATION:
-                pareseNotification(wobject);
+                parseNotification(wobject);
                 break;
             case ServerMessageWrapper.TYPE_RESPONSE:
                 parseResponse(wobject);
@@ -104,7 +106,7 @@ public class WSManager implements IMessageHandler {
         }
     }
 
-    private void pareseNotification(ServerMessageWrapper wobject) {
+    private void parseNotification(ServerMessageWrapper wobject) {
         Notification an;
         try {
             an = mapper.convertValue(wobject.getMessageJson(), Notification.class);

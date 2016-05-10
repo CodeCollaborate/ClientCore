@@ -12,27 +12,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Manages the metadata of projects and files.
  * Created by fahslaj on 5/2/2016.
  */
 public class MetadataManager {
 
+    // The default name of the configuration file located at a project's root
     private static final String CONFIG_FILE_NAME = "CodeCollaborateConfig.json";
     // Json Object Mapper
     private static final ObjectMapper mapper = new ObjectMapper();
     // Logger
+
     protected static Logger logger = LoggerFactory.getLogger("metadata");
-
-    /**
-     * Metadata Management
-     */
-
+    // stores recently read project metadata
     private Map<String, ProjectMetadata> projectCache = new HashMap<>();
+    // stores the most recent file paths for specific projects
     private Map<Long, String> projectFilePathCache = new HashMap<>();
+    // stores recently read file metadata
     private Map<Long, FileMetadata> fileCache = new HashMap<>();
-
-    protected MetadataManager() {
-
-    }
 
     /**
      * Returns the cached root path of a project
@@ -136,6 +133,11 @@ public class MetadataManager {
         }
     }
 
+    /**
+     * Looks up file metadata based on the given file id
+     * @param fileId the file id of the file to look up
+     * @return the file metadata
+     */
     public FileMetadata getFileMetadata(long fileId) {
         return fileCache.get(fileId);
     }

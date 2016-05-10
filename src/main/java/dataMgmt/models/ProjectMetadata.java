@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Arrays;
 
 /**
+ * The structure for project metadata read from the project's root.
  * Created by fahslaj on 5/2/2016.
  */
 public class ProjectMetadata {

@@ -3,6 +3,7 @@ package dataMgmt.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
+ * The structure for file metadata read from the project's metadata.
  * Created by fahslaj on 5/2/2016.
  */
 public class FileMetadata {

@@ -6,11 +6,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.IRequestSendErrorHandler;
 import websocket.IResponseHandler;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Created by fahslaj on 4/14/2016.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Request {
+
+    private static AtomicLong tagGenerator = new AtomicLong(0);
 
     @JsonProperty("Tag")
     protected long tag;
@@ -38,6 +42,20 @@ public class Request {
 
     @JsonIgnore
     private IRequestSendErrorHandler errorHandler;
+
+    public Request(String resource, String method,
+                      IRequestData data, IResponseHandler responseHandler, IRequestSendErrorHandler errorHandler) {
+        this.tag = tagGenerator.getAndIncrement();
+        this.resource = resource;
+        this.method = method;
+        // TODO: get these from the client core based on user info
+        this.senderId = "12345";
+        this.senderToken = "12345";
+        this.timestamp = System.currentTimeMillis();
+        this.data = data;
+        this.responseHandler = responseHandler;
+        this.errorHandler = errorHandler;
+    }
 
     public long getTag() {
         return tag;

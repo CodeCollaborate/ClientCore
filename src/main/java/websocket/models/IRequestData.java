@@ -5,4 +5,5 @@ package websocket.models;
  */
 public interface IRequestData {
     // dank code bruh
+	Request getRequest();
 }

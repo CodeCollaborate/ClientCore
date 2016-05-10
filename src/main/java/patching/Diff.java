@@ -1,7 +1,8 @@
 package patching;
 
-import utils.Utils;
-
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,7 +54,11 @@ public class Diff {
 
         int length = Integer.parseInt(parts[1].substring(1));
 
-        this.changes = Utils.urlDecode(parts[2]);
+        try {
+            this.changes = URLDecoder.decode(parts[2], "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Invalid encoding type provided: UTF-8", e);
+        }
 
         if (this.changes.length() != length) {
             throw new IllegalArgumentException(
@@ -121,7 +126,11 @@ public class Diff {
         sb.append(insertion ? "+" : "-");
         sb.append(changes.length());
         sb.append(":");
-        sb.append(Utils.urlEncode(changes));
+        try {
+            sb.append(URLEncoder.encode(changes, "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Invalid encoding type provided: UTF-8", e);
+        }
 
         return sb.toString();
     }

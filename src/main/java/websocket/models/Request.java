@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Request {
 
     private static AtomicLong tagGenerator = new AtomicLong(0);
+    private Request instance;
 
     @JsonProperty("Tag")
     protected long tag;
@@ -43,6 +44,20 @@ public class Request {
     @JsonIgnore
     private IRequestSendErrorHandler errorHandler;
 
+    /**
+     * Default Request constructor that should only be used for testing requests.
+     */
+    public Request() {
+    	this.instance = this;
+    	this.tag = tagGenerator.getAndIncrement();
+        this.resource = "Default";
+        this.method = "Default";
+        // TODO: get these from the client core based on user info
+        this.senderId = "12345";
+        this.senderToken = "12345";
+        this.timestamp = System.currentTimeMillis();
+    }
+    
     public Request(String resource, String method,
                       IRequestData data, IResponseHandler responseHandler, IRequestSendErrorHandler errorHandler) {
         this.tag = tagGenerator.getAndIncrement();

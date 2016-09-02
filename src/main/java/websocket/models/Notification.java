@@ -15,6 +15,9 @@ public class Notification extends AbstractServerMessage {
     @JsonProperty("Method")
     protected String method;
 
+    @JsonProperty("ResourceID")
+    protected long resourceID;
+
     public String getResource() {
         return resource;
     }
@@ -29,5 +32,13 @@ public class Notification extends AbstractServerMessage {
 
     public void setMethod(String method) {
         this.method = method;
+    }
+
+    public long getResourceID() {
+        return resourceID;
+    }
+
+    public void setResourceID(long resourceID) {
+        this.resourceID = resourceID;
     }
 }

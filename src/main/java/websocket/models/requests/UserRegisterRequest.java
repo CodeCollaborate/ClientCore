@@ -4,24 +4,24 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.IRequestData;
 import websocket.models.Request;
-//import
+
 
 public class UserRegisterRequest implements IRequestData {
 
     @JsonProperty("Username")
-	protected String username;
+    protected String username;
 
     @JsonProperty("FirstName")
-	protected String firstName;
+    protected String firstName;
 
     @JsonProperty("LastName")
-	protected String lastName;
+    protected String lastName;
 
     @JsonProperty("Email")
-	protected String email;
+    protected String email;
 
     @JsonProperty("Password")
-	protected String password;
+    protected String password;
 
     @JsonIgnore
 	@Override

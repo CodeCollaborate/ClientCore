@@ -22,12 +22,12 @@ public class FileChangeRequest implements IRequestData {
 	public Request getRequest() {
 		// TODO Auto-generated method stub
 		return new Request("File", "Change", this, 
-				(response) -> {
-                    System.out.println("Received file change response: " + response);
-                },
-                () -> {
-                    System.out.println("Failed to send file change request to the server.");
-                }) {
+			(response) -> {
+                System.out.println("Received file change response: " + response);
+            },
+            () -> {
+                System.out.println("Failed to send file change request to the server.");
+            }) {
 			
 		};
 	}

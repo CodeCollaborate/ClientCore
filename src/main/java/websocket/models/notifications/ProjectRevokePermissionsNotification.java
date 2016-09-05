@@ -1,17 +1,13 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.INotificationData;
 
-import websocket.models.Notification;
-
-public class ProjectRevokePermissionsNotification extends Notification {
+public class ProjectRevokePermissionsNotification implements INotificationData {
 	@JsonProperty("RevokeUsername")
-	public String revokeUsername;
+	public final String revokeUsername;
 
-	public ProjectRevokePermissionsNotification(String revokeUsername, long projectID) {
+	public ProjectRevokePermissionsNotification(@JsonProperty("RevokeUsername") String revokeUsername) {
 		this.revokeUsername = revokeUsername;
-		super.setResource("Project");
-		super.setMethod("RevokePermissions");
-		super.setResourceID(projectID);
 	}
 }

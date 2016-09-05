@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Request {
+    private static AtomicLong tagGen = new AtomicLong();
 
     private static AtomicLong tagGenerator = new AtomicLong(0);
     private Request instance;
@@ -64,8 +65,8 @@ public class Request {
         this.resource = resource;
         this.method = method;
         // TODO: get these from the client core based on user info
-        this.senderId = "12345";
-        this.senderToken = "12345";
+        this.senderId = null;
+        this.senderToken = null;
         this.timestamp = System.currentTimeMillis();
         this.data = data;
         this.responseHandler = responseHandler;
@@ -76,24 +77,12 @@ public class Request {
         return tag;
     }
 
-    public void setTag(long tag) {
-        this.tag = tag;
-    }
-
     public String getResource() {
         return resource;
     }
 
-    public void setResource(String resource) {
-        this.resource = resource;
-    }
-
     public String getMethod() {
         return method;
-    }
-
-    public void setMethod(String method) {
-        this.method = method;
     }
 
     public String getSenderId() {

@@ -1,17 +1,13 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.INotificationData;
 
-import websocket.models.Notification;
-
-public class FileMoveNotification extends Notification {
+public class FileMoveNotification implements INotificationData {
 	@JsonProperty("NewPath")
-	public String newPath;
+	public final String newPath;
 
-	public FileMoveNotification(String newPath, long fileID) {
+	public FileMoveNotification(@JsonProperty("NewPath") String newPath) {
 		this.newPath = newPath;
-		super.setResource("File");
-		super.setMethod("Move");
-		super.setResourceID(fileID);
 	}
 }

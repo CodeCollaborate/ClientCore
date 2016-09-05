@@ -1,18 +1,14 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import websocket.models.File;
-import websocket.models.Notification;
+import websocket.models.INotificationData;
 
-public class FileCreateNotification extends Notification {
-	@JsonProperty("File")
-	public File file;
+public class FileCreateNotification implements INotificationData {
+    @JsonProperty("File")
+    public final File file;
 
-	public FileCreateNotification(File file) {
-		this.file = file;
-		super.setResource("File");
-		super.setMethod("Create");
-		super.setResourceID(file.fileID);
-	}
+    public FileCreateNotification(@JsonProperty("File") File file) {
+        this.file = file;
+    }
 }

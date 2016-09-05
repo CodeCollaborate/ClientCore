@@ -21,6 +21,10 @@ public class WSManager implements IMessageHandler {
     HashMap<String, INotificationHandler> notificationHandlerHashMap;
     // WebSocket connection
     WSConnection socket;
+
+    private String userID;
+    private String userToken;
+
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -28,6 +32,7 @@ public class WSManager implements IMessageHandler {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
         this.socket = new WSConnection(config);
+        socket.registerIncomingMessageHandler(this);
     }
 
     // used for testing
@@ -35,6 +40,11 @@ public class WSManager implements IMessageHandler {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
         this.socket = socket;
+        socket.registerIncomingMessageHandler(this);
+
+        Request request = new Request();
+        request.setErrorHandler(() -> {
+        });
     }
 
     /**
@@ -68,10 +78,17 @@ public class WSManager implements IMessageHandler {
             try {
                 socket.connect();
             } catch (Exception e) {
-                logger.error("WebSocket connection could not connect.");
+                logger.error("WebSocket connection could not connect: " + e.getMessage());
                 throw new ConnectException("Could not connect to WebSocket.");
             }
         }
+
+        // Set authentication information, if available.
+        if (userID != null) {
+            request.setSenderId(userID);
+            request.setSenderToken(userToken);
+        }
+
         String messageText;
         try {
             messageText = mapper.writeValueAsString(request);
@@ -80,6 +97,7 @@ public class WSManager implements IMessageHandler {
             return;
         }
         socket.enqueueMessage(messageText);
+        requestHashMap.put(request.getTag(), request);
     }
 
     @Override
@@ -93,21 +111,33 @@ public class WSManager implements IMessageHandler {
         }
         switch (wobject.getType()) {
             case ServerMessageWrapper.TYPE_NOTIFICATION:
-                parseNotification(wobject);
+                handleNotification(wobject);
                 break;
             case ServerMessageWrapper.TYPE_RESPONSE:
-                parseResponse(wobject);
+                handleResponse(wobject);
                 break;
         }
     }
 
-    private void parseNotification(ServerMessageWrapper wobject) {
+    private void handleNotification(ServerMessageWrapper wobject) {
         Notification an;
         try {
             an = mapper.convertValue(wobject.getMessageJson(), Notification.class);
         } catch (IllegalArgumentException e) {
             String notificationMessage = wobject.getMessageJson().toString();
-            logger.error("Malformed notification from server: " + notificationMessage);
+            logger.error(String.format("Malformed notification from server: %s\n%s", notificationMessage, e.toString()));
+            return;
+        }
+
+        // parse body of notification
+        try {
+            an.parseData();
+        } catch (JsonProcessingException e) {
+            String notificationData = an.getJsonData().toString();
+            logger.error(String.format("Malformed notification data from server: %s\n%s", notificationData, e.toString()));
+            return;
+        } catch (ClassNotFoundException e) {
+            logger.error(String.format("Notification data class not found: \n%s", e.toString()));
             return;
         }
 
@@ -121,13 +151,13 @@ public class WSManager implements IMessageHandler {
         handler.handleNotification(an);
     }
 
-    private void parseResponse(ServerMessageWrapper wobject) {
+    private void handleResponse(ServerMessageWrapper wobject) {
         Response resp;
         try {
             resp = mapper.convertValue(wobject.getMessageJson(), Response.class);
         } catch (IllegalArgumentException e) {
             String responseMessage = wobject.getMessageJson().toString();
-            logger.error("Malformed response from server: " + responseMessage);
+            logger.error(String.format("Malformed response from server: %s\n%s", responseMessage, e.toString()));
             return;
         }
         long tag = resp.getTag();
@@ -137,6 +167,19 @@ public class WSManager implements IMessageHandler {
             logger.warn("Received extraneous response from server: " + responseMessage);
             return;
         }
+
+        // parse body of response based on request type
+        try {
+            resp.parseData(request.getData().getClass());
+        } catch (JsonProcessingException e) {
+            String responseData = resp.getJsonData().toString();
+            logger.error(String.format("Malformed response data from server: %s\n%s", responseData, e.toString()));
+            return;
+        } catch (ClassNotFoundException e) {
+            logger.error(String.format("Response data class not found: \n%s", e.toString()));
+            return;
+        }
+
         IResponseHandler handler = request.getResponseHandler();
         if (handler == null) {
             String responseMessage = wobject.getMessageJson().toString();
@@ -158,5 +201,10 @@ public class WSManager implements IMessageHandler {
         request = requestHashMap.get(request.getTag());
         IRequestSendErrorHandler handler = request.getErrorHandler();
         handler.handleRequestSendError();
+    }
+
+    public void setAuthInfo(String userID, String userToken) {
+        this.userID = userID;
+        this.userToken = userToken;
     }
 }

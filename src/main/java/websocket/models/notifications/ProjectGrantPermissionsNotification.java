@@ -1,21 +1,18 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.INotificationData;
 
-import websocket.models.Notification;
+public class ProjectGrantPermissionsNotification implements INotificationData {
+    @JsonProperty("GrantUsername")
+    public final String grantUsername;
 
-public class ProjectGrantPermissionsNotification extends Notification{
-	@JsonProperty("GrantUsername")
-	public String grantUsername;
-	
-	@JsonProperty("PermissionLevel")
-	public int permissionLevel;
+    @JsonProperty("PermissionLevel")
+    public final int permissionLevel;
 
-	public ProjectGrantPermissionsNotification(String grantUsername, int permissionLevel, long projectID) {
-		this.grantUsername = grantUsername;
-		this.permissionLevel = permissionLevel;
-		super.setResource("Project");
-		super.setMethod("GrantPermissions");
-		super.setResourceID(projectID);
-	}
+    public ProjectGrantPermissionsNotification(@JsonProperty("GrantUsername") String grantUsername,
+                                               @JsonProperty("PermissionLevel") int permissionLevel) {
+        this.grantUsername = grantUsername;
+        this.permissionLevel = permissionLevel;
+    }
 }

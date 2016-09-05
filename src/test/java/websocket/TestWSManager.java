@@ -276,7 +276,7 @@ public class TestWSManager {
 
         final String[] testText = new String[1];
         INotificationHandler testHandler = notification -> {
-            testText[0] = notification.getData().toString();
+            testText[0] = notification.getJsonData().toString();
             synchronized (this) {
                 this.notifyAll();
             }

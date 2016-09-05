@@ -63,6 +63,7 @@ public class WSConnection {
      * @return true if connection request sent successfully, false otherwise.
      */
     public void connect() throws Exception {
+        logger.info(String.format("Connecting to %s", config.getUriString()));
         try {
             if (this.client == null) {
                 this.client = new WebSocketClient();
@@ -92,6 +93,10 @@ public class WSConnection {
         logger.info(String.format("Got connection to %s", session.getRemoteAddress().getHostName()));
         this.session = session;
         setState(State.READY);
+
+        int idleTimeout = 5;
+        logger.info(String.format("Setting websocket idle timeout to %d minutes", idleTimeout));
+        session.setIdleTimeout(TimeUnit.MINUTES.toMillis(idleTimeout));
 
         Thread sendingThread = new Thread(this::messageLoop);
         sendingThread.start();

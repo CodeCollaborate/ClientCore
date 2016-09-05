@@ -4,27 +4,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class File {
 	@JsonProperty("FileID")
-	public long fileID;
-	
-	@JsonProperty("Name")
-	public String fileName;
-	
-	@JsonProperty("RelativePath")
-	public String relativePath;
-	
-	@JsonProperty("Version")
-	public long fileVersion;
-	
-	@JsonProperty("ProjectID")
-	public long projectID;
+	private long fileID;
 
-	public File(long fileID, String fileName, String relativePath, long fileVersion, long projectID) {
+	@JsonProperty("Name")
+	private String fileName;
+
+	@JsonProperty("RelativePath")
+	private String relativePath;
+
+	@JsonProperty("Version")
+	private long fileVersion;
+
+	public File(@JsonProperty("FileID") long fileID,
+				@JsonProperty("Name") String fileName,
+				@JsonProperty("RelativePath") String relativePath,
+				@JsonProperty("Version") long fileVersion) {
 		super();
 		this.fileID = fileID;
 		this.fileName = fileName;
 		this.relativePath = relativePath;
 		this.fileVersion = fileVersion;
-		this.projectID = projectID;
 	}
 
 	public long getFileID() {
@@ -58,14 +57,4 @@ public class File {
 	public void setFileVersion(long fileVersion) {
 		this.fileVersion = fileVersion;
 	}
-
-	public long getProjectID() {
-		return projectID;
-	}
-
-	public void setProjectID(long projectID) {
-		this.projectID = projectID;
-	}
-	
-	
 }

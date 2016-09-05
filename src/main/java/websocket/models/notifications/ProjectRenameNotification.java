@@ -1,19 +1,13 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.INotificationData;
 
-import websocket.models.Notification;
+public class ProjectRenameNotification implements INotificationData {
+    @JsonProperty("NewName")
+    public final String newName;
 
-public class ProjectRenameNotification extends Notification {
-	@JsonProperty("NewName")
-	public String newName;
-
-	public ProjectRenameNotification(String newName, long projectID) {
-		this.newName = newName;
-		super.setResource("Project");
-		super.setMethod("Rename");
-		super.setResourceID(projectID);
-	}
-	
-	
+    public ProjectRenameNotification(@JsonProperty("NewName") String newName) {
+        this.newName = newName;
+    }
 }

@@ -1,12 +1,9 @@
 package websocket.models.notifications;
 
-import websocket.models.Notification;
+import websocket.models.INotificationData;
 
-public class ProjectDeleteNotification extends Notification {
+public class ProjectDeleteNotification implements INotificationData {
 
-	public ProjectDeleteNotification(long projectID) {
-		super.setResource("Project");
-		super.setMethod("Delete");
-		super.setResourceID(projectID);
+	public ProjectDeleteNotification() {
 	}
 }

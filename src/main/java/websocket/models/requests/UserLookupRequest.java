@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -13,7 +14,7 @@ import java.util.List;
 public class UserLookupRequest implements IRequestData {
 
     @JsonProperty("Usernames")
-    protected List<String> username;
+    protected List<String> usernames;
 
     @JsonIgnore
     @Override
@@ -27,7 +28,11 @@ public class UserLookupRequest implements IRequestData {
                 });
     }
 
-    public UserLookupRequest(List<String> username) {
-        this.username = username;
+    public UserLookupRequest(List<String> usernames) {
+        this.usernames = usernames;
+    }
+
+    public UserLookupRequest(String[] usernames) {
+        this.usernames = Arrays.asList(usernames);
     }
 }

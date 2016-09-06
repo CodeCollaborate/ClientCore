@@ -11,10 +11,7 @@ import websocket.models.IRequestData;
 import websocket.models.Request;
 import websocket.models.notifications.*;
 import websocket.models.requests.*;
-import websocket.models.responses.FileChangeResponse;
-import websocket.models.responses.FileCreateResponse;
-import websocket.models.responses.ProjectCreateResponse;
-import websocket.models.responses.UserLoginResponse;
+import websocket.models.responses.*;
 
 import java.net.ConnectException;
 import java.util.concurrent.Semaphore;
@@ -25,13 +22,6 @@ import java.util.concurrent.Semaphore;
 public class IntegrationTest {
     private static final Logger logger = LoggerFactory.getLogger("integrationTest");
 
-    private static final String userID = "testUser";
-    private static final String userPass = "testPass";
-
-    private static final String projectName = "_testProject";
-    private static final String filePath = "test/file/path";
-    private static final String fileName = "_testFile";
-    private static final String fileData = "test data1\ntest data 2";
     private static final WSManager wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
     private static final IRequestSendErrorHandler errHandler = new IRequestSendErrorHandler() {
         @Override
@@ -39,29 +29,58 @@ public class IntegrationTest {
             System.out.println("Failed to send");
         }
     };
+
+    private static final String userID = "testUser";
+    private static final String userPass = "testPass";
+    private static final String userFirstName = "testFirstName";
+    private static final String userLastName = "testLastName";
+    private static final String userEmail = "testEmail@testDomain.com";
+    private static final String fileData = "test data1\ntest data 2";
+    private static String projectName = "_testProject";
+    private static String filePath = "test/file/path";
+    private static String fileName = "_testFile";
     private static int fileVersion = 1;
-    private static int projectID = -1;
-    private static int fileID = -1;
+    private static long projectID = -1;
+    private static long fileID = -1;
     private Request req;
     private IRequestData data;
 
     @Test
     public void integrationTest() throws Exception {
         // Test valid flow
-        testLogin();
-        testCreateProject();
-        testSubscribeToProject();
-        testRenameProject();
-        testCreateFile();
-        testChangeFile();
-        testMoveFile();
-        testChangeFile();
-        testRenameFile();
-        testChangeFile();
-        testDeleteFile();
-        testUnsubscribeFromProject();
-        testSubscribeToProject();
-        testDeleteProject();
+//        testUserRegister();
+        testUserLookup();
+        testUserLogin();
+        testUserProjects();
+        testProjectCreate();
+        testUserProjects();
+        testProjectLookup();
+        testProjectGetFiles(); // should have 0 files
+        testProjectSubscribe();
+        testProjectRename();
+        testFileCreate();
+        testProjectGetFiles(); // should have 1 file
+        testFilePull(); // Should have no changes
+        testFileChange();
+        testFilePull(); // Should have 1 change
+        testFileMove();
+        testFileChange();
+        testFileRename();
+        testFileChange();
+        testFilePull(); // Should have 3 changes
+        testProjectGetFiles(); // should have 1 file
+        testFileDelete();
+        testProjectGetFiles(); // should have 0 files
+        testProjectUnsubscribe();
+        testProjectSubscribe();
+        testProjectLookup();
+        testUserProjects();
+        testProjectDelete();
+        testUserProjects();
+        // ProjectGetOnlineClientsRequest (NOT IMPLEMENTED)
+        // ProjectGrantPermissionsRequest (NOT IMPLEMENTED)
+        // ProjectRevokePermissionsRequest (NOT IMPLEMENTED)
+        // ProjectGetPermissionConstantsRequest (NOT IMPLEMENTED)
 
         // TODO(wongb): Test Project.GrantPermissions and Project.RevokePermissions
 
@@ -73,15 +92,13 @@ public class IntegrationTest {
         Thread.sleep(1000);
     }
 
-    private void testRegister() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nRegistering user"));
+    private void testUserRegister() throws InterruptedException, ConnectException {
+        logger.info(String.format("Registering user"));
         Semaphore waiter = new Semaphore(0);
 
-        data = new UserRegisterRequest(userID, "testFirstName", "testLastName", "testEmail@testDomain.com", userPass);
+        data = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass);
         req = new Request("User", "Register", data, response -> {
             Assert.assertEquals("Failed to register", 200, response.getStatus());
-
-            wsMgr.setAuthInfo(userID, ((UserLoginResponse) response.getData()).getToken());
 
             waiter.release();
         }, errHandler);
@@ -89,17 +106,17 @@ public class IntegrationTest {
         waiter.acquire();
     }
 
-    private void testLogin() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nLogging in"));
+    private void testUserLogin() throws InterruptedException, ConnectException {
+        logger.info(String.format("Logging in"));
         Semaphore waiter = new Semaphore(0);
 
         data = new UserLoginRequest(userID, userPass);
         req = new Request("User", "Login", data, response -> {
             // TODO(wongb) Add login logic for server
-            if (response.getStatus() != 200){
+            if (response.getStatus() != 200) {
                 try {
-                    testRegister();
-                    testLogin();
+                    testUserRegister();
+                    testUserLogin();
                 } catch (InterruptedException | ConnectException e) {
                     Assert.fail("Failed to register and login");
                 }
@@ -116,8 +133,8 @@ public class IntegrationTest {
         waiter.acquire();
     }
 
-    private void testCreateProject() throws ConnectException, InterruptedException {
-        logger.info(String.format("\nCreating project with name %s", projectName));
+    private void testProjectCreate() throws ConnectException, InterruptedException {
+        logger.info(String.format("Creating project with name %s", projectName));
         Semaphore waiter = new Semaphore(0);
 
         data = new ProjectCreateRequest(projectName);
@@ -132,8 +149,8 @@ public class IntegrationTest {
         waiter.acquire();
     }
 
-    private void testSubscribeToProject() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nSubscribing to project with id %d", projectID));
+    private void testProjectSubscribe() throws InterruptedException, ConnectException {
+        logger.info(String.format("Subscribing to project with id %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
         data = new ProjectSubscribeRequest(projectID);
@@ -146,11 +163,13 @@ public class IntegrationTest {
         waiter.acquire();
     }
 
-    private void testRenameProject() throws ConnectException, InterruptedException {
-        logger.info(String.format("\nRenaming project with id %d to %s", projectID, projectName + "_Renamed"));
+    private void testProjectRename() throws ConnectException, InterruptedException {
+        projectName = projectName + "_Renamed";
+
+        logger.info(String.format("Renaming project with id %d to %s", projectID, projectName));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectRenameRequest(projectID, projectName + "_Renamed");
+        data = new ProjectRenameRequest(projectID, projectName);
         req = new Request("Project", "Rename", data, response -> {
             Assert.assertEquals("Failed to rename project", 200, response.getStatus());
 
@@ -158,7 +177,7 @@ public class IntegrationTest {
         }, errHandler);
         wsMgr.registerNotificationHandler("Project", "Rename", notification -> { // Create notification handler
             Assert.assertEquals("ProjectRenameNotification gave wrong project ID", projectID, notification.getResourceID());
-            Assert.assertEquals("ProjectRenameNotification gave wrong value", projectName + "_Renamed", ((ProjectRenameNotification) notification.getData()).newName);
+            Assert.assertEquals("ProjectRenameNotification gave wrong value", projectName, ((ProjectRenameNotification) notification.getData()).newName);
 
             wsMgr.deregisterNotificationHandler("Project", "Rename");
             waiter.release();
@@ -168,8 +187,8 @@ public class IntegrationTest {
         waiter.acquire(2);
     }
 
-    private void testCreateFile() throws ConnectException, InterruptedException {
-        logger.info(String.format("\nCreating file %s in project with id %d", filePath + "/" + fileName, projectID));
+    private void testFileCreate() throws ConnectException, InterruptedException {
+        logger.info(String.format("Creating file %s in project with id %d", filePath + "/" + fileName, projectID));
         Semaphore waiter = new Semaphore(0);
 
         data = new FileCreateRequest(fileName, filePath, projectID, fileData.getBytes());
@@ -188,7 +207,7 @@ public class IntegrationTest {
             }
 
             Assert.assertEquals("FileCreateNotification gave wrong project ID", projectID, notification.getResourceID());
-            Assert.assertEquals("FileCreateNotification gave wrong file name", fileName, ((FileCreateNotification) notification.getData()).file.getFileName());
+            Assert.assertEquals("FileCreateNotification gave wrong file name", fileName, ((FileCreateNotification) notification.getData()).file.getFilename());
             Assert.assertEquals("FileCreateNotification gave wrong file path", filePath, ((FileCreateNotification) notification.getData()).file.getRelativePath());
             Assert.assertEquals("FileCreateNotification gave wrong file ID", fileID, ((FileCreateNotification) notification.getData()).file.getFileID());
             Assert.assertEquals("FileCreateNotification gave wrong file version", fileVersion, ((FileCreateNotification) notification.getData()).file.getFileVersion());
@@ -201,11 +220,13 @@ public class IntegrationTest {
         waiter.acquire(3);
     }
 
-    private void testMoveFile() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nMoving file %d", fileID));
+    private void testFileMove() throws InterruptedException, ConnectException {
+        filePath = filePath + "/new";
+
+        logger.info(String.format("Moving file %d to %s", fileID, filePath));
         Semaphore waiter = new Semaphore(0);
 
-        data = new FileMoveRequest(fileID, filePath + "/new");
+        data = new FileMoveRequest(fileID, filePath);
         req = new Request("File", "Move", data, response -> {
             Assert.assertEquals("Failed to move file", 200, response.getStatus());
 
@@ -213,7 +234,7 @@ public class IntegrationTest {
         }, errHandler);
         wsMgr.registerNotificationHandler("File", "Move", notification -> { // Create notification handler
             Assert.assertEquals("FileMoveNotification gave wrong file ID", fileID, notification.getResourceID());
-            Assert.assertEquals("FileMoveNotification gave wrong changes", filePath + "/new", ((FileMoveNotification) notification.getData()).newPath);
+            Assert.assertEquals("FileMoveNotification gave wrong changes", filePath, ((FileMoveNotification) notification.getData()).newPath);
 
             wsMgr.deregisterNotificationHandler("File", "Move");
             waiter.release();
@@ -223,11 +244,13 @@ public class IntegrationTest {
         waiter.acquire(2);
     }
 
-    private void testRenameFile() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nRenaming file %d", fileID));
+    private void testFileRename() throws InterruptedException, ConnectException {
+        fileName = fileName + "_new";
+
+        logger.info(String.format("Renaming file %d to %s", fileID, fileName));
         Semaphore waiter = new Semaphore(0);
 
-        data = new FileRenameRequest(fileID, fileName + "_new");
+        data = new FileRenameRequest(fileID, fileName);
         req = new Request("File", "Rename", data, response -> {
             Assert.assertEquals("Failed to rename file", 200, response.getStatus());
 
@@ -235,7 +258,7 @@ public class IntegrationTest {
         }, errHandler);
         wsMgr.registerNotificationHandler("File", "Rename", notification -> { // Create notification handler
             Assert.assertEquals("FileRenameNotification gave wrong file ID", fileID, notification.getResourceID());
-            Assert.assertEquals("FileRenameNotification gave wrong new name", fileName + "_new", ((FileRenameNotification) notification.getData()).newName);
+            Assert.assertEquals("FileRenameNotification gave wrong new name", fileName, ((FileRenameNotification) notification.getData()).newName);
 
             wsMgr.deregisterNotificationHandler("File", "Rename");
             waiter.release();
@@ -245,11 +268,11 @@ public class IntegrationTest {
         waiter.acquire(2);
     }
 
-    private void testChangeFile() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nChanging file %d", fileID));
+    private void testFileChange() throws InterruptedException, ConnectException {
+        logger.info(String.format("Changing file %d", fileID));
         Semaphore waiter = new Semaphore(0);
 
-        String[] changes = new String[]{"+5:6:newData"};
+        String[] changes = new String[]{"+5:6:newData" + fileVersion};
         data = new FileChangeRequest(fileID, changes, fileVersion);
         req = new Request("File", "Change", data, response -> {
             Assert.assertEquals("Failed to change file", 200, response.getStatus());
@@ -272,8 +295,29 @@ public class IntegrationTest {
         fileVersion++;
     }
 
-    private void testDeleteFile() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nDeleting file %d", fileID));
+    private void testFilePull() throws InterruptedException, ConnectException {
+        logger.info(String.format("Pulling file %d", fileID));
+        Semaphore waiter = new Semaphore(0);
+
+        String[] changes = new String[fileVersion - 1];
+        for (int i = 0; i < changes.length; i++) {
+            changes[i] = "+5:6:newData" + (i + 1);
+        }
+        data = new FilePullRequest(fileID);
+        req = new Request("File", "Pull", data, response -> {
+            Assert.assertEquals("Failed to pull file", 200, response.getStatus());
+            Assert.assertArrayEquals("FilePullResponse gave wrong base file text", fileData.getBytes(), ((FilePullResponse) response.getData()).getFileBytes());
+            Assert.assertArrayEquals("FilePullResponse gave wrong changes", changes, ((FilePullResponse) response.getData()).getChanges());
+
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        waiter.acquire();
+    }
+
+    private void testFileDelete() throws InterruptedException, ConnectException {
+        logger.info(String.format("Deleting file %d", fileID));
         Semaphore waiter = new Semaphore(0);
 
         data = new FileDeleteRequest(fileID);
@@ -285,6 +329,8 @@ public class IntegrationTest {
         wsMgr.registerNotificationHandler("File", "Delete", notification -> { // Create notification handler
             Assert.assertEquals("FileDeleteNotification gave wrong file ID", fileID, notification.getResourceID());
 
+            fileID = -1;
+
             wsMgr.deregisterNotificationHandler("File", "Delete");
             waiter.release();
         });
@@ -293,8 +339,8 @@ public class IntegrationTest {
         waiter.acquire(2);
     }
 
-    private void testUnsubscribeFromProject() throws InterruptedException, ConnectException {
-        logger.info(String.format("\nUnsubscribing from project with id %d", projectID));
+    private void testProjectUnsubscribe() throws InterruptedException, ConnectException {
+        logger.info(String.format("Unsubscribing from project with id %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
         data = new ProjectUnsubscribeRequest(projectID);
@@ -309,8 +355,8 @@ public class IntegrationTest {
         waiter.acquire();
     }
 
-    private void testDeleteProject() throws ConnectException, InterruptedException {
-        logger.info(String.format("\nDeleting project with ID %d", projectID));
+    private void testProjectDelete() throws ConnectException, InterruptedException {
+        logger.info(String.format("Deleting project with ID %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
         data = new ProjectDeleteRequest(projectID);
@@ -322,11 +368,107 @@ public class IntegrationTest {
         wsMgr.registerNotificationHandler("Project", "Delete", notification -> { // Create notification handler
             Assert.assertEquals("ProjectDeleteNotification gave wrong project ID", projectID, notification.getResourceID());
 
+            projectID = -1;
+
             wsMgr.deregisterNotificationHandler("Project", "Delete");
             waiter.release();
         });
 
         wsMgr.sendRequest(req);
         waiter.acquire(2);
+    }
+
+    private void testProjectGetFiles() throws ConnectException, InterruptedException {
+        logger.info(String.format("Getting files for project with ID %d", projectID));
+        Semaphore waiter = new Semaphore(0);
+
+        data = new ProjectGetFilesRequest(projectID);
+        req = new Request("Project", "GetFiles", data, response -> {
+            Assert.assertEquals("Failed to get files for project", 200, response.getStatus());
+
+            if (fileID != -1) {
+                Assert.assertEquals("Incorrect number of files returned", 1, ((ProjectGetFilesResponse) response.getData()).files.length);
+                Assert.assertEquals("Incorrect file ID returned for file at index 0", fileID, ((ProjectGetFilesResponse) response.getData()).files[0].getFileID());
+                Assert.assertEquals("Incorrect file name returned for file at index 0", fileName, ((ProjectGetFilesResponse) response.getData()).files[0].getFilename());
+                // Disabled until mysql os-filepath fix implemented in server
+//                Assert.assertEquals("Incorrect file path returned for file at index 0", filePath, ((ProjectGetFilesResponse) response.getData()).files[0].getPermissions());
+                Assert.assertEquals("Incorrect file version returned for file at index 0", fileVersion, ((ProjectGetFilesResponse) response.getData()).files[0].getFileVersion());
+            } else {
+                Assert.assertEquals("Incorrect number of files returned", 0, ((ProjectGetFilesResponse) response.getData()).files.length);
+            }
+
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        waiter.acquire();
+    }
+
+    private void testProjectLookup() throws ConnectException, InterruptedException {
+        logger.info(String.format("Looking up project with ID %d", projectID));
+        Semaphore waiter = new Semaphore(0);
+
+        data = new ProjectLookupRequest(new Long[]{projectID});
+        req = new Request("Project", "Lookup", data, response -> {
+            Assert.assertEquals("Failed to lookup project", 200, response.getStatus());
+
+            Assert.assertEquals("Incorrect number of projects returned", 1, ((ProjectLookupResponse) response.getData()).getProjects().length);
+            Assert.assertEquals("Incorrect ProjectID returned", projectID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getProjectID());
+            Assert.assertEquals("Incorrect project name returned", projectName, ((ProjectLookupResponse) response.getData()).getProjects()[0].getName());
+            Assert.assertEquals("Incorrect project permissions count returned", 1, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().size());
+            Assert.assertEquals("Incorrect project permissions name for owner returned", userID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(userID).getUsername());
+            Assert.assertEquals("Incorrect project permissions level for owner returned", 10, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(userID).getPermissionLevel());
+            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", userID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(userID).getGrantedBy());
+
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        waiter.acquire();
+    }
+
+    private void testUserLookup() throws ConnectException, InterruptedException {
+        logger.info(String.format("Looking up user with ID %s", userID));
+        Semaphore waiter = new Semaphore(0);
+
+        data = new UserLookupRequest(new String[]{userID});
+        req = new Request("User", "Lookup", data, response -> {
+            Assert.assertEquals("Failed to lookup user", 200, response.getStatus());
+
+            Assert.assertEquals("Incorrect number of users returned", 1, ((UserLookupResponse) response.getData()).getUsers().length);
+            Assert.assertEquals("Incorrect first name returned", userFirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
+            Assert.assertEquals("Incorrect last name returned", userLastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
+            Assert.assertEquals("Incorrect email returned", userEmail, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
+            Assert.assertEquals("Incorrect username returned", userID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
+
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        waiter.acquire();
+    }
+
+    private void testUserProjects() throws ConnectException, InterruptedException {
+        logger.info(String.format("Looking up projects for user with ID %s", userID));
+        Semaphore waiter = new Semaphore(0);
+
+        data = new UserProjectsRequest();
+        req = new Request("User", "Projects", data, response -> {
+            Assert.assertEquals("Failed to lookup projects for user", 200, response.getStatus());
+
+            if (projectID != -1){
+                Assert.assertEquals("Incorrect number of projects returned", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
+                Assert.assertEquals("Incorrect ProjectID returned", projectID, ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
+                Assert.assertEquals("Incorrect project name returned", projectName, ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
+                Assert.assertEquals("Incorrect project permissions level returned", 10, ((UserProjectsResponse) response.getData()).getProjects()[0].getPermissionLevel());
+            } else {
+                Assert.assertEquals("Incorrect number of projects returned", 0, ((UserProjectsResponse) response.getData()).getProjects().length);
+            }
+
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        waiter.acquire();
     }
 }

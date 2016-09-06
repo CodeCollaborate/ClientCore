@@ -1,5 +1,6 @@
 package websocket.models.requests;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.IRequestData;
 import websocket.models.Request;
@@ -12,6 +13,7 @@ public class ProjectGetFilesRequest implements IRequestData {
     @JsonProperty("ProjectID")
     protected long projectID;
 
+    @JsonIgnore
     @Override
     public Request getRequest() {
         return new Request("Project", "GetFiles", this,

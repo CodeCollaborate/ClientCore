@@ -1,5 +1,6 @@
 package integration;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -15,29 +16,25 @@ import websocket.models.responses.*;
 
 import java.net.ConnectException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
-/**
- * Created by Benedict on 7/25/2016.
- */
 public class IntegrationTest {
     private static final Logger logger = LoggerFactory.getLogger("integrationTest");
-
-    private static final WSManager wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
     private static final IRequestSendErrorHandler errHandler = new IRequestSendErrorHandler() {
         @Override
         public void handleRequestSendError() {
             System.out.println("Failed to send");
         }
     };
-
-    private static final String userID = "testUser";
-    private static final String userPass = "testPass";
-    private static final String userFirstName = "testFirstName";
-    private static final String userLastName = "testLastName";
-    private static final String userEmail = "testEmail@testDomain.com";
-    private static final String fileData = "test data1\ntest data 2";
+    private static final String userID = "_testUser";
+    private static final String userPass = "_testPass";
+    private static final String userFirstName = "_testFirstName";
+    private static final String userLastName = "_testLastName";
+    private static final String userEmail = "_testEmail@testDomain.com";
+    private static final String fileData = "_test data1\ntest data 2";
+    private static WSManager wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
     private static String projectName = "_testProject";
-    private static String filePath = "test/file/path";
+    private static String filePath = "_test/file/path";
     private static String fileName = "_testFile";
     private static int fileVersion = 1;
     private static long projectID = -1;
@@ -45,10 +42,29 @@ public class IntegrationTest {
     private Request req;
     private IRequestData data;
 
+    private static String senderID = "";
+    private static String senderToken = "";
+
+    @After
+    public void cleanup() throws ConnectException, InterruptedException {
+        // Create a new connection - The old one may have died if there were errors.
+        wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
+
+        // TODO(wongb): Redo authentication once server supports it.
+        wsMgr.setAuthInfo(senderID, senderToken);
+
+        // TODO(wongb): Do user cleanup once server supports it.
+        if (projectID != -1) {
+            logger.info("Cleaning project up");
+            // Deleting the project will delete all its files as well
+            wsMgr.sendRequest(new ProjectDeleteRequest(projectID).getRequest());
+        }
+    }
+
     @Test
     public void integrationTest() throws Exception {
         // Test valid flow
-//        testUserRegister();
+        testUserRegister();
         testUserLookup();
         testUserLogin();
         testUserProjects();
@@ -98,12 +114,14 @@ public class IntegrationTest {
 
         data = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass);
         req = new Request("User", "Register", data, response -> {
-            Assert.assertEquals("Failed to register", 200, response.getStatus());
+            // If registration fails, probably is already there.
 
             waiter.release();
         }, errHandler);
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testUserLogin() throws InterruptedException, ConnectException {
@@ -126,11 +144,15 @@ public class IntegrationTest {
             Assert.assertEquals("Failed to log in", 200, response.getStatus());
 
             wsMgr.setAuthInfo(userID, ((UserLoginResponse) response.getData()).getToken());
+            senderID = userID;
+            senderToken = ((UserLoginResponse) response.getData()).getToken();
 
             waiter.release();
         }, errHandler);
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectCreate() throws ConnectException, InterruptedException {
@@ -146,7 +168,9 @@ public class IntegrationTest {
             waiter.release();
         }, errHandler);
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectSubscribe() throws InterruptedException, ConnectException {
@@ -160,7 +184,9 @@ public class IntegrationTest {
             waiter.release();
         }, errHandler);
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectRename() throws ConnectException, InterruptedException {
@@ -184,7 +210,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(2);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testFileCreate() throws ConnectException, InterruptedException {
@@ -201,7 +229,9 @@ public class IntegrationTest {
         }, errHandler);
         wsMgr.registerNotificationHandler("File", "Create", notification -> { // Create notification handler
             try {
-                waiter.acquire();
+                if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+                    Assert.fail("Acquire timed out");
+                }
             } catch (InterruptedException e) {
                 // do nothing
             }
@@ -217,7 +247,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(3);
+        if (!waiter.tryAcquire(3, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testFileMove() throws InterruptedException, ConnectException {
@@ -241,7 +273,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(2);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testFileRename() throws InterruptedException, ConnectException {
@@ -265,7 +299,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(2);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testFileChange() throws InterruptedException, ConnectException {
@@ -291,7 +327,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(2);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
         fileVersion++;
     }
 
@@ -313,7 +351,9 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testFileDelete() throws InterruptedException, ConnectException {
@@ -336,7 +376,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(2);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectUnsubscribe() throws InterruptedException, ConnectException {
@@ -352,7 +394,9 @@ public class IntegrationTest {
         wsMgr.sendRequest(req);
 
         // Wait till subscription is done before doing anything else.
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectDelete() throws ConnectException, InterruptedException {
@@ -375,7 +419,9 @@ public class IntegrationTest {
         });
 
         wsMgr.sendRequest(req);
-        waiter.acquire(2);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectGetFiles() throws ConnectException, InterruptedException {
@@ -401,7 +447,9 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testProjectLookup() throws ConnectException, InterruptedException {
@@ -424,7 +472,9 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testUserLookup() throws ConnectException, InterruptedException {
@@ -445,7 +495,9 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 
     private void testUserProjects() throws ConnectException, InterruptedException {
@@ -456,7 +508,7 @@ public class IntegrationTest {
         req = new Request("User", "Projects", data, response -> {
             Assert.assertEquals("Failed to lookup projects for user", 200, response.getStatus());
 
-            if (projectID != -1){
+            if (projectID != -1) {
                 Assert.assertEquals("Incorrect number of projects returned", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
                 Assert.assertEquals("Incorrect ProjectID returned", projectID, ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
                 Assert.assertEquals("Incorrect project name returned", projectName, ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
@@ -469,6 +521,8 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        waiter.acquire();
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
     }
 }

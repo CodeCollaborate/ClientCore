@@ -2,6 +2,7 @@ package websocket;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import websocket.models.*;
@@ -33,6 +34,8 @@ public class WSManager implements IMessageHandler {
         this.requestHashMap = new HashMap<>();
         this.socket = new WSConnection(config);
         socket.registerIncomingMessageHandler(this);
+
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 
     // used for testing
@@ -45,6 +48,8 @@ public class WSManager implements IMessageHandler {
         Request request = new Request();
         request.setErrorHandler(() -> {
         });
+
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 
     /**
@@ -156,7 +161,7 @@ public class WSManager implements IMessageHandler {
         try {
             resp = mapper.convertValue(wobject.getMessageJson(), Response.class);
         } catch (IllegalArgumentException e) {
-            String responseMessage = wobject.getMessageJson().toString();
+                    String responseMessage = wobject.getMessageJson().toString();
             logger.error(String.format("Malformed response from server: %s\n%s", responseMessage, e.toString()));
             return;
         }

@@ -1,7 +1,6 @@
 package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -9,10 +8,6 @@ import websocket.models.Request;
  * Created by loganga on 5/9/2016
  */
 public class UserProjectsRequest implements IRequestData {
-
-    @JsonProperty("Username")
-    protected String username;
-
     @JsonIgnore
     @Override
     public Request getRequest() {
@@ -25,7 +20,6 @@ public class UserProjectsRequest implements IRequestData {
                 });
     }
 
-    public UserProjectsRequest(String username) {
-        this.username = username;
+    public UserProjectsRequest() {
     }
 }

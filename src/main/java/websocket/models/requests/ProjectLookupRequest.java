@@ -5,13 +5,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Created by loganga on 5/9/2016
  */
 public class ProjectLookupRequest implements IRequestData {
 
-    @JsonProperty("ProjectID")
-    protected long projectID;
+    @JsonProperty("ProjectIDs")
+    protected List<Long> projectIDs;
 
     @JsonIgnore
     @Override
@@ -25,7 +28,11 @@ public class ProjectLookupRequest implements IRequestData {
                 });
     }
 
-    public ProjectLookupRequest(long projectID) {
-        this.projectID = projectID;
+    public ProjectLookupRequest(List<Long> projectIDs) {
+        this.projectIDs = projectIDs;
+    }
+
+    public ProjectLookupRequest(Long[] projectIDs) {
+        this.projectIDs = Arrays.asList(projectIDs);
     }
 }

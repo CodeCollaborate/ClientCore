@@ -130,7 +130,7 @@ public class WSManager implements IMessageHandler {
             an = mapper.convertValue(wobject.getMessageJson(), Notification.class);
         } catch (IllegalArgumentException e) {
             String notificationMessage = wobject.getMessageJson().toString();
-            logger.error(String.format("Malformed notification from server: %s\n%s", notificationMessage, e.toString()));
+            logger.error(String.format("Malformed notification from server: %s", notificationMessage));
             return;
         }
 
@@ -139,10 +139,10 @@ public class WSManager implements IMessageHandler {
             an.parseData();
         } catch (JsonProcessingException e) {
             String notificationData = an.getJsonData().toString();
-            logger.error(String.format("Malformed notification data from server: %s\n%s", notificationData, e.toString()));
+            logger.error(String.format("Malformed notification data from server: %s", notificationData));
             return;
         } catch (ClassNotFoundException e) {
-            logger.error(String.format("Notification data class not found: \n%s", e.toString()));
+            logger.error("Notification data class not found");
             return;
         }
 
@@ -162,7 +162,7 @@ public class WSManager implements IMessageHandler {
             resp = mapper.convertValue(wobject.getMessageJson(), Response.class);
         } catch (IllegalArgumentException e) {
                     String responseMessage = wobject.getMessageJson().toString();
-            logger.error(String.format("Malformed response from server: %s\n%s", responseMessage, e.toString()));
+            logger.error(String.format("Malformed response from server: %s", responseMessage));
             return;
         }
         long tag = resp.getTag();
@@ -174,15 +174,17 @@ public class WSManager implements IMessageHandler {
         }
 
         // parse body of response based on request type
-        try {
-            resp.parseData(request.getData().getClass());
-        } catch (JsonProcessingException e) {
-            String responseData = resp.getJsonData().toString();
-            logger.error(String.format("Malformed response data from server: %s\n%s", responseData, e.toString()));
-            return;
-        } catch (ClassNotFoundException e) {
-            logger.error(String.format("Response data class not found: \n%s", e.toString()));
-            return;
+        if(request.getData() != null) {
+            try {
+                resp.parseData(request.getData().getClass());
+            } catch (JsonProcessingException e) {
+                String responseData = resp.getJsonData().toString();
+                logger.error(String.format("Malformed response data from server: %s", responseData));
+                return;
+            } catch (ClassNotFoundException e) {
+                logger.error("Response data class not found");
+                return;
+            }
         }
 
         IResponseHandler handler = request.getResponseHandler();

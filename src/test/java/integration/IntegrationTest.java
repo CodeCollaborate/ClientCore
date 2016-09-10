@@ -3,6 +3,7 @@ package integration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import websocket.IRequestSendErrorHandler;
@@ -18,6 +19,7 @@ import java.net.ConnectException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+@Category(IntegrationTests.class)
 public class IntegrationTest {
     private static final Logger logger = LoggerFactory.getLogger("integrationTest");
     private static final IRequestSendErrorHandler errHandler = new IRequestSendErrorHandler() {

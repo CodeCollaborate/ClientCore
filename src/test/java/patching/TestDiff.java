@@ -80,7 +80,7 @@ public class TestDiff {
 
         diff = new Diff("1:+4:test");
         newDiff = diff.convertToCRLF("\r\ntest");
-        Assert.assertEquals(1, newDiff.getStartIndex());
+        Assert.assertEquals(2, newDiff.getStartIndex());
 
         diff = new Diff("2:+4:test");
         newDiff = diff.convertToCRLF("\r\ntest");
@@ -116,6 +116,23 @@ public class TestDiff {
         diff = new Diff("7:+4:test");
         newDiff = diff.convertToLF("\r\ntes\r\n");
         Assert.assertEquals(5, newDiff.getStartIndex());
+    }
+
+    @Test
+    public void testConvertBack() {
+        Diff diff = new Diff("53:+1:a");
+        Diff LFDiff = diff.convertToLF("package testPkg1;\r\n" +
+                "\r\n" +
+                "public class TestClass1 {\r\n" +
+                "\r\n" +
+                "}\r\n");
+        Diff CRLFDiff = LFDiff.convertToCRLF("package testPkg1;\r\n" +
+                "\r\n" +
+                "public class TestClass1 {\r\n" +
+                "\r\n" +
+                "}\r\n");
+        Assert.assertEquals(diff.toString(), CRLFDiff.toString());
+
     }
 
     @Test

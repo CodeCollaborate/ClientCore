@@ -141,7 +141,7 @@ public class Diff {
         int newStartIndex = this.startIndex;
         String newChanges = this.changes.replace("\n", "\r\n");
 
-        for (int i = 0; i < startIndex - 1 && i < base.length() - 1; i++) {
+        for (int i = 0; i < newStartIndex && i < base.length() - 1; i++) {
             if (base.charAt(i) == '\r' && base.charAt(i + 1) == '\n') {
                 newStartIndex++;
             }

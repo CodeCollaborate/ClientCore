@@ -9,12 +9,13 @@ target/*
 # Eclipse, IntelliJ project files
 *.iml
 .idea
+
 *.project
 .classpath
+.gradle
 
 # Config files
-/config*
-/build/
-/bin/
+config*
+build/
+bin/
 .settings/*
-/.gradle/

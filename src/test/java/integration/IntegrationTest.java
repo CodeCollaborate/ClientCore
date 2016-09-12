@@ -56,7 +56,7 @@ public class IntegrationTest {
         if (projectID != -1) {
             logger.info("Cleaning project up");
             // Deleting the project will delete all its files as well
-            wsMgr.sendRequest(new ProjectDeleteRequest(projectID).getRequest());
+            wsMgr.sendRequest(new ProjectDeleteRequest(projectID).getRequest(null, null));
         }
     }
 
@@ -111,8 +111,7 @@ public class IntegrationTest {
         logger.info(String.format("Registering user"));
         Semaphore waiter = new Semaphore(0);
 
-        data = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass);
-        req = new Request("User", "Register", data, response -> {
+        req = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass).getRequest( response -> {
             // If registration fails, probably is already there.
 
             waiter.release();
@@ -127,8 +126,7 @@ public class IntegrationTest {
         logger.info(String.format("Logging in"));
         Semaphore waiter = new Semaphore(0);
 
-        data = new UserLoginRequest(userID, userPass);
-        req = new Request("User", "Login", data, response -> {
+        req = new UserLoginRequest(userID, userPass).getRequest( response -> {
             // TODO(wongb) Add login logic for server
             if (response.getStatus() != 200) {
                 try {
@@ -158,8 +156,7 @@ public class IntegrationTest {
         logger.info(String.format("Creating project with name %s", projectName));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectCreateRequest(projectName);
-        req = new Request("Project", "Create", data, response -> {
+        req = new ProjectCreateRequest(projectName).getRequest( response -> {
             Assert.assertEquals("Failed to create project", 200, response.getStatus());
 
             projectID = ((ProjectCreateResponse) response.getData()).getProjectID();
@@ -176,8 +173,7 @@ public class IntegrationTest {
         logger.info(String.format("Subscribing to project with id %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectSubscribeRequest(projectID);
-        req = new Request("Project", "Subscribe", data, response -> {
+        req = new ProjectSubscribeRequest(projectID).getRequest( response -> {
             Assert.assertEquals("Failed to subscribe to project", 200, response.getStatus());
 
             waiter.release();
@@ -194,8 +190,7 @@ public class IntegrationTest {
         logger.info(String.format("Renaming project with id %d to %s", projectID, projectName));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectRenameRequest(projectID, projectName);
-        req = new Request("Project", "Rename", data, response -> {
+        req = new ProjectRenameRequest(projectID, projectName).getRequest( response -> {
             Assert.assertEquals("Failed to rename project", 200, response.getStatus());
 
             waiter.release();
@@ -218,8 +213,7 @@ public class IntegrationTest {
         logger.info(String.format("Creating file %s in project with id %d", filePath + "/" + fileName, projectID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new FileCreateRequest(fileName, filePath, projectID, fileData.getBytes());
-        req = new Request("File", "Create", data, response -> {
+        req = new FileCreateRequest(fileName, filePath, projectID, fileData.getBytes()).getRequest( response -> {
             Assert.assertEquals("Failed to create file", 200, response.getStatus());
 
             fileID = ((FileCreateResponse) response.getData()).getFileID();
@@ -257,8 +251,7 @@ public class IntegrationTest {
         logger.info(String.format("Moving file %d to %s", fileID, filePath));
         Semaphore waiter = new Semaphore(0);
 
-        data = new FileMoveRequest(fileID, filePath);
-        req = new Request("File", "Move", data, response -> {
+        req = new FileMoveRequest(fileID, filePath).getRequest( response -> {
             Assert.assertEquals("Failed to move file", 200, response.getStatus());
 
             waiter.release();
@@ -283,8 +276,7 @@ public class IntegrationTest {
         logger.info(String.format("Renaming file %d to %s", fileID, fileName));
         Semaphore waiter = new Semaphore(0);
 
-        data = new FileRenameRequest(fileID, fileName);
-        req = new Request("File", "Rename", data, response -> {
+        req = new FileRenameRequest(fileID, fileName).getRequest( response -> {
             Assert.assertEquals("Failed to rename file", 200, response.getStatus());
 
             waiter.release();
@@ -308,8 +300,7 @@ public class IntegrationTest {
         Semaphore waiter = new Semaphore(0);
 
         String[] changes = new String[]{"+5:6:newData" + fileVersion};
-        data = new FileChangeRequest(fileID, changes, fileVersion);
-        req = new Request("File", "Change", data, response -> {
+        req = new FileChangeRequest(fileID, changes, fileVersion).getRequest( response -> {
             Assert.assertEquals("Failed to change file", 200, response.getStatus());
             Assert.assertEquals("FileChangeResponse gave wrong file version", fileVersion + 1, ((FileChangeResponse) response.getData()).getFileVersion());
 
@@ -340,8 +331,7 @@ public class IntegrationTest {
         for (int i = 0; i < changes.length; i++) {
             changes[i] = "+5:6:newData" + (i + 1);
         }
-        data = new FilePullRequest(fileID);
-        req = new Request("File", "Pull", data, response -> {
+        req = new FilePullRequest(fileID).getRequest( response -> {
             Assert.assertEquals("Failed to pull file", 200, response.getStatus());
             Assert.assertArrayEquals("FilePullResponse gave wrong base file text", fileData.getBytes(), ((FilePullResponse) response.getData()).getFileBytes());
             Assert.assertArrayEquals("FilePullResponse gave wrong changes", changes, ((FilePullResponse) response.getData()).getChanges());
@@ -359,8 +349,7 @@ public class IntegrationTest {
         logger.info(String.format("Deleting file %d", fileID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new FileDeleteRequest(fileID);
-        req = new Request("File", "Delete", data, response -> {
+        req = new FileDeleteRequest(fileID).getRequest( response -> {
             Assert.assertEquals("Failed to delete file", 200, response.getStatus());
 
             waiter.release();
@@ -384,8 +373,7 @@ public class IntegrationTest {
         logger.info(String.format("Unsubscribing from project with id %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectUnsubscribeRequest(projectID);
-        req = new Request("Project", "Unsubscribe", data, response -> {
+        req = new ProjectUnsubscribeRequest(projectID).getRequest( response -> {
             Assert.assertEquals("Failed to unsubscribe from project", 200, response.getStatus());
 
             waiter.release();
@@ -402,8 +390,7 @@ public class IntegrationTest {
         logger.info(String.format("Deleting project with ID %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectDeleteRequest(projectID);
-        req = new Request("Project", "Delete", data, response -> {
+        req = new ProjectDeleteRequest(projectID).getRequest( response -> {
             Assert.assertEquals("Failed to delete project", 200, response.getStatus());
 
             waiter.release();
@@ -427,8 +414,7 @@ public class IntegrationTest {
         logger.info(String.format("Getting files for project with ID %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectGetFilesRequest(projectID);
-        req = new Request("Project", "GetFiles", data, response -> {
+        req = new ProjectGetFilesRequest(projectID).getRequest( response -> {
             Assert.assertEquals("Failed to get files for project", 200, response.getStatus());
 
             if (fileID != -1) {
@@ -455,8 +441,7 @@ public class IntegrationTest {
         logger.info(String.format("Looking up project with ID %d", projectID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new ProjectLookupRequest(new Long[]{projectID});
-        req = new Request("Project", "Lookup", data, response -> {
+        req = new ProjectLookupRequest(new Long[]{projectID}).getRequest( response -> {
             Assert.assertEquals("Failed to lookup project", 200, response.getStatus());
 
             Assert.assertEquals("Incorrect number of projects returned", 1, ((ProjectLookupResponse) response.getData()).getProjects().length);
@@ -480,8 +465,7 @@ public class IntegrationTest {
         logger.info(String.format("Looking up user with ID %s", userID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new UserLookupRequest(new String[]{userID});
-        req = new Request("User", "Lookup", data, response -> {
+        req = new UserLookupRequest(new String[]{userID}).getRequest( response -> {
             Assert.assertEquals("Failed to lookup user", 200, response.getStatus());
 
             Assert.assertEquals("Incorrect number of users returned", 1, ((UserLookupResponse) response.getData()).getUsers().length);
@@ -503,8 +487,7 @@ public class IntegrationTest {
         logger.info(String.format("Looking up projects for user with ID %s", userID));
         Semaphore waiter = new Semaphore(0);
 
-        data = new UserProjectsRequest();
-        req = new Request("User", "Projects", data, response -> {
+        req = new UserProjectsRequest().getRequest( response -> {
             Assert.assertEquals("Failed to lookup projects for user", 200, response.getStatus());
 
             if (projectID != -1) {

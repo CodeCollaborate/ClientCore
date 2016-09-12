@@ -2,6 +2,8 @@ package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -13,19 +15,13 @@ public class FilePullRequest implements IRequestData {
     @JsonProperty("FileID")
     protected long fileID;
 
-    @JsonIgnore
-    @Override
-    public Request getRequest() {
-        return new Request("File", "Pull", this,
-                (response) -> {
-                    System.out.println("Received file pull response: " + response);
-                },
-                () -> {
-                    System.out.println("Failed to send file pull request to the server.");
-                });
-    }
-
     public FilePullRequest(long fileID) {
         this.fileID = fileID;
+    }
+
+    @JsonIgnore
+    @Override
+    public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
+        return new Request("File", "Pull", this, responseHandler, requestSendErrorHandler);
     }
 }

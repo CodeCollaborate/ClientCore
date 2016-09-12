@@ -2,6 +2,8 @@ package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -19,13 +21,7 @@ public class ProjectGetOnlineClientsRequest implements IRequestData {
 
     @JsonIgnore
     @Override
-    public Request getRequest() {
-        return new Request("Project", "GetOnlineClients", this,
-                (response) -> {
-                    System.out.println("Received project get online clients response: " + response);
-                },
-                () -> {
-                    System.out.println("Failed to send project get online clients request to the server.");
-                });
+    public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
+        return new Request("Project", "GetOnlineClients", this, responseHandler, requestSendErrorHandler);
     }
 }

@@ -2,6 +2,8 @@ package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -13,19 +15,13 @@ public class ProjectUnsubscribeRequest implements IRequestData {
     @JsonProperty("ProjectID")
     protected long projectID;
 
-    @JsonIgnore
-    @Override
-    public Request getRequest() {
-        return new Request("Project", "Unsubscribe", this,
-                (response) -> {
-                    System.out.println("Received project unsubscribe response: " + response);
-                },
-                () -> {
-                    System.out.println("Failed to send project unsubscribe request to the server.");
-                });
-    }
-
     public ProjectUnsubscribeRequest(long projectID) {
         this.projectID = projectID;
+    }
+
+    @JsonIgnore
+    @Override
+    public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
+        return new Request("Project", "Unsubscribe", this, responseHandler, requestSendErrorHandler);
     }
 }

@@ -2,6 +2,8 @@ package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -23,23 +25,17 @@ public class UserRegisterRequest implements IRequestData {
     @JsonProperty("Password")
     protected String password;
 
-    @JsonIgnore
-	@Override
-	public Request getRequest() {
-		return new Request("User", "Register", this,
-				(response) -> {
-					System.out.println("Received user register response: " + response);
-				},
-				() -> {
-					System.out.println("Failed to send user register request to server.");
-				});
-	}
-
     public UserRegisterRequest(String username, String firstName, String lastName, String email, String password) {
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
+    }
+
+    @JsonIgnore
+    @Override
+    public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
+        return new Request("User", "Register", this, responseHandler, requestSendErrorHandler);
     }
 }

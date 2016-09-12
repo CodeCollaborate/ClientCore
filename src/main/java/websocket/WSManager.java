@@ -45,10 +45,6 @@ public class WSManager implements IMessageHandler {
         this.socket = socket;
         socket.registerIncomingMessageHandler(this);
 
-        Request request = new Request();
-        request.setErrorHandler(() -> {
-        });
-
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 

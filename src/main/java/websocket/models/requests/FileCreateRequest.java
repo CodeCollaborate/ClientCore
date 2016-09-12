@@ -2,6 +2,8 @@ package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -22,22 +24,16 @@ public class FileCreateRequest implements IRequestData {
     @JsonProperty("FileBytes")
     protected byte[] fileBytes;
 
-    @JsonIgnore
-    @Override
-    public Request getRequest() {
-        return new Request("File", "Create", this,
-                (response) -> {
-                    System.out.println("Received file create response: " + response);
-                },
-                () -> {
-                    System.out.println("Failed to send file create request to the server.");
-                });
-    }
-
     public FileCreateRequest(String name, String relativePath, long projectID, byte[] fileBytes) {
         this.name = name;
         this.relativePath = relativePath;
         this.projectID = projectID;
         this.fileBytes = fileBytes;
+    }
+
+    @JsonIgnore
+    @Override
+    public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
+        return new Request("File", "Create", this, responseHandler, requestSendErrorHandler);
     }
 }

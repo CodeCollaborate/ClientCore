@@ -22,10 +22,8 @@ public class WSManager implements IMessageHandler {
     HashMap<String, INotificationHandler> notificationHandlerHashMap;
     // WebSocket connection
     WSConnection socket;
-
     private String userID;
     private String userToken;
-
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -46,6 +44,23 @@ public class WSManager implements IMessageHandler {
         socket.registerIncomingMessageHandler(this);
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    }
+
+    public void connect() throws ConnectException {
+        try {
+            socket.connect();
+        } catch (Exception e) {
+            logger.error("WebSocket connection could not connect: " + e.getMessage());
+            throw new ConnectException("Could not connect to WebSocket.");
+        }
+    }
+
+    public void registerEventHandler(WSConnection.EventType event, Runnable handler) {
+        socket.eventHandlers.put(event, handler);
+    }
+
+    public void deregisterEventHandler(WSConnection.EventType event) {
+        socket.eventHandlers.remove(event);
     }
 
     /**
@@ -75,6 +90,10 @@ public class WSManager implements IMessageHandler {
      * @param request
      */
     public void sendRequest(Request request) throws ConnectException {
+        sendRequest(request, 0);
+    }
+
+    public void sendRequest(Request request, int priority) throws ConnectException {
         if (socket.getState() == WSConnection.State.CREATED || socket.getState() == WSConnection.State.ERROR) {
             try {
                 socket.connect();
@@ -97,7 +116,7 @@ public class WSManager implements IMessageHandler {
             logger.error("Could not map request to Json string: " + request);
             return;
         }
-        socket.enqueueMessage(messageText);
+        socket.enqueueMessage(messageText, priority);
         requestHashMap.put(request.getTag(), request);
     }
 
@@ -157,7 +176,7 @@ public class WSManager implements IMessageHandler {
         try {
             resp = mapper.convertValue(wobject.getMessageJson(), Response.class);
         } catch (IllegalArgumentException e) {
-                    String responseMessage = wobject.getMessageJson().toString();
+            String responseMessage = wobject.getMessageJson().toString();
             logger.error(String.format("Malformed response from server: %s", responseMessage));
             return;
         }
@@ -170,7 +189,7 @@ public class WSManager implements IMessageHandler {
         }
 
         // parse body of response based on request type
-        if(request.getData() != null) {
+        if (request.getData() != null) {
             try {
                 resp.parseData(request.getData().getClass());
             } catch (JsonProcessingException e) {

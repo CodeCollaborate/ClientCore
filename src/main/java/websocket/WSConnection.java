@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import websocket.models.ConnectionConfig;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,14 +27,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @WebSocket(maxTextMessageSize = 64 * 1024)
 public class WSConnection {
-
     private static final Logger logger = LoggerFactory.getLogger("websocket");
-
     // Queue of messages. Priority given to messages that need to be retried.
     final Queue<WSMessage> messageQueue = new PriorityQueue<>();
-
     // List of handlers that incoming messages should be sent to.
     final List<IMessageHandler> incomingMessageHandlers = new ArrayList<>();
+    final HashMap<EventType, Runnable> eventHandlers;
     // Jetty objects
     WebSocketClient client;
     Session session;
@@ -45,13 +40,20 @@ public class WSConnection {
     ConnectionConfig config;
     // State of program
     private volatile State state;
-
     /**
      * Creates a new WSConnection, but does not initialize the connection
      */
     public WSConnection(ConnectionConfig config) {
         setState(State.CREATED);
         this.config = config;
+        this.eventHandlers = new HashMap<>();
+    }
+
+    public void handleEvent(EventType event) {
+        Runnable r = eventHandlers.get(event);
+        if (r != null) {
+            r.run();
+        }
     }
 
     /**
@@ -98,6 +100,8 @@ public class WSConnection {
         logger.info(String.format("Setting websocket idle timeout to %d minutes", idleTimeout));
         session.setIdleTimeout(TimeUnit.MINUTES.toMillis(idleTimeout));
 
+        handleEvent(EventType.ON_CONNECT);
+
         Thread sendingThread = new Thread(this::messageLoop);
         sendingThread.start();
     }
@@ -135,6 +139,9 @@ public class WSConnection {
     public void onClose(int statusCode, String reason) {
         logger.info(String.format("Connection closed - Reason: %s", reason));
         this.session = null;
+
+        handleEvent(EventType.ON_CLOSE);
+
         if (getState() != State.CLOSE && config.isReconnect()) {
             for (int i = 0; i < config.getMaxRetryCount(); i++) {
                 try {
@@ -228,13 +235,13 @@ public class WSConnection {
         return true;
     }
 
-    void enqueueMessage(String msg) {
+    void enqueueMessage(String msg, int priority) {
         if (getState() == State.CLOSE || state == State.EXIT) {
             return;
         }
 
         synchronized (messageQueue) {
-            this.messageQueue.offer(new WSMessage(msg));
+            this.messageQueue.offer(new WSMessage(msg, priority));
             this.messageQueue.notifyAll();
             logger.debug(String.format("Enqueued message: %s", msg));
         }
@@ -245,6 +252,7 @@ public class WSConnection {
     @OnWebSocketMessage
     public void onMessage(String msg) {
         logger.debug(String.format("Received message: %s", msg));
+
         for (IMessageHandler handler : incomingMessageHandlers) {
             handler.handleMessage(msg);
         }
@@ -279,7 +287,6 @@ public class WSConnection {
         return true;
     }
 
-
     /**
      * Registers the given handler as an incoming message handler
      *
@@ -298,6 +305,14 @@ public class WSConnection {
         this.incomingMessageHandlers.remove(handler);
     }
 
+    public enum EventType {
+        ON_CONNECT,
+        ON_ERROR,
+        ON_CLOSE,
+        ON_RECEIVE_MESSAGE,
+        ON_SEND_MESSAGE
+    }
+
     enum State {
         CREATED,
         CONNECT,
@@ -312,13 +327,14 @@ public class WSConnection {
      */
     static class WSMessage implements Comparable<WSMessage> {
         private static AtomicLong counter = new AtomicLong(0);
-
+        private final int priority;
         private final String message;
         private final long id = counter.getAndIncrement();
         private int retryCount = 0;
 
-        WSMessage(String message) {
+        WSMessage(String message, int priority) {
             this.message = message;
+            this.priority = priority;
         }
 
         String getMessage() {
@@ -333,13 +349,23 @@ public class WSConnection {
             retryCount++;
         }
 
+        public int getPriority() {
+            return priority;
+        }
+
         @Override
         public int compareTo(WSMessage o) {
-            int val = -1 * Integer.compare(retryCount, o.retryCount);
-            if (val == 0) {
-                val = Long.compare(id, o.id);
+            int result = Integer.compare(priority, o.priority);
+            if (result != 0) {
+                return result;
             }
-            return val;
+
+            result = -1 * Integer.compare(retryCount, o.retryCount);
+            if (result == 0) {
+                result = Long.compare(id, o.id);
+            }
+
+            return result;
         }
     }
 }

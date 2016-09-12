@@ -57,7 +57,7 @@ public class TestWSManager {
             Assert.fail("Request send failure");
         }
         verify(fakeConn, times(2)).getState();
-        verify(fakeConn, times(1)).enqueueMessage(anyString());
+        verify(fakeConn, times(1)).enqueueMessage(anyString(), anyInt());
     }
 
     @Test
@@ -78,7 +78,7 @@ public class TestWSManager {
             e.printStackTrace();
             Assert.fail("Shouldn't ever get here");
         }
-        verify(fakeConn, times(1)).enqueueMessage(anyString());
+        verify(fakeConn, times(1)).enqueueMessage(anyString(), anyInt());
     }
 
     @Test
@@ -104,7 +104,7 @@ public class TestWSManager {
         } catch (Exception e) {
             // should break
         }
-        verify(fakeConn, times(0)).enqueueMessage(anyString());
+        verify(fakeConn, times(0)).enqueueMessage(anyString(), anyInt());
     }
 
     @Test
@@ -285,7 +285,7 @@ public class TestWSManager {
 
         try {
             conn.connect();
-            conn.enqueueMessage(mapper.writeValueAsString(smw));
+            conn.enqueueMessage(mapper.writeValueAsString(smw), 0);
             synchronized (this) {
                 this.wait();
             }

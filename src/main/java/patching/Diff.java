@@ -139,7 +139,7 @@ public class Diff {
         int newStartIndex = this.startIndex;
         String newChanges = this.changes.replace("\n", "\r\n");
 
-        for (int i = 0; i < startIndex - 1 && i < base.length() - 1; i++) {
+        for (int i = 0; i < newStartIndex && i < base.length() - 1; i++) {
             if (base.charAt(i) == '\r' && base.charAt(i + 1) == '\n') {
                 newStartIndex++;
             }
@@ -150,7 +150,7 @@ public class Diff {
 
     public Diff convertToLF(String base) {
         int newStartIndex = this.startIndex;
-        String newChanges = this.changes.replace("\n", "\r\n");
+        String newChanges = this.changes.replace("\r\n", "\n");
 
         for (int i = 0; i < startIndex - 1 && i < base.length() - 1; i++) {
             if (base.charAt(i) == '\r' && base.charAt(i + 1) == '\n') {
@@ -271,10 +271,8 @@ public class Diff {
 
                         if ((intermediate.startIndex + intermediate.getLength()) > other.startIndex) {
                             int length1 = other.startIndex - intermediate.startIndex;
-                            int length2 = intermediate.startIndex + intermediate.getLength() - other.startIndex;
                             String changes1 = intermediate.changes.substring(0, length1);
-                            String changes2 = intermediate.changes.substring(intermediate.getLength() - length2,
-                                    intermediate.getLength());
+                            String changes2 = intermediate.changes.substring(length1);
                             Diff diff1 = new Diff(intermediate.insertion, intermediate.startIndex, changes1);
                             Diff diff2 = new Diff(intermediate.insertion, intermediate.startIndex + other.getLength(),
                                     changes2);

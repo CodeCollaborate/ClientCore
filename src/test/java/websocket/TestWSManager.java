@@ -11,7 +11,6 @@ import websocket.models.Request;
 import websocket.models.ServerMessageWrapper;
 
 import java.io.IOException;
-import java.net.ConnectException;
 
 import static org.mockito.Mockito.*;
 
@@ -57,7 +56,7 @@ public class TestWSManager {
             Assert.fail("Request send failure");
         }
         verify(fakeConn, times(2)).getState();
-        verify(fakeConn, times(1)).enqueueMessage(anyString());
+        verify(fakeConn, times(1)).enqueueMessage(anyString(), anyInt());
     }
 
     @Test
@@ -78,7 +77,7 @@ public class TestWSManager {
             e.printStackTrace();
             Assert.fail("Shouldn't ever get here");
         }
-        verify(fakeConn, times(1)).enqueueMessage(anyString());
+        verify(fakeConn, times(1)).enqueueMessage(anyString(), anyInt());
     }
 
     @Test
@@ -104,16 +103,16 @@ public class TestWSManager {
         } catch (Exception e) {
             // should break
         }
-        verify(fakeConn, times(0)).enqueueMessage(anyString());
+        verify(fakeConn, times(0)).enqueueMessage(anyString(), anyInt());
     }
 
     @Test
     public void testHandleMessageParseFailure() {
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         String invalid = "Invalid message";
         manager.handleMessage(invalid);
-        verify(manager.logger, times(1)).error("Malformed message from server: " + invalid);
+        verify(WSManager.logger, times(1)).error("Malformed message from server: " + invalid);
     }
 
     @Test
@@ -147,9 +146,9 @@ public class TestWSManager {
                 "  \"ServerMessage\": \"dank\"" +
                 "}";
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         manager.handleMessage(message);
-        verify(manager.logger, times(1)).error("Malformed response from server: " + "\"dank\"");
+        verify(WSManager.logger, times(1)).error("Malformed response from server: " + "\"dank\"");
     }
 
     @Test
@@ -166,9 +165,9 @@ public class TestWSManager {
                 "  }\n" +
                 "}";
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         manager.handleMessage(message);
-        verify(manager.logger, times(1)).warn("Received extraneous response from server: " +
+        verify(WSManager.logger, times(1)).warn("Received extraneous response from server: " +
                 "{\"Tag\":\"100\",\"Status\":\"200\",\"Data\":{\"TestParameter1\":\"value1\",\"TestParameter2\":\"value2\"}}");
     }
 
@@ -186,10 +185,10 @@ public class TestWSManager {
                 "  }\n" +
                 "}";
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         manager.requestHashMap.put(Long.decode("100"), new Request());
         manager.handleMessage(message);
-        verify(manager.logger, times(1)).warn("No handler specified for request: " +
+        verify(WSManager.logger, times(1)).warn("No handler specified for request: " +
                 "{\"Tag\":\"100\",\"Status\":\"200\",\"Data\":{\"TestParameter1\":\"value1\",\"TestParameter2\":\"value2\"}}");
 
     }
@@ -199,18 +198,18 @@ public class TestWSManager {
         String message = "{\n" +
                 "  \"Type\":\"Notification\",\n" +
                 "  \"ServerMessage\": {\n" +
-                "    \"Resource\":\"TestResource\",\n" +
-                "    \"Method\":\"TestMethod\",\n" +
+                "    \"Resource\":\"Project\",\n" +
+                "    \"Method\":\"GrantPermissions\",\n" +
                 "    \"Data\":{\n" +
-                "      \"TestParameter1\":\"value1\",\n" +
-                "      \"TestParameter2\":\"value2\"\n" +
+                "      \"GrantUsername\":\"testUser\",\n" +
+                "      \"PermissionLevel\":5\n" +
                 "    }\n" +
                 "  }\n" +
                 "}";
         WSConnection nullConn = mock(WSConnection.class);
         WSManager manager = new WSManager(nullConn);
         INotificationHandler mockHandler = mock(INotificationHandler.class);
-        manager.registerNotificationHandler("TestResource", "TestMethod", mockHandler);
+        manager.registerNotificationHandler("Project", "GrantPermissions", mockHandler);
         manager.handleMessage(message);
         verify(mockHandler, times(1)).handleNotification(anyObject());
     }
@@ -222,9 +221,9 @@ public class TestWSManager {
                 "  \"ServerMessage\": \"dank\"" +
                 "}";
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         manager.handleMessage(message);
-        verify(manager.logger, times(1)).error("Malformed notification from server: " + "\"dank\"");
+        verify(WSManager.logger, times(1)).error("Malformed notification from server: " + "\"dank\"");
 
     }
 
@@ -233,20 +232,19 @@ public class TestWSManager {
         String message = "{\n" +
                 "  \"Type\":\"Notification\",\n" +
                 "  \"ServerMessage\": {\n" +
-                "    \"Resource\":\"TestResource\",\n" +
-                "    \"Method\":\"TestMethod\",\n" +
+                "    \"Resource\":\"Project\",\n" +
+                "    \"Method\":\"GrantPermissions\",\n" +
                 "    \"Data\":{\n" +
-                "      \"TestParameter1\":\"value1\",\n" +
-                "      \"TestParameter2\":\"value2\"\n" +
+                "      \"GrantUsername\":\"testUser\",\n" +
+                "      \"PermissionLevel\":5\n" +
                 "    }\n" +
                 "  }\n" +
                 "}";
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         manager.handleMessage(message);
-        verify(manager.logger, times(1)).warn("No handler registered for notification: " +
-                "{\"Resource\":\"TestResource\",\"Method\":\"TestMethod\",\"Data\":{\"TestParameter1\":\"value1\",\"TestParameter2\":\"value2\"}}");
-
+        verify(WSManager.logger, times(1)).warn("No handler registered for notification: " +
+                "{\"Resource\":\"Project\",\"Method\":\"GrantPermissions\",\"Data\":{\"GrantUsername\":\"testUser\",\"PermissionLevel\":5}}");
     }
 
     @Test
@@ -255,14 +253,14 @@ public class TestWSManager {
         ServerMessageWrapper smw = null;
 
         try {
-            smw = mapper.readValue("{\n" +
+            smw = mapper.readValue( "{\n" +
                     "  \"Type\":\"Notification\",\n" +
                     "  \"ServerMessage\": {\n" +
-                    "    \"Resource\":\"TestResource\",\n" +
-                    "    \"Method\":\"TestMethod\",\n" +
+                    "    \"Resource\":\"Project\",\n" +
+                    "    \"Method\":\"GrantPermissions\",\n" +
                     "    \"Data\":{\n" +
-                    "      \"TestParameter1\":\"value1\",\n" +
-                    "      \"TestParameter2\":\"value2\"\n" +
+                    "      \"GrantUsername\":\"testUser\",\n" +
+                    "      \"PermissionLevel\":5\n" +
                     "    }\n" +
                     "  }\n" +
                     "}", ServerMessageWrapper.class);
@@ -276,26 +274,26 @@ public class TestWSManager {
 
         final String[] testText = new String[1];
         INotificationHandler testHandler = notification -> {
-            testText[0] = notification.getData().toString();
+            testText[0] = notification.getJsonData().toString();
             synchronized (this) {
                 this.notifyAll();
             }
         };
 
-        manager.registerNotificationHandler("TestResource", "TestMethod", testHandler);
+        manager.registerNotificationHandler("Project", "GrantPermissions", testHandler);
 
         try {
             conn.connect();
-            conn.enqueueMessage(mapper.writeValueAsString(smw));
+            conn.enqueueMessage(mapper.writeValueAsString(smw), 0);
             synchronized (this) {
-                this.wait(1000);
+                this.wait();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         String expected = "{" +
-                "\"TestParameter1\":\"value1\"," +
-                "\"TestParameter2\":\"value2\"}";
+                "\"GrantUsername\":\"testUser\"," +
+                "\"PermissionLevel\":5}";
         Assert.assertEquals(expected, testText[0]);
     }
 
@@ -324,8 +322,8 @@ public class TestWSManager {
     public void testHandleMessageSendErrorMalformed() {
         String message = "malformed message";
         WSManager manager = new WSManager(mock(WSConnection.class));
-        manager.logger = mock(Logger.class);
+        WSManager.logger = mock(Logger.class);
         manager.handleMessageSendError(message);
-        verify(manager.logger, times(1)).error("Request that failed to send was malformed");
+        verify(WSManager.logger, times(1)).error("Request that failed to send was malformed");
     }
 }

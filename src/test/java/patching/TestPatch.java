@@ -63,7 +63,7 @@ public class TestPatch {
         patch = new Patch(0, Arrays.asList(diff1));
         newPatch = patch.convertToCRLF("\r\ntest");
         Assert.assertEquals(1, newPatch.getDiffs().size());
-        Assert.assertEquals(1, newPatch.getDiffs().get(0).getStartIndex());
+        Assert.assertEquals(2, newPatch.getDiffs().get(0).getStartIndex());
 
         diff1 = new Diff("2:+4:test");
         patch = new Patch(0, Arrays.asList(diff1));

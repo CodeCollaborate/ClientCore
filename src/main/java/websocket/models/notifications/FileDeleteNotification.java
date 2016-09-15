@@ -1,12 +1,9 @@
 package websocket.models.notifications;
 
-import websocket.models.Notification;
+import websocket.models.INotificationData;
 
-public class FileDeleteNotification extends Notification {
+public class FileDeleteNotification implements INotificationData {
 
-	public FileDeleteNotification(long fileID) {
-		super.setResource("File");
-		super.setMethod("Delete");
-		super.setResourceID(fileID);
+	public FileDeleteNotification() {
 	}
 }

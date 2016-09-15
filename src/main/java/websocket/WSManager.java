@@ -2,12 +2,12 @@ package websocket;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import websocket.models.*;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.util.HashMap;
 
 /**
@@ -21,6 +21,8 @@ public class WSManager implements IMessageHandler {
     HashMap<String, INotificationHandler> notificationHandlerHashMap;
     // WebSocket connection
     WSConnection socket;
+    private String userID;
+    private String userToken;
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -28,6 +30,9 @@ public class WSManager implements IMessageHandler {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
         this.socket = new WSConnection(config);
+        socket.registerIncomingMessageHandler(this);
+
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 
     // used for testing
@@ -35,6 +40,26 @@ public class WSManager implements IMessageHandler {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
         this.socket = socket;
+        socket.registerIncomingMessageHandler(this);
+
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    }
+
+    public void connect() throws ConnectException {
+        try {
+            socket.connect();
+        } catch (Exception e) {
+            logger.error("WebSocket connection could not connect: " + e.getMessage());
+            throw new ConnectException("Could not connect to WebSocket.", e);
+        }
+    }
+
+    public void registerEventHandler(WSConnection.EventType event, Runnable handler) {
+        socket.eventHandlers.put(event, handler);
+    }
+
+    public void deregisterEventHandler(WSConnection.EventType event) {
+        socket.eventHandlers.remove(event);
     }
 
     /**
@@ -64,14 +89,25 @@ public class WSManager implements IMessageHandler {
      * @param request
      */
     public void sendRequest(Request request) throws ConnectException {
+        sendRequest(request, 0);
+    }
+
+    public void sendRequest(Request request, int priority) throws ConnectException {
         if (socket.getState() == WSConnection.State.CREATED || socket.getState() == WSConnection.State.ERROR) {
             try {
                 socket.connect();
             } catch (Exception e) {
-                logger.error("WebSocket connection could not connect.");
-                throw new ConnectException("Could not connect to WebSocket.");
+                logger.error("WebSocket connection could not connect: " + e.getMessage());
+                throw new ConnectException("Could not connect to WebSocket.", e);
             }
         }
+
+        // Set authentication information, if available.
+        if (userID != null) {
+            request.setSenderId(userID);
+            request.setSenderToken(userToken);
+        }
+
         String messageText;
         try {
             messageText = mapper.writeValueAsString(request);
@@ -79,67 +115,95 @@ public class WSManager implements IMessageHandler {
             logger.error("Could not map request to Json string: " + request);
             return;
         }
-        socket.enqueueMessage(messageText);
+        socket.enqueueMessage(messageText, priority);
+        requestHashMap.put(request.getTag(), request);
     }
 
     @Override
     public void handleMessage(String message) {
-        ServerMessageWrapper wobject;
+        ServerMessageWrapper wrapper;
         try {
-            wobject = mapper.readValue(message, ServerMessageWrapper.class);
+            wrapper = mapper.readValue(message, ServerMessageWrapper.class);
         } catch (IOException e) {
             logger.error("Malformed message from server: " + message);
             return;
         }
-        switch (wobject.getType()) {
+        switch (wrapper.getType()) {
             case ServerMessageWrapper.TYPE_NOTIFICATION:
-                parseNotification(wobject);
+                handleNotification(wrapper);
                 break;
             case ServerMessageWrapper.TYPE_RESPONSE:
-                parseResponse(wobject);
+                handleResponse(wrapper);
                 break;
         }
     }
 
-    private void parseNotification(ServerMessageWrapper wobject) {
+    private void handleNotification(ServerMessageWrapper wrapper) {
         Notification an;
         try {
-            an = mapper.convertValue(wobject.getMessageJson(), Notification.class);
+            an = mapper.convertValue(wrapper.getMessageJson(), Notification.class);
         } catch (IllegalArgumentException e) {
-            String notificationMessage = wobject.getMessageJson().toString();
-            logger.error("Malformed notification from server: " + notificationMessage);
+            String notificationMessage = wrapper.getMessageJson().toString();
+            logger.error(String.format("Malformed notification from server: %s", notificationMessage));
+            return;
+        }
+
+        // parse body of notification
+        try {
+            an.parseData();
+        } catch (JsonProcessingException e) {
+            String notificationData = an.getJsonData().toString();
+            logger.error(String.format("Malformed notification data from server: %s", notificationData));
+            return;
+        } catch (ClassNotFoundException e) {
+            logger.error("Notification data class not found");
             return;
         }
 
         String key = an.getResource() + '.' + an.getMethod();
         INotificationHandler handler = notificationHandlerHashMap.get(key);
         if (handler == null) {
-            String notificationMessage = wobject.getMessageJson().toString();
+            String notificationMessage = wrapper.getMessageJson().toString();
             logger.warn("No handler registered for notification: " + notificationMessage);
             return;
         }
         handler.handleNotification(an);
     }
 
-    private void parseResponse(ServerMessageWrapper wobject) {
+    private void handleResponse(ServerMessageWrapper wrapper) {
         Response resp;
         try {
-            resp = mapper.convertValue(wobject.getMessageJson(), Response.class);
+            resp = mapper.convertValue(wrapper.getMessageJson(), Response.class);
         } catch (IllegalArgumentException e) {
-            String responseMessage = wobject.getMessageJson().toString();
-            logger.error("Malformed response from server: " + responseMessage);
+            String responseMessage = wrapper.getMessageJson().toString();
+            logger.error(String.format("Malformed response from server: %s", responseMessage));
             return;
         }
         long tag = resp.getTag();
         Request request = requestHashMap.get(tag);
         if (request == null) {
-            String responseMessage = wobject.getMessageJson().toString();
+            String responseMessage = wrapper.getMessageJson().toString();
             logger.warn("Received extraneous response from server: " + responseMessage);
             return;
         }
+
+        // parse body of response based on request type
+        if (request.data != null) {
+            try {
+                resp.parseData(request.data.getClass());
+            } catch (JsonProcessingException e) {
+                String responseData = resp.getJsonData().toString();
+                logger.error(String.format("Malformed response data from server: %s", responseData));
+                return;
+            } catch (ClassNotFoundException e) {
+                logger.error("Response data class not found");
+                return;
+            }
+        }
+
         IResponseHandler handler = request.getResponseHandler();
         if (handler == null) {
-            String responseMessage = wobject.getMessageJson().toString();
+            String responseMessage = wrapper.getMessageJson().toString();
             logger.warn("No handler specified for request: " + responseMessage);
             return;
         }
@@ -158,5 +222,10 @@ public class WSManager implements IMessageHandler {
         request = requestHashMap.get(request.getTag());
         IRequestSendErrorHandler handler = request.getErrorHandler();
         handler.handleRequestSendError();
+    }
+
+    public void setAuthInfo(String userID, String userToken) {
+        this.userID = userID;
+        this.userToken = userToken;
     }
 }

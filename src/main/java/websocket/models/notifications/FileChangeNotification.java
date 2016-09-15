@@ -1,23 +1,23 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.INotificationData;
 
-import websocket.models.Notification;
-
-public class FileChangeNotification extends Notification {
+public class FileChangeNotification implements INotificationData {
 	@JsonProperty("Changes")
-	public String[] changes;
+	public final String[] changes;
 
 	@JsonProperty("FileVersion")
-	public long fileVersion;
+	public final long fileVersion;
 
 	@JsonProperty("BaseFileVersion")
-	public long baseFileVersion;
+	public final long baseFileVersion;
 
-	public FileChangeNotification(String[] changes, long fileVersion, long baseFileVersion, long fileID) {
+	public FileChangeNotification(@JsonProperty("Changes") String[] changes,
+								  @JsonProperty("FileVersion") long fileVersion,
+								  @JsonProperty("BaseFileVersion") long baseFileVersion) {
 		this.changes = changes;
-		super.setResource("File");
-		super.setMethod("Move");
-		super.setResourceID(fileID);
+		this.fileVersion = fileVersion;
+		this.baseFileVersion = baseFileVersion;
 	}
 }

@@ -1,17 +1,13 @@
 package websocket.models.notifications;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.INotificationData;
 
-import websocket.models.Notification;
+public class ProjectUnsubscribeNotification implements INotificationData {
+    @JsonProperty("Username")
+    public final String username;
 
-public class ProjectUnsubscribeNotification extends Notification {
-	@JsonProperty("Username")
-	public String username;
-
-	public ProjectUnsubscribeNotification(String username, long projectID) {
-		this.username = username;
-		super.setResource("Project");
-		super.setMethod("Unsubscribe");
-		super.setResourceID(projectID);
-	}
+    public ProjectUnsubscribeNotification(@JsonProperty("Username") String username) {
+        this.username = username;
+    }
 }

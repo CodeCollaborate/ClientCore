@@ -1,7 +1,8 @@
 package websocket.models.requests;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.models.IRequestData;
 import websocket.models.Request;
 
@@ -10,18 +11,12 @@ import websocket.models.Request;
  */
 public class ProjectGetPermissionConstantsRequest implements IRequestData {
 
-    @JsonIgnore
-    @Override
-    public Request getRequest() {
-        return new Request("Project", "GetPermissionConstants", this,
-                (response) -> {
-                    System.out.println("Received project get permission constants response: " + response);
-                },
-                () -> {
-                    System.out.println("Failed to send project get permission constants request to the server.");
-                });
+    public ProjectGetPermissionConstantsRequest() {
     }
 
-    public ProjectGetPermissionConstantsRequest() {
+    @JsonIgnore
+    @Override
+    public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
+        return new Request("Project", "GetPermissionConstants", this, responseHandler, requestSendErrorHandler);
     }
 }

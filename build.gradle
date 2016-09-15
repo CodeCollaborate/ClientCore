@@ -29,6 +29,9 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-databind:2.7.3'
     compile 'org.slf4j:slf4j-simple:1.7.21'
 }
+test {
+    exclude 'integration/**'
+}
 
 fatJar {
     archiveName "${baseName}.${extension}"

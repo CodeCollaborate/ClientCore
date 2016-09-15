@@ -73,20 +73,20 @@ public class TestWSConnection {
 
         Assert.assertEquals(0, conn.messageQueue.size());
 
-        conn.enqueueMessage("Test1");
+        conn.enqueueMessage("Test1", 0);
         Assert.assertEquals(1, conn.messageQueue.size());
-        conn.enqueueMessage("Test2");
+        conn.enqueueMessage("Test2", 0);
         Assert.assertEquals(2, conn.messageQueue.size());
-        conn.enqueueMessage("Test3");
+        conn.enqueueMessage("Test3", 0);
         Assert.assertEquals(3, conn.messageQueue.size());
 
-        WSConnection.WSMessage retriedMessage1 = new WSConnection.WSMessage("RetryTest1");
+        WSConnection.WSMessage retriedMessage1 = new WSConnection.WSMessage("RetryTest1", 0);
         retriedMessage1.incrementRetryCount();
 
-        WSConnection.WSMessage retriedMessage2 = new WSConnection.WSMessage("RetryTest2");
+        WSConnection.WSMessage retriedMessage2 = new WSConnection.WSMessage("RetryTest2", 0);
         retriedMessage2.incrementRetryCount();
 
-        WSConnection.WSMessage retriedMessage3 = new WSConnection.WSMessage("RetryTest3");
+        WSConnection.WSMessage retriedMessage3 = new WSConnection.WSMessage("RetryTest3", 0);
         retriedMessage3.incrementRetryCount();
         retriedMessage3.incrementRetryCount();
 
@@ -107,7 +107,7 @@ public class TestWSConnection {
 
         Assert.assertEquals(0, conn.messageQueue.size());
 
-        WSConnection.WSMessage msg = new WSConnection.WSMessage("msg");
+        WSConnection.WSMessage msg = new WSConnection.WSMessage("msg", 0);
 
         Assert.assertEquals(WSConnection.State.CREATED, conn.getState());
         try {
@@ -180,7 +180,7 @@ public class TestWSConnection {
             e.printStackTrace();
         }
         conn.setState(WSConnection.State.READY);
-        WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
+        WSConnection.WSMessage message = new WSConnection.WSMessage("Test", 0);
 
         Assert.assertEquals(0, message.getRetryCount());
         Assert.assertEquals(0, conn.messageQueue.size());
@@ -237,7 +237,7 @@ public class TestWSConnection {
         }
 
         conn.setState(WSConnection.State.READY);
-        WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
+        WSConnection.WSMessage message = new WSConnection.WSMessage("Test", 0);
 
         Assert.assertEquals(0, message.getRetryCount());
         Assert.assertEquals(0, conn.messageQueue.size());
@@ -273,7 +273,7 @@ public class TestWSConnection {
         }
 
         conn.setState(WSConnection.State.READY);
-        WSConnection.WSMessage message = new WSConnection.WSMessage("Test");
+        WSConnection.WSMessage message = new WSConnection.WSMessage("Test", 0);
 
         Assert.assertEquals(0, message.getRetryCount());
         Assert.assertEquals(0, conn.messageQueue.size());
@@ -454,7 +454,7 @@ public class TestWSConnection {
 
         // Ensure that connection is actually open, and messages can be sent.
         for (int i = 0; i < 5; i++) {
-            conn.enqueueMessage("HELLO" + i);
+            conn.enqueueMessage("HELLO" + i, 0);
         }
 
         waitForNotifies(receivedMessages, 5, 1000);
@@ -494,7 +494,7 @@ public class TestWSConnection {
         }
 
         for (int i = 0; i < 5; i++) {
-            conn.enqueueMessage("HELLO" + i);
+            conn.enqueueMessage("HELLO" + i, 0);
         }
 
         waitForNotifies(receivedMessages, 5, 1000);

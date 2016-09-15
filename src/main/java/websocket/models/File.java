@@ -3,69 +3,84 @@ package websocket.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class File {
-	@JsonProperty("FileID")
-	public long fileID;
-	
-	@JsonProperty("Name")
-	public String fileName;
-	
-	@JsonProperty("RelativePath")
-	public String relativePath;
-	
-	@JsonProperty("Version")
-	public long fileVersion;
-	
-	@JsonProperty("ProjectID")
-	public long projectID;
+    @JsonProperty("FileID")
+    private long fileID;
 
-	public File(long fileID, String fileName, String relativePath, long fileVersion, long projectID) {
-		super();
-		this.fileID = fileID;
-		this.fileName = fileName;
-		this.relativePath = relativePath;
-		this.fileVersion = fileVersion;
-		this.projectID = projectID;
-	}
+    @JsonProperty("Filename")
+    private String filename;
 
-	public long getFileID() {
-		return fileID;
-	}
+    @JsonProperty("RelativePath")
+    private String relativePath;
 
-	public void setFileID(long fileID) {
-		this.fileID = fileID;
-	}
+    @JsonProperty("Version")
+    private long fileVersion;
 
-	public String getFileName() {
-		return fileName;
-	}
+    @JsonProperty("Creator")
+    private String creator;
 
-	public void setFileName(String fileName) {
-		this.fileName = fileName;
-	}
+    @JsonProperty("CreationDate")
+    private String creationDate;
 
-	public String getRelativePath() {
-		return relativePath;
-	}
+    public File(@JsonProperty("FileID") long fileID,
+                @JsonProperty("Filename") String filename,
+                @JsonProperty("RelativePath") String relativePath,
+                @JsonProperty("Version") long fileVersion,
+                @JsonProperty("Creator") String creator,
+                @JsonProperty("CreationDate") String creationDate) {
+        super();
+        this.fileID = fileID;
+        this.filename = filename;
+        this.relativePath = relativePath;
+        this.fileVersion = fileVersion;
+        this.creator = creator;
+        this.creationDate = creationDate;
+    }
 
-	public void setRelativePath(String relativePath) {
-		this.relativePath = relativePath;
-	}
+    public long getFileID() {
+        return fileID;
+    }
 
-	public long getFileVersion() {
-		return fileVersion;
-	}
+    public void setFileID(long fileID) {
+        this.fileID = fileID;
+    }
 
-	public void setFileVersion(long fileVersion) {
-		this.fileVersion = fileVersion;
-	}
+    public String getFilename() {
+        return filename;
+    }
 
-	public long getProjectID() {
-		return projectID;
-	}
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
 
-	public void setProjectID(long projectID) {
-		this.projectID = projectID;
-	}
-	
-	
+    public String getRelativePath() {
+        return relativePath;
+    }
+
+    public void setRelativePath(String relativePath) {
+        this.relativePath = relativePath;
+    }
+
+    public long getFileVersion() {
+        return fileVersion;
+    }
+
+    public void setFileVersion(long fileVersion) {
+        this.fileVersion = fileVersion;
+    }
+
+    public String getCreator() {
+        return creator;
+    }
+
+    public void setCreator(String creator) {
+        this.creator = creator;
+    }
+
+    public String getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(String creationDate) {
+        this.creationDate = creationDate;
+    }
 }

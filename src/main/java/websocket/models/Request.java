@@ -19,25 +19,25 @@ public class Request {
     private Request instance;
 
     @JsonProperty("Tag")
-    protected long tag;
+    public final long tag;
 
     @JsonProperty("Resource")
-    protected String resource;
+    public final String resource;
 
     @JsonProperty("Method")
-    protected String method;
+    public final String method;
 
     @JsonProperty("SenderID")
-    protected String senderId;
+    private String senderId;
 
     @JsonProperty("SenderToken")
-    protected String senderToken;
+    private String senderToken;
 
     @JsonProperty("Timestamp")
-    protected long timestamp;
+    public final long timestamp;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    protected IRequestData data;
+    public final IRequestData data;
 
     @JsonIgnore
     private IResponseHandler responseHandler;
@@ -53,7 +53,7 @@ public class Request {
     	this.tag = tagGenerator.getAndIncrement();
         this.resource = "Default";
         this.method = "Default";
-        // TODO: get these from the client core based on user info
+        this.data = null;
         this.senderId = "12345";
         this.senderToken = "12345";
         this.timestamp = System.currentTimeMillis();
@@ -64,9 +64,6 @@ public class Request {
         this.tag = tagGenerator.getAndIncrement();
         this.resource = resource;
         this.method = method;
-        // TODO: get these from the client core based on user info
-        this.senderId = null;
-        this.senderToken = null;
         this.timestamp = System.currentTimeMillis();
         this.data = data;
         this.responseHandler = responseHandler;
@@ -77,59 +74,19 @@ public class Request {
         return tag;
     }
 
-    public String getResource() {
-        return resource;
-    }
-
-    public String getMethod() {
-        return method;
-    }
-
-    public String getSenderId() {
-        return senderId;
-    }
-
     public void setSenderId(String senderId) {
         this.senderId = senderId;
-    }
-
-    public String getSenderToken() {
-        return senderToken;
     }
 
     public void setSenderToken(String senderToken) {
         this.senderToken = senderToken;
     }
 
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public IRequestData getData() {
-        return data;
-    }
-
-    public void setData(IRequestData data) {
-        this.data = data;
-    }
-
     public IResponseHandler getResponseHandler() {
         return responseHandler;
     }
 
-    public void setResponseHandler(IResponseHandler responseHandler) {
-        this.responseHandler = responseHandler;
-    }
-
     public IRequestSendErrorHandler getErrorHandler() {
         return errorHandler;
-    }
-
-    public void setErrorHandler(IRequestSendErrorHandler errorHandler) {
-        this.errorHandler = errorHandler;
     }
 }

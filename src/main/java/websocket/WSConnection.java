@@ -28,8 +28,11 @@ import java.util.concurrent.atomic.AtomicLong;
 @WebSocket(maxTextMessageSize = 64 * 1024)
 public class WSConnection {
     private static final Logger logger = LoggerFactory.getLogger("websocket");
+    private static final int IDLE_TIMEOUT = 5;
+
     // Queue of messages. Priority given to messages that need to be retried.
     final Queue<WSMessage> messageQueue = new PriorityQueue<>();
+
     // List of handlers that incoming messages should be sent to.
     final List<IMessageHandler> incomingMessageHandlers = new ArrayList<>();
     final HashMap<EventType, Runnable> eventHandlers;
@@ -40,6 +43,7 @@ public class WSConnection {
     ConnectionConfig config;
     // State of program
     private volatile State state;
+
     /**
      * Creates a new WSConnection, but does not initialize the connection
      */
@@ -65,7 +69,6 @@ public class WSConnection {
      * @return true if connection request sent successfully, false otherwise.
      */
     public void connect() throws Exception {
-        logger.info(String.format("Connecting to %s", config.getUriString()));
         try {
             if (this.client == null) {
                 this.client = new WebSocketClient();
@@ -96,9 +99,10 @@ public class WSConnection {
         this.session = session;
         setState(State.READY);
 
-        int idleTimeout = 5;
-        logger.info(String.format("Setting websocket idle timeout to %d minutes", idleTimeout));
-        session.setIdleTimeout(TimeUnit.MINUTES.toMillis(idleTimeout));
+        logger.info(String.format("Setting websocket idle timeout to %d minutes", IDLE_TIMEOUT));
+        session.setIdleTimeout(TimeUnit.MINUTES.toMillis(IDLE_TIMEOUT));
+
+        //TODO(wongb): D
 
         handleEvent(EventType.ON_CONNECT);
 

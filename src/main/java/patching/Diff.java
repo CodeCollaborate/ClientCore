@@ -64,8 +64,6 @@ public class Diff {
             throw new IllegalArgumentException(
                     String.format("Length does not match length of change: %d != %s", length, this.changes));
         }
-
-
     }
 
     public boolean isInsertion() {

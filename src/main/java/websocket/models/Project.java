@@ -14,6 +14,7 @@ public class Project {
     @JsonProperty("Permissions")
     private HashMap<String, Permission> permissions;
 
+    // Used in User.Projects - needs to use permissions eventually.
     @JsonProperty("PermissionLevel")
     private int permissionLevel;
 

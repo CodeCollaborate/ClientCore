@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.ConnectionConfig;
-import websocket.models.IRequestData;
 import websocket.models.Request;
 import websocket.models.notifications.*;
 import websocket.models.requests.*;
@@ -42,7 +41,6 @@ public class IntegrationTest {
     private static String senderID = "";
     private static String senderToken = "";
     private Request req;
-    private IRequestData data;
 
     @After
     public void cleanup() throws ConnectException, InterruptedException {

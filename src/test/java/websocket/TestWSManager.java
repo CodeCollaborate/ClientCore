@@ -11,7 +11,6 @@ import websocket.models.Request;
 import websocket.models.ServerMessageWrapper;
 
 import java.io.IOException;
-import java.net.ConnectException;
 
 import static org.mockito.Mockito.*;
 

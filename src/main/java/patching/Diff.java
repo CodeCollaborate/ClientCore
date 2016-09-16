@@ -24,7 +24,7 @@ public class Diff {
     public Diff(boolean insertion, int startIndex, String changes) {
         this.insertion = insertion;
         this.startIndex = startIndex;
-        this.changes = changes.replace("\r\n", "\n");
+        this.changes = changes;
     }
 
     public Diff(String str) {

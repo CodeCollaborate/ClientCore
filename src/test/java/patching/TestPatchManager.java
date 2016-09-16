@@ -45,10 +45,10 @@ public class TestPatchManager {
 
         PatchManager mgr = new PatchManager();
 
-        try{
+        try {
             mgr.applyPatch(baseString, Arrays.asList(patch1));
             Assert.fail("Should have failed; invalid location");
-        } catch (Exception e){
+        } catch (Exception e) {
             // Succeed
         }
     }

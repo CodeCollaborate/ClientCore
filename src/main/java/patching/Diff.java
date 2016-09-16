@@ -179,12 +179,8 @@ public class Diff {
 
                 // CASE 1: IndexA < IndexB
                 if (other.startIndex < current.startIndex) {
-                    // CASE 1a: Ins - Ins
-                    if (other.insertion && current.insertion) {
-                        transformType2(newIntermediateDiffs, current, other);
-                    }
-                    // CASE 1b: Ins - Rmv
-                    else if (other.insertion && !current.insertion) {
+                    // CASE 1a, 1b: Ins - Ins, Ins - Rmv
+                    if ((other.insertion && current.insertion) || (other.insertion && !current.insertion)) {
                         transformType2(newIntermediateDiffs, current, other);
                     }
                     // CASE 1c: Rmv - Ins
@@ -203,12 +199,8 @@ public class Diff {
                 }
                 // CASE 2: IndexA = IndexB
                 else if (other.startIndex == current.startIndex) {
-                    // CASE 2a: Ins - Ins
-                    if (other.insertion && current.insertion) {
-                        transformType2(newIntermediateDiffs, current, other);
-                    }
-                    // CASE 2b: Ins - Rmv
-                    else if (other.insertion && !current.insertion) {
+                    // CASE 2a, 2b: Ins - Ins, Ins - Rmv
+                    if ((other.insertion && current.insertion) || (other.insertion && !current.insertion)) {
                         transformType2(newIntermediateDiffs, current, other);
                     }
                     // CASE 2c: Rmv - Ins
@@ -227,17 +219,13 @@ public class Diff {
                 }
                 // CASE 3: IndexA = IndexB
                 else if (other.startIndex > current.startIndex) {
-                    // CASE 3a: Ins - Ins
-                    if (other.insertion && current.insertion) {
-                        newIntermediateDiffs.add(current);
+                    // CASE 3a, 3c: Ins - Ins, Rmv - Ins
+                    if ((other.insertion && current.insertion) || (!other.insertion && current.insertion)) {
+                        transformType1(newIntermediateDiffs, current, other);
                     }
                     // CASE 3b: Ins - Rmv
                     else if (other.insertion && !current.insertion) {
                         transformType6(newIntermediateDiffs, current, other);
-                    }
-                    // CASE 3c: Rmv - Ins
-                    else if (!other.insertion && current.insertion) {
-                        transformType1(newIntermediateDiffs, current, other);
                     }
                     // CASE 3d: Rmv - Rmv
                     else if (!other.insertion && !current.insertion) {
@@ -286,7 +274,8 @@ public class Diff {
             newIntermediateDiffs.add(newDiff);
         } else if ((other.startIndex + other.getLength()) >= (current.startIndex
                 + current.getLength())) {
-            // Do nothing
+            // In this case, all the items that this patch was trying to delete have already been deleted.
+            // Thus, return no transformed diffs.
         } else {
             int overlap = other.startIndex + other.getLength() - current.startIndex;
             int newStartLoc = current.startIndex - other.getLength() + overlap;

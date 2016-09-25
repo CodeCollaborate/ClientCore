@@ -62,8 +62,8 @@ public class IntegrationTest {
     public void integrationTest() throws Exception {
         // Test valid flow
         testUserRegister();
-        testUserLookup();
         testUserLogin();
+        testUserLookup();
         testUserProjects();
         testProjectCreate();
         testUserProjects();

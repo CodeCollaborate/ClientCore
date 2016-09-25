@@ -24,7 +24,7 @@ public class Diff {
     public Diff(boolean insertion, int startIndex, String changes) {
         this.insertion = insertion;
         this.startIndex = startIndex;
-        this.changes = changes.replace("\r\n", "\n");
+        this.changes = changes;
     }
 
     public Diff(String str) {
@@ -175,52 +175,21 @@ public class Diff {
 
         for (Diff other : others) {
             List<Diff> newIntermediateDiffs = new ArrayList<>();
-            for (Diff intermediate : intermediateDiffs) {
+            for (Diff current : intermediateDiffs) {
 
                 // CASE 1: IndexA < IndexB
-                if (other.startIndex < intermediate.startIndex) {
-                    // CASE 1a: Ins - Ins
-                    if (other.insertion && intermediate.insertion) {
-                        int newStartLoc = intermediate.startIndex + other.getLength();
-                        Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                        newIntermediateDiffs.add(newDiff);
-                    }
-                    // CASE 1b: Ins - Rmv
-                    else if (other.insertion && !intermediate.insertion) {
-                        int newStartLoc = intermediate.startIndex + other.getLength();
-                        Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                        newIntermediateDiffs.add(newDiff);
-
+                if (other.startIndex < current.startIndex) {
+                    // CASE 1a, 1b: Ins - Ins, Ins - Rmv
+                    if ((other.insertion && current.insertion) || (other.insertion && !current.insertion)) {
+                        transformType2(newIntermediateDiffs, current, other);
                     }
                     // CASE 1c: Rmv - Ins
-                    else if (!other.insertion && intermediate.insertion) {
-                        if ((other.startIndex + other.getLength()) > intermediate.startIndex) {
-                            int newStartLoc = intermediate.startIndex - (intermediate.startIndex - other.startIndex);
-                            Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                            newIntermediateDiffs.add(newDiff);
-                        } else {
-                            int newStartLoc = intermediate.startIndex - other.getLength();
-                            Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                            newIntermediateDiffs.add(newDiff);
-                        }
-
+                    else if (!other.insertion && current.insertion) {
+                        transformType3(newIntermediateDiffs, current, other);
                     }
                     // CASE 1d: Rmv - Rmv
-                    else if (!other.insertion && !intermediate.insertion) {
-                        if ((other.startIndex + other.getLength()) <= intermediate.startIndex) {
-                            int newStartLoc = intermediate.startIndex - other.getLength();
-                            Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                            newIntermediateDiffs.add(newDiff);
-                        } else if ((other.startIndex + other.getLength()) >= (intermediate.startIndex
-                                + intermediate.getLength())) {
-                            // Do nothing
-                        } else {
-                            int overlap = other.startIndex + other.getLength() - intermediate.startIndex;
-                            int newStartLoc = intermediate.startIndex - other.getLength() + overlap;
-                            String newChanges = intermediate.changes.substring(overlap);
-                            Diff newDiff = new Diff(intermediate.insertion, newStartLoc, newChanges);
-                            newIntermediateDiffs.add(newDiff);
-                        }
+                    else if (!other.insertion && !current.insertion) {
+                        transformType4(newIntermediateDiffs, current, other);
                     }
                     // FAIL: Should never have been able to get here.
                     else {
@@ -229,30 +198,18 @@ public class Diff {
                     }
                 }
                 // CASE 2: IndexA = IndexB
-                else if (other.startIndex == intermediate.startIndex) {
-                    // CASE 2a: Ins - Ins
-                    if (other.insertion && intermediate.insertion) {
-                        int newStartLoc = intermediate.startIndex + other.getLength();
-                        Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                        newIntermediateDiffs.add(newDiff);
-                    }
-                    // CASE 2b: Ins - Rmv
-                    else if (other.insertion && !intermediate.insertion) {
-                        int newStartLoc = intermediate.startIndex + other.getLength();
-                        Diff newDiff = new Diff(intermediate.insertion, newStartLoc, intermediate.changes);
-                        newIntermediateDiffs.add(newDiff);
+                else if (other.startIndex == current.startIndex) {
+                    // CASE 2a, 2b: Ins - Ins, Ins - Rmv
+                    if ((other.insertion && current.insertion) || (other.insertion && !current.insertion)) {
+                        transformType2(newIntermediateDiffs, current, other);
                     }
                     // CASE 2c: Rmv - Ins
-                    else if (!other.insertion && intermediate.insertion) {
-                        newIntermediateDiffs.add(intermediate);
+                    else if (!other.insertion && current.insertion) {
+                        transformType1(newIntermediateDiffs, current, other);
                     }
                     // CASE 2d: Rmv - Rmv
-                    else if (!other.insertion && !intermediate.insertion) {
-                        if (intermediate.getLength() > other.getLength()) {
-                            String newChanges = intermediate.changes.substring(other.getLength());
-                            Diff newDiff = new Diff(intermediate.insertion, intermediate.startIndex, newChanges);
-                            newIntermediateDiffs.add(newDiff);
-                        }
+                    else if (!other.insertion && !current.insertion) {
+                        transformType5(newIntermediateDiffs, current, other);
                     }
                     // FAIL: Should never have been able to get here.
                     else {
@@ -261,50 +218,24 @@ public class Diff {
                     }
                 }
                 // CASE 3: IndexA = IndexB
-                else if (other.startIndex > intermediate.startIndex) {
-                    // CASE 3a: Ins - Ins
-                    if (other.insertion && intermediate.insertion) {
-                        newIntermediateDiffs.add(intermediate);
+                else if (other.startIndex > current.startIndex) {
+                    // CASE 3a, 3c: Ins - Ins, Rmv - Ins
+                    if ((other.insertion && current.insertion) || (!other.insertion && current.insertion)) {
+                        transformType1(newIntermediateDiffs, current, other);
                     }
                     // CASE 3b: Ins - Rmv
-                    else if (other.insertion && !intermediate.insertion) {
-
-                        if ((intermediate.startIndex + intermediate.getLength()) > other.startIndex) {
-                            int length1 = other.startIndex - intermediate.startIndex;
-                            String changes1 = intermediate.changes.substring(0, length1);
-                            String changes2 = intermediate.changes.substring(length1);
-                            Diff diff1 = new Diff(intermediate.insertion, intermediate.startIndex, changes1);
-                            Diff diff2 = new Diff(intermediate.insertion, intermediate.startIndex + other.getLength(),
-                                    changes2);
-
-                            newIntermediateDiffs.add(diff1);
-                            newIntermediateDiffs.add(diff2);
-                        } else {
-                            newIntermediateDiffs.add(intermediate);
-                        }
-                    }
-                    // CASE 3c: Rmv - Ins
-                    else if (!other.insertion && intermediate.insertion) {
-                        newIntermediateDiffs.add(intermediate);
+                    else if (other.insertion && !current.insertion) {
+                        transformType6(newIntermediateDiffs, current, other);
                     }
                     // CASE 3d: Rmv - Rmv
-                    else if (!other.insertion && !intermediate.insertion) {
-                        if ((intermediate.startIndex + intermediate.getLength()) > other.startIndex) {
-                            int nonOverlap = other.startIndex - intermediate.startIndex;
-                            String newChanges = intermediate.changes.substring(0,
-                                    intermediate.getLength() - nonOverlap);
-                            Diff newDiff = new Diff(intermediate.insertion, intermediate.startIndex, newChanges);
-                            newIntermediateDiffs.add(newDiff);
-                        } else {
-                            newIntermediateDiffs.add(intermediate);
-                        }
+                    else if (!other.insertion && !current.insertion) {
+                        transformType7(newIntermediateDiffs, current, other);
                     }
                     // FAIL: Should never have been able to get here.
                     else {
                         throw new IllegalStateException("Got to invalid state while transforming [" + this.toString()
                                 + "] on predessors [" + others + "]");
                     }
-
                 } else {
                     throw new IllegalStateException("Got to invalid state");
                 }
@@ -312,5 +243,81 @@ public class Diff {
             intermediateDiffs = newIntermediateDiffs;
         }
         return intermediateDiffs;
+    }
+
+    private void transformType1(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        newIntermediateDiffs.add(current);
+    }
+
+    private void transformType2(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        int newStartLoc = current.startIndex + other.getLength();
+        Diff newDiff = new Diff(current.insertion, newStartLoc, current.changes);
+        newIntermediateDiffs.add(newDiff);
+    }
+
+    private void transformType3(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        if ((other.startIndex + other.getLength()) > current.startIndex) {
+            int newStartLoc = current.startIndex - (current.startIndex - other.startIndex);
+            Diff newDiff = new Diff(current.insertion, newStartLoc, current.changes);
+            newIntermediateDiffs.add(newDiff);
+        } else {
+            int newStartLoc = current.startIndex - other.getLength();
+            Diff newDiff = new Diff(current.insertion, newStartLoc, current.changes);
+            newIntermediateDiffs.add(newDiff);
+        }
+    }
+
+    private void transformType4(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        if ((other.startIndex + other.getLength()) <= current.startIndex) {
+            int newStartLoc = current.startIndex - other.getLength();
+            Diff newDiff = new Diff(current.insertion, newStartLoc, current.changes);
+            newIntermediateDiffs.add(newDiff);
+        } else if ((other.startIndex + other.getLength()) >= (current.startIndex
+                + current.getLength())) {
+            // In this case, all the items that this patch was trying to delete have already been deleted.
+            // Thus, return no transformed diffs.
+        } else {
+            int overlap = other.startIndex + other.getLength() - current.startIndex;
+            int newStartLoc = current.startIndex - other.getLength() + overlap;
+            String newChanges = current.changes.substring(overlap);
+            Diff newDiff = new Diff(current.insertion, newStartLoc, newChanges);
+            newIntermediateDiffs.add(newDiff);
+        }
+    }
+
+    private void transformType5(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        if (current.getLength() > other.getLength()) {
+            String newChanges = current.changes.substring(other.getLength());
+            Diff newDiff = new Diff(current.insertion, current.startIndex, newChanges);
+            newIntermediateDiffs.add(newDiff);
+        }
+    }
+
+    private void transformType6(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        if ((current.startIndex + current.getLength()) > other.startIndex) {
+            int length1 = other.startIndex - current.startIndex;
+            String changes1 = current.changes.substring(0, length1);
+            String changes2 = current.changes.substring(length1);
+            Diff diff1 = new Diff(current.insertion, current.startIndex, changes1);
+            Diff diff2 = new Diff(current.insertion, current.startIndex + other.getLength(),
+                    changes2);
+
+            newIntermediateDiffs.add(diff1);
+            newIntermediateDiffs.add(diff2);
+        } else {
+            newIntermediateDiffs.add(current);
+        }
+    }
+
+    private void transformType7(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
+        if ((current.startIndex + current.getLength()) > other.startIndex) {
+            int nonOverlap = other.startIndex - current.startIndex;
+            String newChanges = current.changes.substring(0,
+                    current.getLength() - nonOverlap);
+            Diff newDiff = new Diff(current.insertion, current.startIndex, newChanges);
+            newIntermediateDiffs.add(newDiff);
+        } else {
+            newIntermediateDiffs.add(current);
+        }
     }
 }

@@ -55,8 +55,11 @@ public class Patch {
 
     public Patch getUndo() {
         List<Diff> undoDiffs = new ArrayList<Diff>();
-        for (Diff diff : diffs) {
-            undoDiffs.add(diff.getUndo());
+
+        // This needs to be in reverse order, since all the diffs in a package will have been applied in order.
+        // The last diff will have been computed relative to the previous few.
+        for (int i = diffs.size() - 1; i >= 0; i--) {
+            undoDiffs.add(diffs.get(i).getUndo());
         }
         return new Patch(baseVersion, undoDiffs);
     }

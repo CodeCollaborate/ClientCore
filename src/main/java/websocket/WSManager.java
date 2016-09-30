@@ -237,4 +237,8 @@ public class WSManager implements IMessageHandler {
         this.userID = userID;
         this.userToken = userToken;
     }
+
+    public WSConnection.State getConnectionState() {
+        return socket.getState();
+    }
 }

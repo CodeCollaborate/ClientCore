@@ -318,7 +318,7 @@ public class WSConnection {
         ON_SEND_MESSAGE
     }
 
-    enum State {
+    public enum State {
         CREATED,
         CONNECT,
         READY,

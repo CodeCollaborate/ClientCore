@@ -35,7 +35,7 @@ public class WSConnection {
 
     // List of handlers that incoming messages should be sent to.
     final List<IMessageHandler> incomingMessageHandlers = new ArrayList<>();
-    final HashMap<EventType, Runnable> eventHandlers;
+    final HashMap<EventType, List<Runnable>> eventHandlers;
     // Jetty objects
     WebSocketClient client;
     Session session;
@@ -54,10 +54,8 @@ public class WSConnection {
     }
 
     public void handleEvent(EventType event) {
-        Runnable r = eventHandlers.get(event);
-        if (r != null) {
-            r.run();
-        }
+        List<Runnable> runnables = eventHandlers.get(event);
+        runnables.stream().filter(r -> r != null).forEach(Runnable::run);
     }
 
     /**

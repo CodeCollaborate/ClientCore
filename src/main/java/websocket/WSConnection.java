@@ -55,6 +55,9 @@ public class WSConnection {
 
     public void handleEvent(EventType event) {
         List<Runnable> runnables = eventHandlers.get(event);
+        if (runnables == null) {
+            return;
+        }
         runnables.stream().filter(r -> r != null).forEach(Runnable::run);
     }
 

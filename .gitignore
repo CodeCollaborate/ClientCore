@@ -19,3 +19,4 @@ config*
 build/
 bin/
 .settings/*
+/gradle/

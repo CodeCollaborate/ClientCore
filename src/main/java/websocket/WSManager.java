@@ -8,7 +8,9 @@ import org.slf4j.LoggerFactory;
 import websocket.models.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by fahslaj on 4/14/2016.
@@ -55,7 +57,14 @@ public class WSManager implements IMessageHandler {
     }
 
     public void registerEventHandler(WSConnection.EventType event, Runnable handler) {
-        socket.eventHandlers.put(event, handler);
+        List<Runnable> runnables = socket.eventHandlers.get(event);
+        if (runnables != null) {
+            runnables.add(handler);
+        } else {
+            runnables = new ArrayList<>();
+            runnables.add(handler);
+            socket.eventHandlers.put(event, runnables);
+        }
     }
 
     public void deregisterEventHandler(WSConnection.EventType event) {
@@ -227,5 +236,9 @@ public class WSManager implements IMessageHandler {
     public void setAuthInfo(String userID, String userToken) {
         this.userID = userID;
         this.userToken = userToken;
+    }
+
+    public WSConnection.State getConnectionState() {
+        return socket.getState();
     }
 }

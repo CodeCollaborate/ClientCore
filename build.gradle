@@ -36,3 +36,5 @@ test {
 fatJar {
     archiveName "${baseName}.${extension}"
 }
+
+fatJar.dependsOn(build)

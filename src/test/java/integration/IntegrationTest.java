@@ -1,5 +1,6 @@
 package integration;
 
+import com.google.common.collect.BiMap;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -40,6 +41,7 @@ public class IntegrationTest {
     private static long fileID = -1;
     private static String senderID = "";
     private static String senderToken = "";
+    private static BiMap<String, Byte> apiConstants;
     private Request req;
 
     @After
@@ -63,6 +65,7 @@ public class IntegrationTest {
         // Test valid flow
         testUserRegister();
         testUserLogin();
+        testProjectGetPermissionConstants();
         testUserLookup();
         testUserProjects();
         testProjectCreate();
@@ -148,6 +151,28 @@ public class IntegrationTest {
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
+    }
+
+    private void testProjectGetPermissionConstants() throws InterruptedException {
+        logger.info("Requesting api permission constants");
+        Semaphore waiter = new Semaphore(0);
+
+        req = new ProjectGetPermissionConstantsRequest().getRequest( response -> {
+            Assert.assertEquals("Failed to get permission constants", 200, response.getStatus());
+            apiConstants = ((ProjectGetPermissionConstantsResponse) response.getData()).getConstants();
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+
+        Assert.assertNotEquals("Constants map empty", 0, apiConstants.size());
+
+        // NOTE: I chose a permission which (in my opinion) will probably always be around
+        //       if the "read" permission is ever removed from the server, this will fail - Joel
+        Assert.assertTrue("Constants map does not contain correct provlages", apiConstants.containsKey("read"));
     }
 
     private void testProjectCreate() throws ConnectException, InterruptedException {

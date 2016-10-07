@@ -1,6 +1,9 @@
 package dataMgmt;
 
+import websocket.models.Project;
+
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 
@@ -10,8 +13,14 @@ import java.util.Observable;
  */
 public class SessionStorage extends Observable {
 
+    // the username for the user
+    private String username;
+
     // the authentication token for the user
     private String authenticationToken;
+
+    // the list of loaded projects
+    private List<Project> projects;
 
     // the map of users-project keys and their online status
     private Map<String, OnlineStatus> projectUserStatus;
@@ -21,6 +30,23 @@ public class SessionStorage extends Observable {
      */
     protected SessionStorage() {
         projectUserStatus = new HashMap<>();
+    }
+
+    /**
+     * Get the current user's username.
+     * @return username
+     */
+    public String getUsername() {
+        return username;
+    }
+
+    /**
+     * Set the current user's username.
+     * @param username
+     */
+    public void setUsername(String username) {
+        this.username = username;
+        notifyObservers(username);
     }
 
     /**
@@ -37,6 +63,23 @@ public class SessionStorage extends Observable {
      */
     public void setAuthenticationToken(String authenticationToken) {
         this.authenticationToken = authenticationToken;
+    }
+
+    /**
+     * Get the current user's loaded projects.
+     * @return projects list
+     */
+    public List<Project> getProjects() {
+        return projects;
+    }
+
+    /**
+     * Set the current user's loaded projects.
+     * @param projects
+     */
+    public void setProjects(List<Project> projects) {
+        this.projects = projects;
+        notifyObservers(projects);
     }
 
     /**

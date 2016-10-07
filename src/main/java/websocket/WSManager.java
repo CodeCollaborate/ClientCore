@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by fahslaj on 4/14/2016.
@@ -28,19 +30,17 @@ public class WSManager implements IMessageHandler {
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
 
-    public WSManager(ConnectionConfig config) {
-        this.notificationHandlerHashMap = new HashMap<>();
-        this.requestHashMap = new HashMap<>();
-        this.socket = new WSConnection(config);
-        socket.registerIncomingMessageHandler(this);
+    private List<Request> queuedAuthenticatedRquests;
 
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    public WSManager(ConnectionConfig config) {
+        this(new WSConnection(config));
     }
 
     // used for testing
     WSManager(WSConnection socket) {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
+        this.queuedAuthenticatedRquests = new ArrayList<>();
         this.socket = socket;
         socket.registerIncomingMessageHandler(this);
 
@@ -90,6 +90,14 @@ public class WSManager implements IMessageHandler {
      */
     public void deregisterNotificationHandler(String resource, String method) {
         notificationHandlerHashMap.remove(resource + '.' + method);
+    }
+
+    public void sendAuthenticatedRequest(Request request) throws ConnectException {
+        if (userID == null || userToken == null) {
+            this.queuedAuthenticatedRquests.add(request);
+            return;
+        }
+        this.sendRequest(request);
     }
 
     /**
@@ -236,6 +244,14 @@ public class WSManager implements IMessageHandler {
     public void setAuthInfo(String userID, String userToken) {
         this.userID = userID;
         this.userToken = userToken;
+        this.sendAllAuthenticatedRequests();
+    }
+
+    // TODO: fix potential concurrency issue with the list?
+    private void sendAllAuthenticatedRequests() {
+        List<Request> reqList = this.queuedAuthenticatedRquests;
+        this.queuedAuthenticatedRquests = new ArrayList<>();
+        reqList.forEach(this::sendAuthenticatedRequest);
     }
 
     public WSConnection.State getConnectionState() {

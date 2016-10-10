@@ -118,6 +118,8 @@ public class IntegrationTest {
         testUserProjects();
         // ProjectGetOnlineClientsRequest (NOT IMPLEMENTED)
 
+        testUserDelete();
+
         // Run invalid method type, expect error
         // Re-run login, expect error(?)
         // Run invalid login, expect error
@@ -674,4 +676,32 @@ public class IntegrationTest {
             Assert.fail("Acquire timed out");
         }
     }
+
+    private void testUserDelete() throws InterruptedException, ConnectException {
+        logger.info(String.format("Deleting user: %s", user1ID));
+        Semaphore waiter = new Semaphore(0);
+        Semaphore loginWaiter = new Semaphore(0);
+
+        req = new UserDeleteRequest().getRequest( deleteResponse -> {
+            Assert.assertEquals("Failed to delete user", 200, deleteResponse.getStatus());
+
+            // verifying user was deleted
+            req = new UserLoginRequest(user1ID, user1Pass).getRequest( loginResponse -> {
+                Assert.assertNotEquals("Failed to log in", 200, loginResponse.getStatus());
+                loginWaiter.release();
+            }, errHandler);
+            wsMgr.sendRequest(req);
+
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+
+        if (!loginWaiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+        if (!waiter.tryAcquire(10, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
 }

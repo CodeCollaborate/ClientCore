@@ -96,9 +96,8 @@ public class IntegrationTest {
         // ProjectGetOnlineClientsRequest (NOT IMPLEMENTED)
         // ProjectGrantPermissionsRequest (NOT IMPLEMENTED)
         // ProjectRevokePermissionsRequest (NOT IMPLEMENTED)
-        // ProjectGetPermissionConstantsRequest (NOT IMPLEMENTED)
 
-        // TODO(wongb): Test Project.GrantPermissions and Project.RevokePermissions
+        // TODO(shapiro): Test Project.GrantPermissions and Project.RevokePermissions
 
 
         // Run invalid method type, expect error

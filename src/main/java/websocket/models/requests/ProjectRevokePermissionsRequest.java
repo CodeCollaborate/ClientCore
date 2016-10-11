@@ -16,9 +16,9 @@ public class ProjectRevokePermissionsRequest implements IRequestData {
     protected long projectID;
 
     @JsonProperty("RevokeUsername")
-    protected long revokeUsername;
+    protected String revokeUsername;
 
-    public ProjectRevokePermissionsRequest(long projectID, long revokeUsername) {
+    public ProjectRevokePermissionsRequest(long projectID, String revokeUsername) {
         this.projectID = projectID;
         this.revokeUsername = revokeUsername;
     }

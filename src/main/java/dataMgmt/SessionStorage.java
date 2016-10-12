@@ -2,10 +2,7 @@ package dataMgmt;
 
 import websocket.models.Project;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Observable;
+import java.util.*;
 
 /**
  * The storage unit for session data.
@@ -20,7 +17,7 @@ public class SessionStorage extends Observable {
     private String authenticationToken;
 
     // the list of loaded projects
-    private List<Project> projects;
+    private HashMap<Long, Project> projects = new HashMap<>();
 
     // the map of users-project keys and their online status
     private Map<String, OnlineStatus> projectUserStatus;
@@ -70,15 +67,47 @@ public class SessionStorage extends Observable {
      * @return projects list
      */
     public List<Project> getProjects() {
+        List<Project> projects = new ArrayList<>(this.projects.values());
+        Collections.sort(projects, (o1, o2) -> {
+            if (o1.getName() == null) {
+                return 1;
+            } else if (o2.getName() == null) {
+                return -1;
+            } else {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
         return projects;
     }
 
     /**
+     * Get a specific project by its id.
+     * @param projectId the id with which to look up a project
+     * @return the project with the specified projectId, or null if there is none
+     */
+    public Project getProjectById(long projectId) {
+        return this.projects.get(projectId);
+    }
+
+    /**
      * Set the current user's loaded projects.
-     * @param projects
+     * @param projects the list of projects to set
      */
     public void setProjects(List<Project> projects) {
-        this.projects = projects;
+        this.projects = new HashMap<>();
+        for (Project project : projects) {
+            this.projects.put(project.getProjectID(), project);
+        }
+        notifyObservers(projects);
+    }
+
+    /**
+     * Add a project to the currently loaded projects. If one project already exists with the given id,
+     * it will be overwritten.
+     * @param project the project to add
+     */
+    public void addProject(Project project) {
+        this.projects.put(project.getProjectID(), project);
         notifyObservers(projects);
     }
 

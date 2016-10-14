@@ -1,5 +1,6 @@
 package dataMgmt.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.nio.file.Paths;
@@ -19,7 +20,7 @@ public class FileMetadata {
     private String relativePath;
 
     @JsonProperty("Version")
-    private long fileVersion;
+    private long version;
 
     @JsonProperty("Creator")
     private String creator;
@@ -51,16 +52,17 @@ public class FileMetadata {
         this.relativePath = relativePath;
     }
 
+    @JsonIgnore
     public String getFilePath(){
         return Paths.get(relativePath, filename).toString().replace('\\','/');
     }
 
-    public long getFileVersion() {
-        return fileVersion;
+    public long getVersion() {
+        return version;
     }
 
-    public void setFileVersion(long fileVersion) {
-        this.fileVersion = fileVersion;
+    public void setVersion(long version) {
+        this.version = version;
     }
 
     public String getCreator() {
@@ -77,5 +79,32 @@ public class FileMetadata {
 
     public void setCreationDate(String creationDate) {
         this.creationDate = creationDate;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FileMetadata)) return false;
+
+        FileMetadata that = (FileMetadata) o;
+
+        if (fileID != that.fileID) return false;
+        if (version != that.version) return false;
+        if (filename != null ? !filename.equals(that.filename) : that.filename != null) return false;
+        if (relativePath != null ? !relativePath.equals(that.relativePath) : that.relativePath != null) return false;
+        if (creator != null ? !creator.equals(that.creator) : that.creator != null) return false;
+        return creationDate != null ? creationDate.equals(that.creationDate) : that.creationDate == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (fileID ^ (fileID >>> 32));
+        result = 31 * result + (filename != null ? filename.hashCode() : 0);
+        result = 31 * result + (relativePath != null ? relativePath.hashCode() : 0);
+        result = 31 * result + (int) (version ^ (version >>> 32));
+        result = 31 * result + (creator != null ? creator.hashCode() : 0);
+        result = 31 * result + (creationDate != null ? creationDate.hashCode() : 0);
+        return result;
     }
 }

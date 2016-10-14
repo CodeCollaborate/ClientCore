@@ -1,6 +1,6 @@
 {
   "ProjectID": 12948745,
   "Name": "MyProjectName",
-  "Owner": "Me",
+  "PermissionLevel": 10,
   "Files": []
 }

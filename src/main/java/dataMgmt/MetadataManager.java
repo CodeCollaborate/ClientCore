@@ -116,7 +116,7 @@ public class MetadataManager {
         try {
             metadata = mapper.readValue(file, ProjectMetadata.class);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/'));
+            throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/') + " - " + e.getMessage());
         }
 
         putProjectMetadata(projectRoot, metadata);
@@ -174,7 +174,7 @@ public class MetadataManager {
         try {
             file.createNewFile();
         } catch (IOException e) {
-            logger.error("IO Error on file creation: " + projectRoot);
+            logger.error("IO Error on file creation: " + projectRoot + " - " + e.getMessage());
             return;
         }
 
@@ -182,7 +182,7 @@ public class MetadataManager {
         try {
             mapper.writeValue(file, metadata);
         } catch (IOException e) {
-            logger.error("IO Error on metadata write to file: " + projectRoot);
+            logger.error("IO Error on metadata write to file: " + projectRoot + " - " + e.getMessage());
         }
     }
 }

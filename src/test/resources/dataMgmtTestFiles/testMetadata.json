@@ -1,21 +1,24 @@
 {
   "ProjectID": 10248523,
   "Name": "testProject",
-  "Owner": "Austin",
+  "PermissionLevel": 10,
   "Files": [
     {
       "FileID": 123,
-      "FilePath": "./testClass.java",
+      "RelativePath": "./",
+      "Filename": "testClass.java",
       "Version": 184
     },
     {
       "FileID": 456,
-      "FilePath": "./otherStuff.txt",
+      "RelativePath": "./",
+      "Filename": "otherStuff.txt",
       "Version": 1
     },
     {
       "FileID": 789,
-      "FilePath": "./weirdFile.dank",
+      "RelativePath": "./",
+      "Filename": "weirdFile.dank",
       "Version": 56
     }
   ]

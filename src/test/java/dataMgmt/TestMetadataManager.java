@@ -1,6 +1,8 @@
 package dataMgmt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dataMgmt.models.FileMetadata;
+import dataMgmt.models.ProjectMetadata;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,24 +23,26 @@ public class TestMetadataManager {
 
     private static final String testWriteRoot = "./src/test/resources/dataMgmtTestFiles/";
     private static final String testWriteFile = "writtenTest.json";
+    
     @Test
     public void testGetProjectMetadataNormal() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
         expectedMetadata.setName("testProject");
-        expectedMetadata.setOwner("Austin");
-        expectedMetadata.setProjectId(10248523);
+        expectedMetadata.setPermissionLevel(10);
+        expectedMetadata.setProjectID(10248523);
 
         int size = 3;
         FileMetadata[] fileMetadatas = new FileMetadata[size];
 
         long[] ids = {123, 456, 789};
-        String[] paths = {"./testClass.java", "./otherStuff.txt", "./weirdFile.dank"};
+        String[] paths = {"testClass.java", "otherStuff.txt", "weirdFile.dank"};
         long[] versions = {184, 1, 56};
 
-        for (int i = 0; i < fileMetadatas.length; i++) {
+        for (int i = 0; i < size; i++) {
             fileMetadatas[i] = new FileMetadata();
-            fileMetadatas[i].setFileId(ids[i]);
-            fileMetadatas[i].setFilePath(paths[i]);
+            fileMetadatas[i].setFileID(ids[i]);
+            fileMetadatas[i].setRelativePath("./");
+            fileMetadatas[i].setFilename(paths[i]);
             fileMetadatas[i].setVersion(versions[i]);
         }
         expectedMetadata.setFiles(fileMetadatas);
@@ -70,9 +74,9 @@ public class TestMetadataManager {
     @Test
     public void testNoFilesMetadata() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
-        expectedMetadata.setProjectId(12948745);
+        expectedMetadata.setProjectID(12948745);
         expectedMetadata.setName("MyProjectName");
-        expectedMetadata.setOwner("Me");
+        expectedMetadata.setPermissionLevel(10);
         expectedMetadata.setFiles(new FileMetadata[0]);
 
         DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testNoFilesMetadata);
@@ -83,11 +87,14 @@ public class TestMetadataManager {
     @Test
     public void testWriteProjectMetadataNormal() {
         ProjectMetadata sampleMetadata = new ProjectMetadata();
-        sampleMetadata.setProjectId(98);
+        sampleMetadata.setProjectID(98);
         sampleMetadata.setName("sampleName");
-        sampleMetadata.setOwner("Gene");
+        sampleMetadata.setPermissionLevel(10);
         FileMetadata[] files = new FileMetadata[1];
         files[0] = new FileMetadata();
+        files[0].setFilename("TEST");
+        files[0].setRelativePath("./");
+        files[0].setVersion(1);
         sampleMetadata.setFiles(files);
 
         DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);
@@ -103,9 +110,9 @@ public class TestMetadataManager {
     @Test
     public void testWriteProjectMetadataNoFiles() {
         ProjectMetadata sampleMetadata = new ProjectMetadata();
-        sampleMetadata.setProjectId(203);
+        sampleMetadata.setProjectID(203);
         sampleMetadata.setName("memes");
-        sampleMetadata.setOwner("Greg");
+        sampleMetadata.setPermissionLevel(10);
         sampleMetadata.setFiles(new FileMetadata[0]);
 
         DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);

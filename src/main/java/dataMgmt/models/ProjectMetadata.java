@@ -3,6 +3,7 @@ package dataMgmt.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.Permission;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -24,7 +25,10 @@ public class ProjectMetadata {
     private int permissionLevel;
 
     @JsonProperty("Files")
-    protected FileMetadata[] files;
+    private FileMetadata[] files;
+
+    @JsonProperty("FileVersion")
+    private long fileVersion;
 
     public long getProjectID() {
         return projectID;
@@ -66,4 +70,39 @@ public class ProjectMetadata {
         this.files = files;
     }
 
+    public long getFileVersion() {
+        return fileVersion;
+    }
+
+    public void setFileVersion(long fileVersion) {
+        this.fileVersion = fileVersion;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ProjectMetadata)) return false;
+
+        ProjectMetadata that = (ProjectMetadata) o;
+
+        if (projectID != that.projectID) return false;
+        if (permissionLevel != that.permissionLevel) return false;
+        if (fileVersion != that.fileVersion) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        if (permissions != null ? !permissions.equals(that.permissions) : that.permissions != null) return false;
+        // Probably incorrect - comparing Object[] arrays with Arrays.equals
+        return Arrays.equals(files, that.files);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (projectID ^ (projectID >>> 32));
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (permissions != null ? permissions.hashCode() : 0);
+        result = 31 * result + permissionLevel;
+        result = 31 * result + Arrays.hashCode(files);
+        result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
+        return result;
+    }
 }

@@ -1,19 +1,10 @@
 package dataMgmt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dataMgmt.models.FileMetadata;
-import dataMgmt.models.ProjectMetadata;
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 /**
  * Created by fahslaj on 5/2/2016.
@@ -22,12 +13,14 @@ public class TestMetadataManager {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static final String testMetadata = "./src/test/resources/dataMgmtTestFiles/testMetadata.json";
-    private static final String testEmptyMetadata = "./src/test/resources/dataMgmtTestFiles/testEmptyMetadata.json";
-    private static final String testMalformedMetadata = "./src/test/resources/dataMgmtTestFiles/testMalformedMetadata.json";
-    private static final String testNoFilesMetadata = "./src/test/resources/dataMgmtTestFiles/testNoFilesMetadata.json";
+    private static final String configRoot = "./src/test/resources/dataMgmtTestFiles/";
+    private static final String testMetadata = "testMetadata.json";
+    private static final String testEmptyMetadata = "testEmptyMetadata.json";
+    private static final String testMalformedMetadata = "testMalformedMetadata.json";
+    private static final String testNoFilesMetadata = "testNoFilesMetadata.json";
 
-    private static final String testWriteDestination = "./src/test/resources/dataMgmtTestFiles/writtenTest.json";
+    private static final String testWriteRoot = "./src/test/resources/dataMgmtTestFiles/";
+    private static final String testWriteFile = "writtenTest.json";
     @Test
     public void testGetProjectMetadataNormal() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
@@ -50,23 +43,22 @@ public class TestMetadataManager {
         }
         expectedMetadata.setFiles(fileMetadatas);
 
-        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testMetadata);
+        DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testMetadata);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(configRoot);
         Assert.assertEquals(expectedMetadata, resultMetadata);
     }
 
     @Test
     public void testGetProjectMetadataEmpty() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
-        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testEmptyMetadata);
+        DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testEmptyMetadata);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(configRoot);
         Assert.assertEquals(expectedMetadata, resultMetadata);
     }
 
-    @Test
+    @Test(expected=IllegalStateException.class)
     public void testGetProjectMetadataMalformed() {
-        MetadataManager.logger = mock(Logger.class);
-        DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testMalformedMetadata);
-        verify(MetadataManager.logger, times(1)).error("IO Error on metadata read from path: "+testMalformedMetadata);
-        MetadataManager.logger = LoggerFactory.getLogger("metadata");
+        DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testMalformedMetadata);
     }
 
     @Test
@@ -83,7 +75,8 @@ public class TestMetadataManager {
         expectedMetadata.setOwner("Me");
         expectedMetadata.setFiles(new FileMetadata[0]);
 
-        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadataFileSpecific(testNoFilesMetadata);
+        DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testNoFilesMetadata);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(configRoot);
         Assert.assertEquals(expectedMetadata, resultMetadata);
     }
 
@@ -97,18 +90,13 @@ public class TestMetadataManager {
         files[0] = new FileMetadata();
         sampleMetadata.setFiles(files);
 
-        DataManager.getInstance().getMetadataManager().writeProjectMetadataFileSpecific(sampleMetadata, testWriteDestination);
-        File file = new File(testWriteDestination);
-        ProjectMetadata result = null;
-        if (!file.exists())
-            Assert.fail("File was not written");
-        try {
-            result = mapper.readValue(file, ProjectMetadata.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-            Assert.fail("Invalid json");
-        }
-        Assert.assertEquals(sampleMetadata, result);
+        DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);
+
+        DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(testWriteRoot, testWriteFile);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(testWriteRoot);
+        Assert.assertEquals(sampleMetadata, resultMetadata);
+
+        File file = new File(testWriteRoot, testWriteFile);
         file.delete();
     }
 
@@ -120,18 +108,13 @@ public class TestMetadataManager {
         sampleMetadata.setOwner("Greg");
         sampleMetadata.setFiles(new FileMetadata[0]);
 
-        DataManager.getInstance().getMetadataManager().writeProjectMetadataFileSpecific(sampleMetadata, testWriteDestination);
-        File file = new File(testWriteDestination);
-        ProjectMetadata result = null;
-        if (!file.exists())
-            Assert.fail("File was not written");
-        try {
-            result = mapper.readValue(file, ProjectMetadata.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-            Assert.fail("Invalid json");
-        }
-        Assert.assertEquals(sampleMetadata, result);
+        DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);
+
+        DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(testWriteRoot, testWriteFile);
+        ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(testWriteRoot);
+        Assert.assertEquals(sampleMetadata, resultMetadata);
+
+        File file = new File(testWriteRoot, testWriteFile);
         file.delete();
     }
 }

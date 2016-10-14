@@ -2,74 +2,80 @@ package dataMgmt.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.nio.file.Paths;
+
 /**
  * The structure for file metadata read from the project's metadata.
  * Created by fahslaj on 5/2/2016.
  */
 public class FileMetadata {
-
     @JsonProperty("FileID")
-    protected long fileId;
+    private long fileID;
 
-    @JsonProperty("FilePath")
-    protected String filePath;
+    @JsonProperty("Filename")
+    private String filename;
+
+    @JsonProperty("RelativePath")
+    private String relativePath;
 
     @JsonProperty("Version")
-    protected long version;
+    private long fileVersion;
 
-    @JsonProperty("ProjectID")
-    protected long projectId;
+    @JsonProperty("Creator")
+    private String creator;
 
-    public long getFileId() {
-        return fileId;
+    @JsonProperty("CreationDate")
+    private String creationDate;
+
+    public long getFileID() {
+        return fileID;
     }
 
-    public void setFileId(long fileId) {
-        this.fileId = fileId;
+    public void setFileID(long fileID) {
+        this.fileID = fileID;
     }
 
-    public String getFilePath() {
-        return filePath;
+    public String getFilename() {
+        return filename;
     }
 
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setFilename(String filename) {
+        this.filename = filename;
     }
 
-    public long getVersion() {
-        return version;
+    public String getRelativePath() {
+        return relativePath;
     }
 
-    public void setVersion(long version) {
-        this.version = version;
+    public void setRelativePath(String relativePath) {
+        this.relativePath = relativePath;
     }
 
-    public long getProjectId() {
-        return projectId;
+    public String getFilePath(){
+        return Paths.get(relativePath, filename).toString().replace('\\','/');
     }
 
-    public void setProjectId(long projectId) {
-        this.projectId = projectId;
+    public long getFileVersion() {
+        return fileVersion;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        FileMetadata that = (FileMetadata) o;
-
-        if (getFileId() != that.getFileId()) return false;
-        if (getVersion() != that.getVersion()) return false;
-        return getFilePath() != null ? getFilePath().equals(that.getFilePath()) : that.getFilePath() == null;
-
+    public void setFileVersion(long fileVersion) {
+        this.fileVersion = fileVersion;
     }
 
-    @Override
-    public int hashCode() {
-        int result = (int) (getFileId() ^ (getFileId() >>> 32));
-        result = 31 * result + (getFilePath() != null ? getFilePath().hashCode() : 0);
-        result = 31 * result + (int) (getVersion() ^ (getVersion() >>> 32));
-        return result;
+    public String getCreator() {
+        return creator;
+    }
+
+    public void setCreator(String creator) {
+        this.creator = creator;
+    }
+
+    public String getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(String creationDate) {
+        this.creationDate = creationDate;
     }
 }

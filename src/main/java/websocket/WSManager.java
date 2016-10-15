@@ -27,20 +27,18 @@ public class WSManager implements IMessageHandler {
     private String userToken;
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
+    // queued requests that require authentication
+    private List<Request> queuedAuthenticatedRequests;
 
     public WSManager(ConnectionConfig config) {
-        this.notificationHandlerHashMap = new HashMap<>();
-        this.requestHashMap = new HashMap<>();
-        this.socket = new WSConnection(config);
-        socket.registerIncomingMessageHandler(this);
-
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        this(new WSConnection(config));
     }
 
     // used for testing
     WSManager(WSConnection socket) {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
+        this.queuedAuthenticatedRequests = new ArrayList<>();
         this.socket = socket;
         socket.registerIncomingMessageHandler(this);
 
@@ -90,6 +88,16 @@ public class WSManager implements IMessageHandler {
      */
     public void deregisterNotificationHandler(String resource, String method) {
         notificationHandlerHashMap.remove(resource + '.' + method);
+    }
+
+    public void sendAuthenticatedRequest(Request request) throws ConnectException {
+        if (userID == null || userToken == null) {
+            synchronized(this.queuedAuthenticatedRequests) {
+                this.queuedAuthenticatedRequests.add(request);
+            }
+            return;
+        }
+        this.sendRequest(request);
     }
 
     /**
@@ -236,6 +244,15 @@ public class WSManager implements IMessageHandler {
     public void setAuthInfo(String userID, String userToken) {
         this.userID = userID;
         this.userToken = userToken;
+        this.sendAllAuthenticatedRequests();
+    }
+
+    private void sendAllAuthenticatedRequests() {
+        synchronized(this.queuedAuthenticatedRequests) {
+            List<Request> reqList = this.queuedAuthenticatedRequests;
+            this.queuedAuthenticatedRequests = new ArrayList<>();
+            reqList.forEach(this::sendAuthenticatedRequest);
+        }
     }
 
     public WSConnection.State getConnectionState() {

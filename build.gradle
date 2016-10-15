@@ -28,6 +28,7 @@ dependencies {
     compile 'org.eclipse.jetty.websocket:websocket-client:9.3.8.v20160314'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.7.3'
     compile 'org.slf4j:slf4j-simple:1.7.21'
+    compile 'com.google.guava:guava:19.0'
 }
 test {
     exclude 'integration/**'

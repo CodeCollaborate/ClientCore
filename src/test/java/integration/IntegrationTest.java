@@ -1,5 +1,6 @@
 package integration;
 
+import com.google.common.collect.BiMap;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,21 +26,35 @@ public class IntegrationTest {
             System.out.println("Failed to send");
         }
     };
-    private static final String userID = "_testUser";
-    private static final String userPass = "_testPass";
-    private static final String userFirstName = "_testFirstName";
-    private static final String userLastName = "_testLastName";
-    private static final String userEmail = "_testEmail@testDomain.com";
-    private static final String fileData = "_test data1\ntest data 2";
+    private static final String user1ID = "_testUser";
+    private static final String user1Pass = "_testPass";
+    private static final String user1FirstName = "_testFirstName";
+    private static final String user1LastName = "_testLastName";
+    private static final String user1Email = "_testEmail@testDomain.com";
+
+    private static final String user2ID = "_testUser2";
+    private static final String user2Pass = "_testPass2";
+    private static final String user2FirstName = "_testFirstName2";
+    private static final String user2LastName = "_testLastName2";
+    private static final String user2Email = "_testEmail2@testDomain.com";
+
     private static WSManager wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
+    private static BiMap<String, Byte> apiConstants;
+
     private static String projectName = "_testProject";
+    private static final String fileData = "_test data1\ntest data 2";
     private static String filePath = "_test/file/path";
+
     private static String fileName = "_testFile";
     private static int fileVersion = 1;
     private static long projectID = -1;
     private static long fileID = -1;
-    private static String senderID = "";
-    private static String senderToken = "";
+
+    private static String sender1ID = "";
+    private static String sender1Token = "";
+    private static String sender2ID = "";
+    private static String sender2Token = "";
+
     private Request req;
 
     @After
@@ -48,7 +63,7 @@ public class IntegrationTest {
         wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
 
         // TODO(wongb): Redo authentication once server supports it.
-        wsMgr.setAuthInfo(senderID, senderToken);
+        wsMgr.setAuthInfo(sender1ID, sender1Token);
 
         // TODO(wongb): Do user cleanup once server supports it.
         if (projectID != -1) {
@@ -61,8 +76,9 @@ public class IntegrationTest {
     @Test
     public void integrationTest() throws Exception {
         // Test valid flow
-        testUserRegister();
+        testUserRegister(user1ID, user1FirstName, user1LastName, user1Email, user1Pass);
         testUserLogin();
+        testProjectGetPermissionConstants();
         testUserLookup();
         testUserProjects();
         testProjectCreate();
@@ -82,6 +98,16 @@ public class IntegrationTest {
         testFileChange();
         testFilePull(); // Should have 3 changes
         testProjectGetFiles(); // should have 1 file
+
+        testOtherUserRegisterAndLogin();
+        testInvalidAccess();
+        testProjectGrantReadPermission();
+        testInvalidProjectWrite();
+        testProjectUpdatePermission();
+        testValidProjectWrite();
+        testValidRevokePermission();
+        testInvalidAccess();
+
         testFileDelete();
         testProjectGetFiles(); // should have 0 files
         testProjectUnsubscribe();
@@ -91,12 +117,6 @@ public class IntegrationTest {
         testProjectDelete();
         testUserProjects();
         // ProjectGetOnlineClientsRequest (NOT IMPLEMENTED)
-        // ProjectGrantPermissionsRequest (NOT IMPLEMENTED)
-        // ProjectRevokePermissionsRequest (NOT IMPLEMENTED)
-        // ProjectGetPermissionConstantsRequest (NOT IMPLEMENTED)
-
-        // TODO(wongb): Test Project.GrantPermissions and Project.RevokePermissions
-
 
         // Run invalid method type, expect error
         // Re-run login, expect error(?)
@@ -105,8 +125,154 @@ public class IntegrationTest {
         Thread.sleep(1000);
     }
 
-    private void testUserRegister() throws InterruptedException, ConnectException {
-        logger.info(String.format("Registering user"));
+    private void registerFileChangeNotificationHandler(String[] changes, Semaphore waiter) {
+        wsMgr.registerNotificationHandler("File", "Change", notification -> { // Create notification handler
+            Assert.assertEquals("FileChangeNotification gave wrong file ID", fileID, notification.getResourceID());
+            Assert.assertArrayEquals("FileChangeNotification gave wrong changes", changes, ((FileChangeNotification) notification.getData()).changes);
+            Assert.assertEquals("FileChangeNotification gave wrong file version", fileVersion + 1, ((FileChangeNotification) notification.getData()).fileVersion);
+            Assert.assertEquals("FileChangeNotification gave wrong base file version", fileVersion, ((FileChangeNotification) notification.getData()).baseFileVersion);
+
+            wsMgr.deregisterNotificationHandler("File", "Change");
+            waiter.release();
+        });
+    }
+
+    private void testValidProjectWrite() throws InterruptedException {
+        // switch to user2
+        wsMgr.setAuthInfo(user2ID, sender2Token);
+
+        logger.info(String.format("Attempting to legally change file %d as user %s", fileID, user2ID));
+        Semaphore waiter = new Semaphore(0);
+
+        String[] changes = new String[]{"+5:6:newData" + fileVersion};
+        req = new FileChangeRequest(fileID, changes, fileVersion).getRequest( response -> {
+            Assert.assertEquals("Failed to change file", 200, response.getStatus());
+            Assert.assertEquals("FileChangeResponse gave wrong file version", fileVersion + 1, ((FileChangeResponse) response.getData()).getFileVersion());
+
+            waiter.release();
+        }, errHandler);
+
+        registerFileChangeNotificationHandler(changes, waiter);
+
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+        fileVersion++;
+
+        // switch back to user 1
+        wsMgr.setAuthInfo(user1ID, sender1Token);
+    }
+
+    private void testProjectUpdatePermission() throws InterruptedException {
+        logger.info(String.format("Granting read permission to user with id %s", user2ID));
+        Semaphore waiter = new Semaphore(0);
+
+        Byte readPerm = apiConstants.get("write");
+        req = new ProjectGrantPermissionsRequest(projectID, user2ID, readPerm).getRequest( response -> {
+            Assert.assertEquals("Failed to grant permission", 200, response.getStatus());
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
+    private void testInvalidProjectWrite() throws InterruptedException {
+        // switch to user2
+        wsMgr.setAuthInfo(user2ID, sender2Token);
+
+        logger.info(String.format("Attempting to illegally change file %d", fileID));
+        Semaphore waiter = new Semaphore(0);
+
+        String[] changes = new String[]{"+5:6:newData" + fileVersion};
+        req = new FileChangeRequest(fileID, changes, fileVersion).getRequest( response -> {
+            Assert.assertNotEquals("Failed to change file", 200, response.getStatus());
+
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+
+        // switch back to user 1
+        wsMgr.setAuthInfo(user1ID, sender1Token);
+    }
+
+    private void testValidRevokePermission() throws InterruptedException {
+        logger.info(String.format("Revoking permission for user with id %s", user2ID));
+        Semaphore waiter = new Semaphore(0);
+
+        req = new ProjectRevokePermissionsRequest(projectID, user2ID).getRequest( response -> {
+            Assert.assertEquals("Failed to revoke permission", 200, response.getStatus());
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
+    private void testProjectGrantReadPermission() throws InterruptedException {
+        logger.info(String.format("Granting read permission to user with id %s", user2ID));
+        Semaphore waiter = new Semaphore(0);
+
+        Byte readPerm = apiConstants.get("read");
+        req = new ProjectGrantPermissionsRequest(projectID, user2ID, readPerm).getRequest( response -> {
+            Assert.assertEquals("Failed to grant permission", 200, response.getStatus());
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
+    private void testInvalidAccess() throws InterruptedException {
+        // switch to user2
+        wsMgr.setAuthInfo(user2ID, sender2Token);
+        logger.info(String.format("Illegally trying to subscribe to project with id %d", projectID));
+        Semaphore waiter = new Semaphore(0);
+
+        req = new ProjectSubscribeRequest(projectID).getRequest( response -> {
+            Assert.assertNotEquals("Subscribed to project improperly", 200, response.getStatus());
+
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+
+        // switch back to user 1
+        wsMgr.setAuthInfo(user1ID, sender1Token);
+    }
+
+    private void testOtherUserRegisterAndLogin() throws ConnectException, InterruptedException {
+        testUserRegister(user2ID, user2FirstName, user2LastName, user2Email, user2Pass);
+
+        logger.info(String.format("Logging in: %s", user2ID));
+        Semaphore waiter = new Semaphore(0);
+
+        req = new UserLoginRequest(user2ID, user2Pass).getRequest(response -> {
+            Assert.assertEquals("Failed to log in", 200, response.getStatus());
+
+            sender2Token = ((UserLoginResponse) response.getData()).getToken();
+            sender2ID = user2ID;
+
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
+    private void testUserRegister(String userID, String userFirstName, String userLastName, String userEmail, String userPass) throws InterruptedException, ConnectException {
+        logger.info(String.format("Registering user: %s", userID));
         Semaphore waiter = new Semaphore(0);
 
         req = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass).getRequest( response -> {
@@ -124,23 +290,12 @@ public class IntegrationTest {
         logger.info(String.format("Logging in"));
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserLoginRequest(userID, userPass).getRequest( response -> {
-            // TODO(wongb) Add login logic for server
-            if (response.getStatus() != 200) {
-                try {
-                    testUserRegister();
-                    testUserLogin();
-                } catch (InterruptedException | ConnectException e) {
-                    Assert.fail("Failed to register and login");
-                }
-                waiter.release();
-                return;
-            }
+        req = new UserLoginRequest(user1ID, user1Pass).getRequest(response -> {
             Assert.assertEquals("Failed to log in", 200, response.getStatus());
 
-            wsMgr.setAuthInfo(userID, ((UserLoginResponse) response.getData()).getToken());
-            senderID = userID;
-            senderToken = ((UserLoginResponse) response.getData()).getToken();
+            sender1Token = ((UserLoginResponse) response.getData()).getToken();
+            wsMgr.setAuthInfo(user1ID, sender1Token);
+            sender1ID = user1ID;
 
             waiter.release();
         }, errHandler);
@@ -148,6 +303,28 @@ public class IntegrationTest {
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
+    }
+
+    private void testProjectGetPermissionConstants() throws InterruptedException {
+        logger.info("Requesting api permission constants");
+        Semaphore waiter = new Semaphore(0);
+
+        req = new ProjectGetPermissionConstantsRequest().getRequest( response -> {
+            Assert.assertEquals("Failed to get permission constants", 200, response.getStatus());
+            apiConstants = ((ProjectGetPermissionConstantsResponse) response.getData()).getConstants();
+            waiter.release();
+        }, errHandler);
+
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+
+        Assert.assertNotEquals("Constants map empty", 0, apiConstants.size());
+
+        // NOTE: I chose a permission which (in my opinion) will probably always be around
+        //       if the "read" permission is ever removed from the server, this will fail - Joel
+        Assert.assertTrue("Constants map does not contain correct provlages", apiConstants.containsKey("read"));
     }
 
     private void testProjectCreate() throws ConnectException, InterruptedException {
@@ -304,15 +481,7 @@ public class IntegrationTest {
 
             waiter.release();
         }, errHandler);
-        wsMgr.registerNotificationHandler("File", "Change", notification -> { // Create notification handler
-            Assert.assertEquals("FileChangeNotification gave wrong file ID", fileID, notification.getResourceID());
-            Assert.assertArrayEquals("FileChangeNotification gave wrong changes", changes, ((FileChangeNotification) notification.getData()).changes);
-            Assert.assertEquals("FileChangeNotification gave wrong file version", fileVersion + 1, ((FileChangeNotification) notification.getData()).fileVersion);
-            Assert.assertEquals("FileChangeNotification gave wrong base file version", fileVersion, ((FileChangeNotification) notification.getData()).baseFileVersion);
-
-            wsMgr.deregisterNotificationHandler("File", "Change");
-            waiter.release();
-        });
+        registerFileChangeNotificationHandler(changes, waiter);
 
         wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
@@ -446,9 +615,9 @@ public class IntegrationTest {
             Assert.assertEquals("Incorrect ProjectID returned", projectID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getProjectID());
             Assert.assertEquals("Incorrect project name returned", projectName, ((ProjectLookupResponse) response.getData()).getProjects()[0].getName());
             Assert.assertEquals("Incorrect project permissions count returned", 1, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().size());
-            Assert.assertEquals("Incorrect project permissions name for owner returned", userID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(userID).getUsername());
-            Assert.assertEquals("Incorrect project permissions level for owner returned", 10, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(userID).getPermissionLevel());
-            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", userID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(userID).getGrantedBy());
+            Assert.assertEquals("Incorrect project permissions name for owner returned", user1ID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(user1ID).getUsername());
+            Assert.assertEquals("Incorrect project permissions level for owner returned", 10, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(user1ID).getPermissionLevel());
+            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", user1ID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(user1ID).getGrantedBy());
 
             waiter.release();
         }, errHandler);
@@ -460,17 +629,17 @@ public class IntegrationTest {
     }
 
     private void testUserLookup() throws ConnectException, InterruptedException {
-        logger.info(String.format("Looking up user with ID %s", userID));
+        logger.info(String.format("Looking up user with ID %s", user1ID));
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserLookupRequest(new String[]{userID}).getRequest( response -> {
+        req = new UserLookupRequest(new String[]{user1ID}).getRequest(response -> {
             Assert.assertEquals("Failed to lookup user", 200, response.getStatus());
 
             Assert.assertEquals("Incorrect number of users returned", 1, ((UserLookupResponse) response.getData()).getUsers().length);
-            Assert.assertEquals("Incorrect first name returned", userFirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
-            Assert.assertEquals("Incorrect last name returned", userLastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
-            Assert.assertEquals("Incorrect email returned", userEmail, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
-            Assert.assertEquals("Incorrect username returned", userID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
+            Assert.assertEquals("Incorrect first name returned", user1FirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
+            Assert.assertEquals("Incorrect last name returned", user1LastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
+            Assert.assertEquals("Incorrect email returned", user1Email, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
+            Assert.assertEquals("Incorrect username returned", user1ID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
 
             waiter.release();
         }, errHandler);
@@ -482,7 +651,7 @@ public class IntegrationTest {
     }
 
     private void testUserProjects() throws ConnectException, InterruptedException {
-        logger.info(String.format("Looking up projects for user with ID %s", userID));
+        logger.info(String.format("Looking up projects for user with ID %s", user1ID));
         Semaphore waiter = new Semaphore(0);
 
         req = new UserProjectsRequest().getRequest( response -> {

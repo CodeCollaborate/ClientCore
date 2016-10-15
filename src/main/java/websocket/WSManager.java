@@ -27,8 +27,8 @@ public class WSManager implements IMessageHandler {
     private String userToken;
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
-
-    private List<Request> queuedAuthenticatedRquests;
+    // queued requests that require authentication
+    private List<Request> queuedAuthenticatedRequests;
 
     public WSManager(ConnectionConfig config) {
         this(new WSConnection(config));
@@ -38,7 +38,7 @@ public class WSManager implements IMessageHandler {
     WSManager(WSConnection socket) {
         this.notificationHandlerHashMap = new HashMap<>();
         this.requestHashMap = new HashMap<>();
-        this.queuedAuthenticatedRquests = new ArrayList<>();
+        this.queuedAuthenticatedRequests = new ArrayList<>();
         this.socket = socket;
         socket.registerIncomingMessageHandler(this);
 
@@ -92,7 +92,9 @@ public class WSManager implements IMessageHandler {
 
     public void sendAuthenticatedRequest(Request request) throws ConnectException {
         if (userID == null || userToken == null) {
-            this.queuedAuthenticatedRquests.add(request);
+            synchronized(this.queuedAuthenticatedRequests) {
+                this.queuedAuthenticatedRequests.add(request);
+            }
             return;
         }
         this.sendRequest(request);
@@ -245,11 +247,12 @@ public class WSManager implements IMessageHandler {
         this.sendAllAuthenticatedRequests();
     }
 
-    // TODO: fix potential concurrency issue with the list?
     private void sendAllAuthenticatedRequests() {
-        List<Request> reqList = this.queuedAuthenticatedRquests;
-        this.queuedAuthenticatedRquests = new ArrayList<>();
-        reqList.forEach(this::sendAuthenticatedRequest);
+        synchronized(this.queuedAuthenticatedRequests) {
+            List<Request> reqList = this.queuedAuthenticatedRequests;
+            this.queuedAuthenticatedRequests = new ArrayList<>();
+            reqList.forEach(this::sendAuthenticatedRequest);
+        }
     }
 
     public WSConnection.State getConnectionState() {

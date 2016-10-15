@@ -1,5 +1,6 @@
 package dataMgmt;
 
+import com.google.common.collect.BiMap;
 import websocket.models.Project;
 
 import java.util.*;
@@ -22,6 +23,9 @@ public class SessionStorage extends Observable {
     // the map of users-project keys and their online status
     private Map<String, OnlineStatus> projectUserStatus;
 
+    // the map of permission constants
+    private BiMap<String, Byte> permissionConstants;
+
     /**
      * Create a new SessionStorage with an empty user status map.
      */
@@ -43,6 +47,7 @@ public class SessionStorage extends Observable {
      */
     public void setUsername(String username) {
         this.username = username;
+        setChanged();
         notifyObservers(username);
     }
 
@@ -98,6 +103,7 @@ public class SessionStorage extends Observable {
         for (Project project : projects) {
             this.projects.put(project.getProjectID(), project);
         }
+        setChanged();
         notifyObservers(projects);
     }
 
@@ -108,6 +114,7 @@ public class SessionStorage extends Observable {
      */
     public void addProject(Project project) {
         this.projects.put(project.getProjectID(), project);
+        setChanged();
         notifyObservers(projects);
     }
 
@@ -136,5 +143,23 @@ public class SessionStorage extends Observable {
         }
         setChanged();
         notifyObservers(projectUserStatus);
+    }
+
+    /**
+     * Get the BiMap of permission constants.
+     * @return the permission constants
+     */
+    public BiMap<String, Byte> getPermissionConstants() {
+        return permissionConstants;
+    }
+
+    /**
+     * Set the permission constants map.
+     * @param permissionConstants permission constants BiMap to set
+     */
+    public void setPermissionConstants(BiMap<String, Byte> permissionConstants) {
+        this.permissionConstants = permissionConstants;
+        setChanged();
+        notifyObservers(permissionConstants);
     }
 }

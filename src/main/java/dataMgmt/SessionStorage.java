@@ -181,6 +181,10 @@ public class SessionStorage {
         }
     }
 
+    /**
+     * Add a property change listener
+     * @param listener listener to add
+     */
     public void addPropertyChangeListener(PropertyChangeListener listener) {
         this.listeners.add(listener);
     }

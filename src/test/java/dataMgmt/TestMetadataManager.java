@@ -28,7 +28,6 @@ public class TestMetadataManager {
     public void testGetProjectMetadataNormal() {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
         expectedMetadata.setName("testProject");
-        expectedMetadata.setPermissionLevel(10);
         expectedMetadata.setProjectID(10248523);
 
         int size = 3;
@@ -76,7 +75,6 @@ public class TestMetadataManager {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
         expectedMetadata.setProjectID(12948745);
         expectedMetadata.setName("MyProjectName");
-        expectedMetadata.setPermissionLevel(10);
         expectedMetadata.setFiles(new FileMetadata[0]);
 
         DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testNoFilesMetadata);
@@ -89,7 +87,6 @@ public class TestMetadataManager {
         ProjectMetadata sampleMetadata = new ProjectMetadata();
         sampleMetadata.setProjectID(98);
         sampleMetadata.setName("sampleName");
-        sampleMetadata.setPermissionLevel(10);
         FileMetadata[] files = new FileMetadata[1];
         files[0] = new FileMetadata();
         files[0].setFilename("TEST");
@@ -112,7 +109,6 @@ public class TestMetadataManager {
         ProjectMetadata sampleMetadata = new ProjectMetadata();
         sampleMetadata.setProjectID(203);
         sampleMetadata.setName("memes");
-        sampleMetadata.setPermissionLevel(10);
         sampleMetadata.setFiles(new FileMetadata[0]);
 
         DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);

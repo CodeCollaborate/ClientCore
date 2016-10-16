@@ -17,13 +17,6 @@ public class ProjectMetadata {
     @JsonProperty("Name")
     private String name;
 
-    @JsonProperty("Permissions")
-    private HashMap<String, Permission> permissions;
-
-    // Used in User.Projects - needs to use permissions eventually.
-    @JsonProperty("PermissionLevel")
-    private int permissionLevel;
-
     @JsonProperty("Files")
     private FileMetadata[] files;
 
@@ -44,22 +37,6 @@ public class ProjectMetadata {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public HashMap<String, Permission> getPermissions() {
-        return permissions;
-    }
-
-    public void setPermissions(HashMap<String, Permission> permissions) {
-        this.permissions = permissions;
-    }
-
-    public int getPermissionLevel() {
-        return permissionLevel;
-    }
-
-    public void setPermissionLevel(int permissionLevel) {
-        this.permissionLevel = permissionLevel;
     }
 
     public FileMetadata[] getFiles() {
@@ -86,10 +63,8 @@ public class ProjectMetadata {
         ProjectMetadata that = (ProjectMetadata) o;
 
         if (projectID != that.projectID) return false;
-        if (permissionLevel != that.permissionLevel) return false;
         if (fileVersion != that.fileVersion) return false;
         if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        if (permissions != null ? !permissions.equals(that.permissions) : that.permissions != null) return false;
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
         return Arrays.equals(files, that.files);
 
@@ -99,8 +74,6 @@ public class ProjectMetadata {
     public int hashCode() {
         int result = (int) (projectID ^ (projectID >>> 32));
         result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (permissions != null ? permissions.hashCode() : 0);
-        result = 31 * result + permissionLevel;
         result = 31 * result + Arrays.hashCode(files);
         result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
         return result;

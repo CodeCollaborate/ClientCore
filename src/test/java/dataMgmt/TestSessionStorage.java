@@ -4,7 +4,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.beans.PropertyChangeListener;
-import java.util.Observer;
 
 /**
  * Created by fahslaj on 5/9/2016.

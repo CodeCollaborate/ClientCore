@@ -54,6 +54,7 @@ public class RequestManager {
     }
 
     public void logout() {
+        // TODO: disconnect from websocket connection? Wait to connect to the websocket before login from UI?
         this.dataManager.getSessionStorage().setUsername(null);
         this.wsManager.setAuthInfo(null, null);
     }

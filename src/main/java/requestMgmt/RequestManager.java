@@ -1,14 +1,16 @@
 package requestMgmt;
 
+import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
-import dataMgmt.SessionStorage;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.Project;
 import websocket.models.Request;
+import websocket.models.requests.ProjectGetPermissionConstantsRequest;
 import websocket.models.requests.ProjectLookupRequest;
 import websocket.models.requests.UserLoginRequest;
 import websocket.models.requests.UserProjectsRequest;
+import websocket.models.responses.ProjectGetPermissionConstantsResponse;
 import websocket.models.responses.ProjectLookupResponse;
 import websocket.models.responses.UserLoginResponse;
 import websocket.models.responses.UserProjectsResponse;
@@ -16,8 +18,6 @@ import websocket.models.responses.UserProjectsResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by fahslaj on 10/15/2016.
@@ -69,6 +69,20 @@ public class RequestManager {
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getProjectsRequest);
+    }
+
+    public void fetchPermissionConstants() {
+        Request getPermyConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                BiMap<String, Byte> permyConstants =
+                        (((ProjectGetPermissionConstantsResponse) response.getData()).getConstants());
+                this.dataManager.getSessionStorage().setPermissionConstants(permyConstants);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching permission constants");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(getPermyConstants);
     }
 
     private void sendProjectsLookupRequest(List<Project> projects) {

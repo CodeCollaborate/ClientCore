@@ -1,18 +1,23 @@
 package requestMgmt;
 
 import dataMgmt.DataManager;
+import dataMgmt.SessionStorage;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.Project;
 import websocket.models.Request;
 import websocket.models.requests.ProjectLookupRequest;
+import websocket.models.requests.UserLoginRequest;
 import websocket.models.requests.UserProjectsRequest;
 import websocket.models.responses.ProjectLookupResponse;
+import websocket.models.responses.UserLoginResponse;
 import websocket.models.responses.UserProjectsResponse;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by fahslaj on 10/15/2016.
@@ -25,13 +30,32 @@ public class RequestManager {
     private IRequestSendErrorHandler requestSendErrorHandler;
     private IInvalidResponseHandler invalidResponseHandler;
 
-    public RequestManager(DataManager dataManager, WSManager wsManager) {
+    public RequestManager(DataManager dataManager, WSManager wsManager,
+                          IRequestSendErrorHandler requestSendErrorHandler,
+                          IInvalidResponseHandler invalidResponseHandler) {
         this.dataManager = dataManager;
         this.wsManager = wsManager;
+        this.requestSendErrorHandler = requestSendErrorHandler;
+        this.invalidResponseHandler = invalidResponseHandler;
     }
 
-    public void loginAndSubscribe() {
+    public void loginAndSubscribe(String username, String password) {
+        Request loginRequest = new UserLoginRequest(username, password).getRequest(response -> {
+            UserLoginResponse loginResponse = (UserLoginResponse) response.getData();
+            int status = response.getStatus();
+            if (status == 200) {
+                this.dataManager.getSessionStorage().setUsername(username);
+                this.wsManager.setAuthInfo(username, loginResponse.getToken());
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Could not login to the CodeCollaborate server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendRequest(loginRequest);
+    }
 
+    public void logout() {
+        this.dataManager.getSessionStorage().setUsername(null);
+        this.wsManager.setAuthInfo(null, null);
     }
 
     public void fetchProjects() {
@@ -68,5 +92,13 @@ public class RequestManager {
 
     public void setInvalidResponseHandler(IInvalidResponseHandler handler) {
         this.invalidResponseHandler = handler;
+    }
+
+    public IRequestSendErrorHandler getRequestSendErrorHandler() {
+        return requestSendErrorHandler;
+    }
+
+    public IInvalidResponseHandler getInvalidResponseHandler() {
+        return invalidResponseHandler;
     }
 }

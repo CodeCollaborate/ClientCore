@@ -36,7 +36,7 @@ public class SessionStorage {
     private BiMap<String, Byte> permissionConstants = HashBiMap.create();
 
     // list of listeners for this class's properties
-    private List<PropertyChangeListener> listeners = new ArrayList<>();
+    private final List<PropertyChangeListener> listeners = new ArrayList<>();
 
     /**
      * Create a new SessionStorage with an empty user status map.
@@ -177,8 +177,10 @@ public class SessionStorage {
     }
 
     private void notifyListeners(String identifier, Object oldValue, Object newValue) {
-        for (PropertyChangeListener listener : this.listeners) {
-            listener.propertyChange(new PropertyChangeEvent(this, identifier, oldValue, newValue));
+        synchronized(this.listeners) {
+            for (PropertyChangeListener listener : this.listeners) {
+                listener.propertyChange(new PropertyChangeEvent(this, identifier, oldValue, newValue));
+            }
         }
     }
 
@@ -187,6 +189,8 @@ public class SessionStorage {
      * @param listener listener to add
      */
     public void addPropertyChangeListener(PropertyChangeListener listener) {
-        this.listeners.add(listener);
+        synchronized(this.listeners) {
+            this.listeners.add(listener);
+        }
     }
 }

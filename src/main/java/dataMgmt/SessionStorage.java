@@ -1,6 +1,7 @@
 package dataMgmt;
 
 import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import websocket.models.Project;
 
 import java.beans.PropertyChangeEvent;
@@ -29,10 +30,10 @@ public class SessionStorage {
     private HashMap<Long, Project> projects = new HashMap<>();
 
     // the map of users-project keys and their online status
-    private Map<String, OnlineStatus> projectUserStatus;
+    private Map<String, OnlineStatus> projectUserStatus = new HashMap<>();
 
     // the map of permission constants
-    private BiMap<String, Byte> permissionConstants;
+    private BiMap<String, Byte> permissionConstants = HashBiMap.create();
 
     // list of listeners for this class's properties
     private List<PropertyChangeListener> listeners = new ArrayList<>();

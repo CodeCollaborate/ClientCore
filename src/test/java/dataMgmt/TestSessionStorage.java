@@ -3,6 +3,7 @@ package dataMgmt;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.beans.PropertyChangeListener;
 import java.util.Observer;
 
 /**
@@ -13,8 +14,12 @@ public class TestSessionStorage {
     public void testChangeAndRemoveProjectUserStatusNotify() {
         SessionStorage storage = DataManager.getInstance().getSessionStorage();
         final int[] access = {0};
-        Observer obs = (o, arg) -> access[0]++;
-        storage.addObserver(obs);
+        PropertyChangeListener listener = (propChangeEvent) -> {
+            if (propChangeEvent.getPropertyName().equals(SessionStorage.PROJECT_USER_STATUS)) {
+                access[0]++;
+            }
+        };
+        storage.addPropertyChangeListener(listener);
         storage.changeProjectUserStatus("hello", OnlineStatus.CONNECTED);
         Assert.assertEquals(1, access[0]);
         storage.removeProjectUserStatus("hello");

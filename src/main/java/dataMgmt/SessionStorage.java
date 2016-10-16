@@ -3,13 +3,21 @@ package dataMgmt;
 import com.google.common.collect.BiMap;
 import websocket.models.Project;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.*;
 
 /**
  * The storage unit for session data.
  * Created by fahslaj on 5/3/2016.
  */
-public class SessionStorage extends Observable {
+public class SessionStorage {
+
+    public static final String USERNAME = "username";
+    public static final String AUTH_TOKEN = "authtoken";
+    public static final String PROJECT_LIST = "projectlist";
+    public static final String PROJECT_USER_STATUS = "projectuserstatus";
+    public static final String PERMISSION_CONSTANTS = "permissionconstants";
 
     // the username for the user
     private String username;
@@ -25,6 +33,9 @@ public class SessionStorage extends Observable {
 
     // the map of permission constants
     private BiMap<String, Byte> permissionConstants;
+
+    // list of listeners for this class's properties
+    private List<PropertyChangeListener> listeners = new ArrayList<>();
 
     /**
      * Create a new SessionStorage with an empty user status map.
@@ -46,9 +57,9 @@ public class SessionStorage extends Observable {
      * @param username
      */
     public void setUsername(String username) {
+        String oldValue = this.username;
         this.username = username;
-        setChanged();
-        notifyObservers(username);
+        notifyListeners(USERNAME, oldValue, this.username);
     }
 
     /**
@@ -64,7 +75,9 @@ public class SessionStorage extends Observable {
      * @param authenticationToken the new authentication token
      */
     public void setAuthenticationToken(String authenticationToken) {
+        String oldValue = this.authenticationToken;
         this.authenticationToken = authenticationToken;
+        notifyListeners(AUTH_TOKEN, oldValue, this.authenticationToken);
     }
 
     /**
@@ -99,12 +112,12 @@ public class SessionStorage extends Observable {
      * @param projects the list of projects to set
      */
     public void setProjects(List<Project> projects) {
+        List<Project> oldValue = getProjects();
         this.projects = new HashMap<>();
         for (Project project : projects) {
             this.projects.put(project.getProjectID(), project);
         }
-        setChanged();
-        notifyObservers(projects);
+        notifyListeners(PROJECT_LIST, oldValue, getProjects());
     }
 
     /**
@@ -114,8 +127,7 @@ public class SessionStorage extends Observable {
      */
     public void addProject(Project project) {
         this.projects.put(project.getProjectID(), project);
-        setChanged();
-        notifyObservers(projects);
+        notifyListeners(PROJECT_LIST, null, project);
     }
 
     /**
@@ -123,26 +135,26 @@ public class SessionStorage extends Observable {
      * @param projectUserKey the user-project combo to change
      * @param status the new status
      */
-    // notifyObservers() is called to prompt the gui to change online displays
     public void changeProjectUserStatus(String projectUserKey, OnlineStatus status) {
+        AbstractMap.SimpleEntry<String, OnlineStatus> oldValue;
         synchronized (this) {
+            oldValue = new AbstractMap.SimpleEntry<>(projectUserKey, projectUserStatus.get(projectUserKey));
             projectUserStatus.put(projectUserKey, status);
         }
-        setChanged();
-        notifyObservers(projectUserStatus);
+        notifyListeners(PROJECT_USER_STATUS, oldValue,
+                new AbstractMap.SimpleEntry<>(projectUserKey, projectUserStatus.get(projectUserKey)));
     }
 
     /**
      * Remove the status of a user-project key from the map and notify observers of this change.
      * @param projectUserKey the user-project key of which to remove the value
      */
-    // notifyObservers() is called to prompt the gui to change online displays
     public void removeProjectUserStatus(String projectUserKey) {
+        OnlineStatus status;
         synchronized (this) {
-            projectUserStatus.remove(projectUserKey);
+            status = projectUserStatus.remove(projectUserKey);
         }
-        setChanged();
-        notifyObservers(projectUserStatus);
+        notifyListeners(PROJECT_USER_STATUS, projectUserKey, null);
     }
 
     /**
@@ -158,8 +170,18 @@ public class SessionStorage extends Observable {
      * @param permissionConstants permission constants BiMap to set
      */
     public void setPermissionConstants(BiMap<String, Byte> permissionConstants) {
+        BiMap<String, Byte> oldValue = this.permissionConstants;
         this.permissionConstants = permissionConstants;
-        setChanged();
-        notifyObservers(permissionConstants);
+        notifyListeners(PERMISSION_CONSTANTS, oldValue, this.permissionConstants);
+    }
+
+    private void notifyListeners(String identifier, Object oldValue, Object newValue) {
+        for (PropertyChangeListener listener : this.listeners) {
+            listener.propertyChange(new PropertyChangeEvent(this, identifier, oldValue, newValue));
+        }
+    }
+
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        this.listeners.add(listener);
     }
 }

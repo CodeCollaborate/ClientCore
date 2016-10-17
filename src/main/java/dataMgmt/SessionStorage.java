@@ -126,9 +126,18 @@ public class SessionStorage {
      * it will be overwritten.
      * @param project the project to add
      */
-    public void addProject(Project project) {
+    public void setProject(Project project) {
         this.projects.put(project.getProjectID(), project);
         notifyListeners(PROJECT_LIST, null, project);
+    }
+
+    /**
+     * Remove a project by its id, if it exists.
+     * @param id the id of the project to remove
+     */
+    public void removeProjectById(long id) {
+        Project old = this.projects.remove(id);
+        notifyListeners(PROJECT_LIST, old, null);
     }
 
     /**

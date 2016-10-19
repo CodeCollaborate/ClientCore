@@ -36,6 +36,8 @@ public class MetadataManager {
     private Map<Long, String> projectIDtoRootPath = new HashMap<>();
     // stores conversions between fileID and filePath
     private Map<Long, String> fileIDtoFilePath = new HashMap<>();
+    // stores conversions between fileID and projectID
+    private Map<Long, Long> fileIDtoProjectID = new HashMap<>();
 
     public Collection<FileMetadata> getAllFiles(){
         return fileMetadataMap.values();
@@ -77,6 +79,15 @@ public class MetadataManager {
      */
     public ProjectMetadata getProjectMetadata(String rootPath) {
         return projectMetadataMap.get(rootPath);
+    }
+
+    /**
+     * Gets projectID that the file for the provided FileID belongs to
+     * @param fileID the fileID to lookup the project for
+     * @return the ProjectID that the file belongs to, or null if no such entry exists.
+     */
+    public Long getProjectIDForFileID(long fileID){
+        return fileIDtoProjectID.get(fileID);
     }
 
     /**
@@ -131,19 +142,28 @@ public class MetadataManager {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
                     String filePath = Paths.get(projectRoot, f.getFilePath()).toAbsolutePath().toString().replace('\\', '/');
-                    putFileMetadata(filePath, f);
+                    putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }
         }
     }
 
-    public void putFileMetadata(String filePath, FileMetadata metadata) {
+    public void putFileMetadata(String filePath, long projectID, FileMetadata metadata) {
         fileMetadataMap.put(filePath, metadata);
         fileIDtoFilePath.put(metadata.getFileID(), filePath);
+        fileIDtoProjectID.put(metadata.getFileID(), projectID);
     }
 
     public void projectMoved(long projectID, String newRootPath) {
         projectIDtoRootPath.put(projectID, newRootPath);
+    }
+
+    public void projectDeleted(long projectID) {
+        String rootPath = getProjectLocation(projectID);
+        if (rootPath != null){
+            projectMetadataMap.remove(rootPath);
+        }
+        projectIDtoRootPath.remove(projectID);
     }
 
     public void fileMoved(long fileID, String newFilePath) {
@@ -154,6 +174,15 @@ public class MetadataManager {
         getFileMetadata(fileID).setRelativePath(filePath);
         getFileMetadata(fileID).setFilename(fileName);
         fileIDtoFilePath.put(fileID, newFilePath);
+    }
+
+    public void fileDeleted(long fileID) {
+        String filePath = fileIDtoFilePath.get(fileID);
+        if (filePath != null){
+            fileMetadataMap.remove(filePath);
+        }
+        fileIDtoFilePath.remove(fileID);
+        fileIDtoProjectID.remove(fileID);
     }
 
     /**

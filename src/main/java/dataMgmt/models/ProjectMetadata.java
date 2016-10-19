@@ -1,33 +1,34 @@
 package dataMgmt.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.Permission;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * The structure for project metadata read from the project's root.
  * Created by fahslaj on 5/2/2016.
  */
 public class ProjectMetadata {
-
     @JsonProperty("ProjectID")
-    protected long projectId;
+    private long projectID;
 
     @JsonProperty("Name")
-    protected String name;
-
-    @JsonProperty("Owner")
-    protected String owner;
+    private String name;
 
     @JsonProperty("Files")
-    protected FileMetadata[] files;
+    private FileMetadata[] files;
 
-    public long getProjectId() {
-        return projectId;
+    @JsonProperty("FileVersion")
+    private long fileVersion;
+
+    public long getProjectID() {
+        return projectID;
     }
 
-    public void setProjectId(long projectId) {
-        this.projectId = projectId;
+    public void setProjectID(long projectID) {
+        this.projectID = projectID;
     }
 
     public String getName() {
@@ -38,14 +39,6 @@ public class ProjectMetadata {
         this.name = name;
     }
 
-    public String getOwner() {
-        return owner;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
     public FileMetadata[] getFiles() {
         return files;
     }
@@ -54,26 +47,35 @@ public class ProjectMetadata {
         this.files = files;
     }
 
+    public long getFileVersion() {
+        return fileVersion;
+    }
+
+    public void setFileVersion(long fileVersion) {
+        this.fileVersion = fileVersion;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof ProjectMetadata)) return false;
 
-        ProjectMetadata metadata = (ProjectMetadata) o;
+        ProjectMetadata that = (ProjectMetadata) o;
 
-        if (getProjectId() != metadata.getProjectId()) return false;
-        if (getName() != null ? !getName().equals(metadata.getName()) : metadata.getName() != null) return false;
-        if (getOwner() != null ? !getOwner().equals(metadata.getOwner()) : metadata.getOwner() != null) return false;
-        return Arrays.equals(getFiles(), metadata.getFiles());
+        if (projectID != that.projectID) return false;
+        if (fileVersion != that.fileVersion) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
+        // Probably incorrect - comparing Object[] arrays with Arrays.equals
+        return Arrays.equals(files, that.files);
 
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (getProjectId() ^ (getProjectId() >>> 32));
-        result = 31 * result + (getName() != null ? getName().hashCode() : 0);
-        result = 31 * result + (getOwner() != null ? getOwner().hashCode() : 0);
-        result = 31 * result + Arrays.hashCode(getFiles());
+        int result = (int) (projectID ^ (projectID >>> 32));
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + Arrays.hashCode(files);
+        result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
         return result;
     }
 }

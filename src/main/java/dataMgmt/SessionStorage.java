@@ -86,6 +86,14 @@ public class SessionStorage {
      * @return projects list
      */
     public List<Project> getProjects() {
+        return new ArrayList<>(this.projects.values());
+    }
+
+    /**
+     * Get the current user's loaded projects sorted by name.
+     * @return projects list
+     */
+    public List<Project> getSortedProjects() {
         List<Project> projects = new ArrayList<>(this.projects.values());
         Collections.sort(projects, (o1, o2) -> {
             if (o1.getName() == null) {

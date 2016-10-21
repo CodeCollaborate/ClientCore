@@ -206,12 +206,20 @@ public class IntegrationTest {
         logger.info(String.format("Revoking permission for user with id %s", user2ID));
         Semaphore waiter = new Semaphore(0);
 
+        wsMgr.registerNotificationHandler("Project", "RevokePermissions", notification -> { // Create notification handler
+            Assert.assertEquals("FileRevokePermissionsNotification gave wrong file ID", user2ID,
+                    ((ProjectRevokePermissionsNotification) notification.getData()).revokeUsername);
+
+            wsMgr.deregisterNotificationHandler("Project", "RevokePermissions");
+            waiter.release();
+        });
+
         req = new ProjectRevokePermissionsRequest(projectID, user2ID).getRequest( response -> {
             Assert.assertEquals("Failed to revoke permission", 200, response.getStatus());
             waiter.release();
         }, errHandler);
         wsMgr.sendRequest(req);
-        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }

@@ -210,4 +210,14 @@ public class SessionStorage {
             this.listeners.add(listener);
         }
     }
+
+    /**
+     * Remove a property change listener
+     * @param listener listener to remove
+     */
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        synchronized(this.listeners) {
+            this.listeners.remove(listener);
+        }
+    }
 }

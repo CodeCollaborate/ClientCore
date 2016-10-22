@@ -38,7 +38,9 @@ public class IntegrationTest {
     private static final String user2LastName = "_testLastName2";
     private static final String user2Email = "_testEmail2@testDomain.com";
 
-    private static WSManager wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
+    private static final String SERVER_URL = "ws://localhost:8000/ws/";
+    private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
+
     private static BiMap<String, Byte> apiConstants;
 
     private static String projectName = "_testProject";
@@ -60,16 +62,20 @@ public class IntegrationTest {
     @After
     public void cleanup() throws ConnectException, InterruptedException {
         // Create a new connection - The old one may have died if there were errors.
-        wsMgr = new WSManager(new ConnectionConfig("ws://localhost:8000/ws/", false, 5));
+        wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
 
-        // TODO(wongb): Redo authentication once server supports it.
-        wsMgr.setAuthInfo(sender1ID, sender1Token);
+        if (!"".equals(sender1ID)) {
+            wsMgr.setAuthInfo(sender1ID, sender1Token);
+            logger.info("Cleaning up user_1");
 
-        // TODO(wongb): Do user cleanup once server supports it.
-        if (projectID != -1) {
-            logger.info("Cleaning project up");
-            // Deleting the project will delete all its files as well
-            wsMgr.sendRequest(new ProjectDeleteRequest(projectID).getRequest(null, null));
+            wsMgr.sendRequest(new UserDeleteRequest().getRequest(null, null));
+        }
+
+        if (!"".equals(sender2ID)) {
+            wsMgr.setAuthInfo(sender2ID, sender2Token);
+            logger.info("Cleaning up user_2");
+
+            wsMgr.sendRequest(new UserDeleteRequest().getRequest(null, null));
         }
     }
 
@@ -117,6 +123,8 @@ public class IntegrationTest {
         testProjectDelete();
         testUserProjects();
         // ProjectGetOnlineClientsRequest (NOT IMPLEMENTED)
+
+        testUserDelete();
 
         // Run invalid method type, expect error
         // Re-run login, expect error(?)
@@ -277,6 +285,8 @@ public class IntegrationTest {
 
         req = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass).getRequest( response -> {
             // If registration fails, probably is already there.
+            Assert.assertNotEquals(String.format("user %s already registered, rerun test", userID), 404, response.getStatus());
+            Assert.assertEquals(String.format("Failed to register user: %s", userID), 200, response.getStatus());
 
             waiter.release();
         }, errHandler);
@@ -674,4 +684,32 @@ public class IntegrationTest {
             Assert.fail("Acquire timed out");
         }
     }
+
+    private void testUserDelete() throws InterruptedException, ConnectException {
+        logger.info(String.format("Deleting user: %s", user1ID));
+        Semaphore waiter = new Semaphore(0);
+        Semaphore loginWaiter = new Semaphore(0);
+
+        req = new UserDeleteRequest().getRequest( deleteResponse -> {
+            Assert.assertEquals("Failed to delete user", 200, deleteResponse.getStatus());
+
+            // verifying user was deleted
+            req = new UserLoginRequest(user1ID, user1Pass).getRequest( loginResponse -> {
+                Assert.assertNotEquals("Failed to log in", 200, loginResponse.getStatus());
+                loginWaiter.release();
+            }, errHandler);
+            wsMgr.sendRequest(req);
+
+            waiter.release();
+        }, errHandler);
+        wsMgr.sendRequest(req);
+
+        if (!loginWaiter.tryAcquire(5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+        if (!waiter.tryAcquire(10, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
 }

@@ -144,6 +144,42 @@ public abstract class RequestManager {
     }
 
     /**
+     * Login to the CodeCollaborate server, fetch all projects, and subscribe to the set of
+     * projects with the given ids.
+     * @param username the username to log in with
+     * @param password the password to log in with
+     * @param ids the ids of the projects to subscribe to
+     */
+    public void loginFetchAndSubscribeAll(String username, String password, List<Long> ids) {
+        Request loginRequest = new UserLoginRequest(username, password).getRequest(response -> {
+            UserLoginResponse loginResponse = (UserLoginResponse) response.getData();
+            int status = response.getStatus();
+            if (status == 200) {
+                this.dataManager.getSessionStorage().setUsername(username);
+                this.wsManager.setAuthInfo(username, loginResponse.getToken());
+                Request getProjectsRequest = new UserProjectsRequest().getRequest(response2 -> {
+                    int status2 = response2.getStatus();
+                    if (status2 == 200) {
+                        List<Project> projects =
+                                Arrays.asList(((UserProjectsResponse) response2.getData()).getProjects());
+                        sendProjectsLookupRequest(projects);
+                        for (long id : ids) {
+                            subscribeToProject(id);
+                        }
+                    } else {
+                        this.invalidResponseHandler.handleInvalidResponse(status2, "Error fetching projects");
+                    }
+                }, requestSendErrorHandler);
+                this.wsManager.sendAuthenticatedRequest(getProjectsRequest);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status,
+                        "Could not login to the CodeCollaborate server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendRequest(loginRequest);
+    }
+
+    /**
      * Create a project with the given name
      * @param projectName name of the project to create
      */

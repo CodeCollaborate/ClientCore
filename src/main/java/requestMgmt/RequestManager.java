@@ -4,16 +4,12 @@ import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
+import websocket.models.File;
+import websocket.models.Permission;
 import websocket.models.Project;
 import websocket.models.Request;
-import websocket.models.requests.ProjectGetPermissionConstantsRequest;
-import websocket.models.requests.ProjectLookupRequest;
-import websocket.models.requests.UserLoginRequest;
-import websocket.models.requests.UserProjectsRequest;
-import websocket.models.responses.ProjectGetPermissionConstantsResponse;
-import websocket.models.responses.ProjectLookupResponse;
-import websocket.models.responses.UserLoginResponse;
-import websocket.models.responses.UserProjectsResponse;
+import websocket.models.requests.*;
+import websocket.models.responses.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +18,7 @@ import java.util.List;
 /**
  * Created by fahslaj on 10/15/2016.
  */
-public class RequestManager {
+public abstract class RequestManager {
 
     private DataManager dataManager;
     private WSManager wsManager;
@@ -39,7 +35,12 @@ public class RequestManager {
         this.invalidResponseHandler = invalidResponseHandler;
     }
 
-    public void loginAndSubscribe(String username, String password) {
+    /**
+     * Login to the CodeCollaborate server.
+     * @param username username to log in with
+     * @param password password for the given username
+     */
+    public void login(String username, String password) {
         Request loginRequest = new UserLoginRequest(username, password).getRequest(response -> {
             UserLoginResponse loginResponse = (UserLoginResponse) response.getData();
             int status = response.getStatus();
@@ -53,12 +54,17 @@ public class RequestManager {
         this.wsManager.sendRequest(loginRequest);
     }
 
+    /**
+     * Logout of the CodeCollaborate server.
+     */
     public void logout() {
-        // TODO: disconnect from websocket connection? Wait to connect to the websocket before login from UI?
         this.dataManager.getSessionStorage().setUsername(null);
         this.wsManager.setAuthInfo(null, null);
     }
 
+    /**
+     * Fetch all of the projects the current user has permissions for.
+     */
     public void fetchProjects() {
         Request getProjectsRequest = new UserProjectsRequest().getRequest(response -> {
             int status = response.getStatus();
@@ -70,20 +76,6 @@ public class RequestManager {
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getProjectsRequest);
-    }
-
-    public void fetchPermissionConstants() {
-        Request getPermyConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
-            int status = response.getStatus();
-            if (status == 200) {
-                BiMap<String, Byte> permyConstants =
-                        (((ProjectGetPermissionConstantsResponse) response.getData()).getConstants());
-                this.dataManager.getSessionStorage().setPermissionConstants(permyConstants);
-            } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching permission constants");
-            }
-        }, requestSendErrorHandler);
-        this.wsManager.sendAuthenticatedRequest(getPermyConstants);
     }
 
     private void sendProjectsLookupRequest(List<Project> projects) {
@@ -99,6 +91,215 @@ public class RequestManager {
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getProjectDetails);
+    }
+
+    /**
+     * Subscribe to the project with the given id
+     * @param id id of the project to subscribe to
+     */
+    public void subscribeToProject(long id) {
+        Request subscribeRequest = (new ProjectSubscribeRequest(id)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                dataManager.getSessionStorage().setSubscribed(id);
+                Request requestForFiles = (new ProjectGetFilesRequest(id)).getRequest(response2 -> {
+                    int status2 = response2.getStatus();
+                    if (status2 == 200) {
+                        ProjectGetFilesResponse r = (ProjectGetFilesResponse) response2.getData();
+                        finishSubscribeToProject(id, r.files);
+                    } else {
+                        this.invalidResponseHandler.handleInvalidResponse(status, "Error getting project files: " + id);
+                    }
+                }, this.requestSendErrorHandler);
+                wsManager.sendAuthenticatedRequest(requestForFiles);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Error subscribing to project: " + id);
+            }
+        }, this.requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(subscribeRequest);
+    }
+
+    /**
+     * Finish the subscription action by using the project's files from the server and creating metadata.
+     * @param id id of the project subscribed to
+     * @param files files from the server
+     */
+    public abstract void finishSubscribeToProject(long id, File[] files);
+
+    /**
+     * Unsubscribe from the project with the given id
+     * @param id id of the project to unsubscribe from
+     */
+    public void unsubscribeFromProject(long id) {
+        Request request = (new ProjectUnsubscribeRequest(id)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                dataManager.getSessionStorage().setUnsubscribed(id);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to unsubscribe from project: " + id);
+            }
+        }, this.requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(request);
+    }
+
+    /**
+     * Fetch all projects and subscribe to the set of projects with the given ids.
+     * @param ids the ids of the projects to subscribe to
+     */
+    public void fetchAndSubscribeAll(List<Long> ids) {
+        Request getProjectsRequest = new UserProjectsRequest().getRequest(response2 -> {
+            int status2 = response2.getStatus();
+            if (status2 == 200) {
+                List<Project> projects =
+                        Arrays.asList(((UserProjectsResponse) response2.getData()).getProjects());
+                sendProjectsLookupRequest(projects);
+                for (long id : ids) {
+                    subscribeToProject(id);
+                }
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status2, "Error fetching projects");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(getProjectsRequest);
+    }
+
+    /**
+     * Create a project with the given name
+     * @param projectName name of the project to create
+     */
+    public void createProject(String projectName) {
+        Request request = (new ProjectCreateRequest(projectName)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                long pid = ((ProjectCreateResponse) response.getData()).getProjectID();
+                Request request2 = (new ProjectSubscribeRequest(pid)).getRequest(response2 -> {
+                    int status2 = response2.getStatus();
+                    if (status2 == 200) {
+                        Long[] ids = {pid};
+                        Request request3 = (new ProjectLookupRequest(ids)).getRequest(response3 -> {
+                            int status3 = response3.getStatus();
+                            if (status3 == 200) {
+                                Project project = ((ProjectLookupResponse) response3.getData()).getProjects()[0];
+                                dataManager.getSessionStorage().setProject(project);
+                                dataManager.getSessionStorage().setSubscribed(project.getProjectID());
+                                finishCreateProject(project);
+                            } else {
+                                this.invalidResponseHandler.handleInvalidResponse(status3,
+                                        "Failed to lookup project: " + pid);
+                            }
+                        }, requestSendErrorHandler);
+                        wsManager.sendAuthenticatedRequest(request3);
+                    } else {
+                        this.invalidResponseHandler.handleInvalidResponse(status2,
+                                "Failed to subscribe to project: " + pid);
+                    }
+                }, requestSendErrorHandler);
+                wsManager.sendAuthenticatedRequest(request2);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to create project: " + projectName);
+            }
+        }, requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(request);
+    }
+
+    /**
+     * Finish creating a project by storing metadata and individually creating files
+     * @param project
+     */
+    public abstract void finishCreateProject(Project project);
+
+    /**
+     * Delete the project with the given id
+     * @param id id of the project to delete
+     */
+    public void deleteProject(long id) {
+        Request request = (new ProjectDeleteRequest(id)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                dataManager.getSessionStorage().setUnsubscribed(id);
+                dataManager.getSessionStorage().removeProjectById(id);
+                dataManager.getMetadataManager().projectDeleted(id);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to delete project: " + id);
+            }
+        },  requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(request);
+    }
+
+    /**
+     * Add a user to a project with the given permission level
+     * @param id id of the project to add
+     * @param username username of the user to add
+     * @param permissionLevel level of permission to add
+     */
+    public void addUserToProject(long id, String username, int permissionLevel) {
+        Request request = (new ProjectGrantPermissionsRequest(id, username, permissionLevel)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                Project project = dataManager.getSessionStorage().getProjectById(id);
+                project.getPermissions().put(username, new Permission(username, permissionLevel, null, null));
+                dataManager.getSessionStorage().setProject(project);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to add user to project: " + id);
+            }
+        }, requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(request);
+    }
+
+    /**
+     * Remove a user from a project
+     * @param id id of the project
+     * @param username username of the user to remove
+     */
+    public void removeUserFromProject(long id, String username) {
+        Request request = (new ProjectRevokePermissionsRequest(id, username)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                Project project = dataManager.getSessionStorage().getProjectById(id);
+                project.getPermissions().remove(id);
+                dataManager.getSessionStorage().setProject(project);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to remove user from project: " + id);
+            }
+        }, requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(request);
+    }
+
+    /**
+     * Remove the logged in user from a project
+     * @param id id of the project to remove from
+     */
+    public void removeSelfFromProject(long id) {
+        String username = dataManager.getSessionStorage().getUsername();
+        Request request = (new ProjectRevokePermissionsRequest(id, username)).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                dataManager.getSessionStorage().setUnsubscribed(id);
+                dataManager.getSessionStorage().removeProjectById(id);
+                dataManager.getMetadataManager().projectDeleted(id);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status,
+                        "Failed to remove logged in user from project: " + id);
+            }
+        }, requestSendErrorHandler);
+        wsManager.sendAuthenticatedRequest(request);
+    }
+
+    /**
+     * Fetch permission constants from the server
+     */
+    public void fetchPermissionConstants() {
+        Request getPermyConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                BiMap<String, Byte> permyConstants =
+                        (((ProjectGetPermissionConstantsResponse) response.getData()).getConstants());
+                this.dataManager.getSessionStorage().setPermissionConstants(permyConstants);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching permission constants");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(getPermyConstants);
     }
 
     public void setRequestSendErrorHandler(IRequestSendErrorHandler handler) {

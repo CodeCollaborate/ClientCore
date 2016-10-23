@@ -17,6 +17,7 @@ public class SessionStorage {
     public static final String USERNAME = "username";
     public static final String AUTH_TOKEN = "authtoken";
     public static final String PROJECT_LIST = "projectlist";
+    public static final String SUBSCRIBED_PROJECTS = "subscribedlist";
     public static final String PROJECT_USER_STATUS = "projectuserstatus";
     public static final String PERMISSION_CONSTANTS = "permissionconstants";
 
@@ -28,6 +29,9 @@ public class SessionStorage {
 
     // the list of loaded projects
     private HashMap<Long, Project> projects = new HashMap<>();
+
+    // the set of subscribed project ids
+    private HashSet<Long> subscribedIds = new HashSet<>();
 
     // the map of users-project keys and their online status
     private Map<String, OnlineStatus> projectUserStatus = new HashMap<>();
@@ -146,6 +150,36 @@ public class SessionStorage {
     public void removeProjectById(long id) {
         Project old = this.projects.remove(id);
         notifyListeners(PROJECT_LIST, old, null);
+    }
+
+    /**
+     * Set the given project id as a subscribed project, if it exists.
+     * @param id to set subscribed
+     */
+    public void setSubscribed(long id) {
+        if (this.projects.containsKey(id)) {
+            this.subscribedIds.add(id);
+            notifyListeners(SUBSCRIBED_PROJECTS, null, id);
+        }
+    }
+
+    /**
+     * Remove the given project id from the set of subscribed ids, if it exists.
+     * @param id to remove from subscribed set
+     */
+    public void setUnsubscribed(long id) {
+        if (this.projects.containsKey(id)) {
+            this.subscribedIds.remove(id);
+            notifyListeners(SUBSCRIBED_PROJECTS, id, null);
+        }
+    }
+
+    /**
+     * Get the set of subscribed ids
+     * @return set of subscribed ids
+     */
+    public Set<Long> getSubscribedIds() {
+        return this.subscribedIds;
     }
 
     /**

@@ -54,6 +54,10 @@ public class WSManager implements IMessageHandler {
         }
     }
 
+    public void close() {
+        socket.close();
+    }
+
     public void registerEventHandler(WSConnection.EventType event, Runnable handler) {
         List<Runnable> runnables = socket.eventHandlers.get(event);
         if (runnables != null) {

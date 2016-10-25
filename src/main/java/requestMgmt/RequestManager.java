@@ -2,6 +2,7 @@ package requestMgmt;
 
 import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
+import dataMgmt.SessionStorage;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.File;
@@ -45,7 +46,9 @@ public abstract class RequestManager {
             UserLoginResponse loginResponse = (UserLoginResponse) response.getData();
             int status = response.getStatus();
             if (status == 200) {
-                this.dataManager.getSessionStorage().setUsername(username);
+                SessionStorage storage = this.dataManager.getSessionStorage();
+                storage.setUsername(username);
+                storage.setAuthenticationToken(loginResponse.getToken());
                 this.wsManager.setAuthInfo(username, loginResponse.getToken());
             } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Could not login to the CodeCollaborate server.");

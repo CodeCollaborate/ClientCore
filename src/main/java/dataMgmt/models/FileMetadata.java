@@ -2,6 +2,7 @@ package dataMgmt.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import websocket.models.File;
 
 import java.nio.file.Paths;
 
@@ -27,6 +28,15 @@ public class FileMetadata {
 
     @JsonProperty("CreationDate")
     private String creationDate;
+
+    public FileMetadata(File f) {
+        fileID = f.getFileID();
+        filename = f.getFilename();
+        relativePath = f.getRelativePath();
+        version = f.getFileVersion();
+        creator = f.getCreator();
+        creationDate = f.getCreationDate();
+    }
 
     public long getFileID() {
         return fileID;

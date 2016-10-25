@@ -2,6 +2,7 @@ package dataMgmt.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.Permission;
+import websocket.models.Project;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -20,8 +21,16 @@ public class ProjectMetadata {
     @JsonProperty("Files")
     private FileMetadata[] files;
 
-    @JsonProperty("FileVersion")
-    private long fileVersion;
+    public ProjectMetadata(Project p) {
+        this.projectID = p.getProjectID();
+        this.name = p.getName();
+    }
+
+    public ProjectMetadata(Project p, FileMetadata[] files) {
+        this.projectID = p.getProjectID();
+        this.name = p.getName();
+        this.files = files;
+    }
 
     public long getProjectID() {
         return projectID;
@@ -47,14 +56,6 @@ public class ProjectMetadata {
         this.files = files;
     }
 
-    public long getFileVersion() {
-        return fileVersion;
-    }
-
-    public void setFileVersion(long fileVersion) {
-        this.fileVersion = fileVersion;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -63,7 +64,6 @@ public class ProjectMetadata {
         ProjectMetadata that = (ProjectMetadata) o;
 
         if (projectID != that.projectID) return false;
-        if (fileVersion != that.fileVersion) return false;
         if (name != null ? !name.equals(that.name) : that.name != null) return false;
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
         return Arrays.equals(files, that.files);
@@ -75,7 +75,6 @@ public class ProjectMetadata {
         int result = (int) (projectID ^ (projectID >>> 32));
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + Arrays.hashCode(files);
-        result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
         return result;
     }
 }

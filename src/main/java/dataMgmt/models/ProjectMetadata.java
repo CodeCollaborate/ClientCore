@@ -21,6 +21,8 @@ public class ProjectMetadata {
     @JsonProperty("Files")
     private FileMetadata[] files;
 
+    public ProjectMetadata() {}
+
     public ProjectMetadata(Project p) {
         this.projectID = p.getProjectID();
         this.name = p.getName();

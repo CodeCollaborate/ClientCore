@@ -29,6 +29,8 @@ public class FileMetadata {
     @JsonProperty("CreationDate")
     private String creationDate;
 
+    public FileMetadata() {}
+
     public FileMetadata(File f) {
         fileID = f.getFileID();
         filename = f.getFilename();

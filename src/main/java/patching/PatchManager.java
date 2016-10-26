@@ -8,41 +8,92 @@ import java.util.List;
 public class PatchManager {
 
     public String applyPatch(String content, List<Patch> patches) {
-
-        String newContent = content;
-
-        boolean useCRLF = newContent.contains("\r\n");
+        boolean useCRLF = content.contains("\r\n");
 
         for (Patch patch : patches) {
+            int startIndex = 0;
+            StringBuilder sb = new StringBuilder();
+
             if (useCRLF) {
-                patch.convertToCRLF(newContent);
+                patch.convertToCRLF(content);
             }
             for (Diff diff : patch.getDiffs()) {
-                if (diff.getStartIndex() > 0 && diff.getStartIndex() < newContent.length()
-                        && newContent.charAt(diff.getStartIndex() - 1) == '\r'
-                        && newContent.charAt(diff.getStartIndex()) == '\n') {
+                if (diff.getStartIndex() > 0 && diff.getStartIndex() < content.length()
+                        && content.charAt(diff.getStartIndex() - 1) == '\r'
+                        && content.charAt(diff.getStartIndex()) == '\n') {
                     throw new IllegalArgumentException("Tried to insert between \\r and \\n");
                 }
 
+                // Copy anything before the changes
+                if (startIndex < diff.getStartIndex()) {
+                    sb.append(content.substring(startIndex, diff.getStartIndex()));
+                }
+
                 if (diff.isInsertion()) {
-                    StringBuilder sb = new StringBuilder();
-
-                    sb.append(newContent.substring(0, diff.getStartIndex()));
+                    // insert item
                     sb.append(diff.getChanges());
-                    sb.append(newContent.substring(diff.getStartIndex()));
 
-                    newContent = sb.toString();
+                    // If the diff's startIndex is greater, move it up.
+                    // Otherwise, a previous delete may have deleted over the start index.
+                    if (startIndex < diff.getStartIndex()) {
+                        startIndex = diff.getStartIndex();
+                    }
                 } else {
-                    StringBuilder sb = new StringBuilder();
+                    // validate that we're deleting the right characters
+                    if (!diff.getChanges().equals(content.substring(diff.getStartIndex(), diff.getStartIndex() + diff.getLength()))){
+                        throw new IllegalStateException(
+                                String.format("PatchManager.ApplyText: Deleted text %s does not match changes in diff: %s",
+                                        content.substring(diff.getStartIndex(), diff.getStartIndex() + diff.getLength()), diff.getChanges()));
+                    }
 
-                    sb.append(newContent.substring(0, diff.getStartIndex()));
-                    sb.append(newContent.substring(diff.getStartIndex() + diff.getLength()));
-
-                    newContent = sb.toString();
+                    // shift the start index of the next round
+                    startIndex = diff.getStartIndex() + diff.getLength();
                 }
             }
+
+            sb.append(content.substring(startIndex));
+            content = sb.toString();
         }
 
-        return newContent;
+        return content;
     }
+
+//    public String applyPatch(String content, List<Patch> patches) {
+//
+//        String newContent = content;
+//
+//        boolean useCRLF = newContent.contains("\r\n");
+//
+//        for (Patch patch : patches) {
+//            if (useCRLF) {
+//                patch.convertToCRLF(newContent);
+//            }
+//            for (Diff diff : patch.getDiffs()) {
+//                if (diff.getStartIndex() > 0 && diff.getStartIndex() < newContent.length()
+//                        && newContent.charAt(diff.getStartIndex() - 1) == '\r'
+//                        && newContent.charAt(diff.getStartIndex()) == '\n') {
+//                    throw new IllegalArgumentException("Tried to insert between \\r and \\n");
+//                }
+//
+//                if (diff.isInsertion()) {
+//                    StringBuilder sb = new StringBuilder();
+//
+//                    sb.append(newContent.substring(0, diff.getStartIndex()));
+//                    sb.append(diff.getChanges());
+//                    sb.append(newContent.substring(diff.getStartIndex()));
+//
+//                    newContent = sb.toString();
+//                } else {
+//                    StringBuilder sb = new StringBuilder();
+//
+//                    sb.append(newContent.substring(0, diff.getStartIndex()));
+//                    sb.append(newContent.substring(diff.getStartIndex() + diff.getLength()));
+//
+//                    newContent = sb.toString();
+//                }
+//            }
+//        }
+//
+//        return newContent;
+//    }
 }

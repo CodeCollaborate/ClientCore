@@ -40,7 +40,7 @@ public class PatchManager {
                     }
                 } else {
                     // validate that we're deleting the right characters
-                    if (!diff.getChanges().equals(content.substring(diff.getStartIndex(), diff.getStartIndex() + diff.getLength()))){
+                    if (!diff.getChanges().equals(content.substring(diff.getStartIndex(), diff.getStartIndex() + diff.getLength()))) {
                         throw new IllegalStateException(
                                 String.format("PatchManager.ApplyText: Deleted text %s does not match changes in diff: %s",
                                         content.substring(diff.getStartIndex(), diff.getStartIndex() + diff.getLength()), diff.getChanges()));
@@ -57,43 +57,4 @@ public class PatchManager {
 
         return content;
     }
-
-//    public String applyPatch(String content, List<Patch> patches) {
-//
-//        String newContent = content;
-//
-//        boolean useCRLF = newContent.contains("\r\n");
-//
-//        for (Patch patch : patches) {
-//            if (useCRLF) {
-//                patch.convertToCRLF(newContent);
-//            }
-//            for (Diff diff : patch.getDiffs()) {
-//                if (diff.getStartIndex() > 0 && diff.getStartIndex() < newContent.length()
-//                        && newContent.charAt(diff.getStartIndex() - 1) == '\r'
-//                        && newContent.charAt(diff.getStartIndex()) == '\n') {
-//                    throw new IllegalArgumentException("Tried to insert between \\r and \\n");
-//                }
-//
-//                if (diff.isInsertion()) {
-//                    StringBuilder sb = new StringBuilder();
-//
-//                    sb.append(newContent.substring(0, diff.getStartIndex()));
-//                    sb.append(diff.getChanges());
-//                    sb.append(newContent.substring(diff.getStartIndex()));
-//
-//                    newContent = sb.toString();
-//                } else {
-//                    StringBuilder sb = new StringBuilder();
-//
-//                    sb.append(newContent.substring(0, diff.getStartIndex()));
-//                    sb.append(newContent.substring(diff.getStartIndex() + diff.getLength()));
-//
-//                    newContent = sb.toString();
-//                }
-//            }
-//        }
-//
-//        return newContent;
-//    }
 }

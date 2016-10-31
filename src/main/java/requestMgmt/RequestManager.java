@@ -2,6 +2,7 @@ package requestMgmt;
 
 import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
+import dataMgmt.SessionStorage;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.File;
@@ -45,7 +46,9 @@ public abstract class RequestManager {
             UserLoginResponse loginResponse = (UserLoginResponse) response.getData();
             int status = response.getStatus();
             if (status == 200) {
-                this.dataManager.getSessionStorage().setUsername(username);
+                SessionStorage storage = this.dataManager.getSessionStorage();
+                storage.setUsername(username);
+                storage.setAuthenticationToken(loginResponse.getToken());
                 this.wsManager.setAuthInfo(username, loginResponse.getToken());
             } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Could not login to the CodeCollaborate server.");
@@ -289,17 +292,17 @@ public abstract class RequestManager {
      * Fetch permission constants from the server
      */
     public void fetchPermissionConstants() {
-        Request getPermyConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
+        Request getPermConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
             int status = response.getStatus();
             if (status == 200) {
-                BiMap<String, Byte> permyConstants =
+                BiMap<String, Byte> permConstants =
                         (((ProjectGetPermissionConstantsResponse) response.getData()).getConstants());
-                this.dataManager.getSessionStorage().setPermissionConstants(permyConstants);
+                this.dataManager.getSessionStorage().setPermissionConstants(permConstants);
             } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching permission constants");
             }
         }, requestSendErrorHandler);
-        this.wsManager.sendAuthenticatedRequest(getPermyConstants);
+        this.wsManager.sendAuthenticatedRequest(getPermConstants);
     }
 
     public void setRequestSendErrorHandler(IRequestSendErrorHandler handler) {

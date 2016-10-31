@@ -292,17 +292,17 @@ public abstract class RequestManager {
      * Fetch permission constants from the server
      */
     public void fetchPermissionConstants() {
-        Request getPermyConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
+        Request getPermConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
             int status = response.getStatus();
             if (status == 200) {
-                BiMap<String, Byte> permyConstants =
+                BiMap<String, Byte> permConstants =
                         (((ProjectGetPermissionConstantsResponse) response.getData()).getConstants());
-                this.dataManager.getSessionStorage().setPermissionConstants(permyConstants);
+                this.dataManager.getSessionStorage().setPermissionConstants(permConstants);
             } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching permission constants");
             }
         }, requestSendErrorHandler);
-        this.wsManager.sendAuthenticatedRequest(getPermyConstants);
+        this.wsManager.sendAuthenticatedRequest(getPermConstants);
     }
 
     public void setRequestSendErrorHandler(IRequestSendErrorHandler handler) {

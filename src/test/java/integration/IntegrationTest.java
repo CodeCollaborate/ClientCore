@@ -114,6 +114,7 @@ public class IntegrationTest {
         testValidRevokePermission();
         testInvalidAccess();
 
+        testProjectSubscribe();
         testFileDelete();
         testProjectGetFiles(); // should have 0 files
         testProjectUnsubscribe();

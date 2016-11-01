@@ -38,7 +38,7 @@ public class IntegrationTest {
     private static final String user2LastName = "_testLastName2";
     private static final String user2Email = "_testEmail2@testDomain.com";
 
-    private static final String SERVER_URL = "ws://localhost:8000/ws/";
+    private static final String SERVER_URL = "ws://cody.csse.rose-hulman.edu:8000/ws/";
     private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
 
     private static BiMap<String, Byte> apiConstants;
@@ -114,6 +114,7 @@ public class IntegrationTest {
         testValidRevokePermission();
         testInvalidAccess();
 
+        testProjectSubscribe();
         testFileDelete();
         testProjectGetFiles(); // should have 0 files
         testProjectUnsubscribe();
@@ -536,9 +537,17 @@ public class IntegrationTest {
 
         req = new FileDeleteRequest(fileID).getRequest( response -> {
             Assert.assertEquals("Failed to delete file", 200, response.getStatus());
-            fileID = -1;
+
             waiter.release();
         }, errHandler);
+        wsMgr.registerNotificationHandler("File", "Delete", notification -> { // Create notification handler
+            Assert.assertEquals("FileDeleteNotification gave wrong file ID", fileID, notification.getResourceID());
+
+            fileID = -1;
+
+            wsMgr.deregisterNotificationHandler("File", "Delete");
+            waiter.release();
+        });
 
         wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {

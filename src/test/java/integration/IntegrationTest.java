@@ -536,17 +536,9 @@ public class IntegrationTest {
 
         req = new FileDeleteRequest(fileID).getRequest( response -> {
             Assert.assertEquals("Failed to delete file", 200, response.getStatus());
-
+            fileID = -1;
             waiter.release();
         }, errHandler);
-        wsMgr.registerNotificationHandler("File", "Delete", notification -> { // Create notification handler
-            Assert.assertEquals("FileDeleteNotification gave wrong file ID", fileID, notification.getResourceID());
-
-            fileID = -1;
-
-            wsMgr.deregisterNotificationHandler("File", "Delete");
-            waiter.release();
-        });
 
         wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {

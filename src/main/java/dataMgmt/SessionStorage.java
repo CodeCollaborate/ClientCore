@@ -54,7 +54,11 @@ public class SessionStorage {
      * @return username
      */
     public String getUsername() {
-        return username;
+        String name;
+        synchronized (USERNAME) {
+            name = username;
+        }
+        return name;
     }
 
     /**
@@ -62,9 +66,12 @@ public class SessionStorage {
      * @param username
      */
     public void setUsername(String username) {
-        String oldValue = this.username;
-        this.username = username;
-        notifyListeners(USERNAME, oldValue, this.username);
+        String oldValue;
+        synchronized (USERNAME) {
+            oldValue = this.username;
+            this.username = username;
+        }
+        notifyListeners(USERNAME, oldValue, username);
     }
 
     /**
@@ -72,7 +79,11 @@ public class SessionStorage {
      * @return authentication token
      */
     public String getAuthenticationToken() {
-        return authenticationToken;
+        String authToken;
+        synchronized (AUTH_TOKEN) {
+            authToken = authenticationToken;
+        }
+        return authToken;
     }
 
     /**
@@ -80,9 +91,12 @@ public class SessionStorage {
      * @param authenticationToken the new authentication token
      */
     public void setAuthenticationToken(String authenticationToken) {
-        String oldValue = this.authenticationToken;
-        this.authenticationToken = authenticationToken;
-        notifyListeners(AUTH_TOKEN, oldValue, this.authenticationToken);
+        String oldValue;
+        synchronized (AUTH_TOKEN) {
+            oldValue = this.authenticationToken;
+            this.authenticationToken = authenticationToken;
+        }
+        notifyListeners(AUTH_TOKEN, oldValue, authenticationToken);
     }
 
     /**
@@ -90,7 +104,11 @@ public class SessionStorage {
      * @return projects list
      */
     public List<Project> getProjects() {
-        return new ArrayList<>(this.projects.values());
+        Collection<Project> collection;
+        synchronized (PROJECT_LIST) {
+            collection = this.projects.values();
+        }
+        return new ArrayList<>(collection);
     }
 
     /**
@@ -98,7 +116,7 @@ public class SessionStorage {
      * @return projects list
      */
     public List<Project> getSortedProjects() {
-        List<Project> projects = new ArrayList<>(this.projects.values());
+        List<Project> projects = getProjects();
         Collections.sort(projects, (o1, o2) -> {
             if (o1.getName() == null) {
                 return 1;
@@ -117,7 +135,11 @@ public class SessionStorage {
      * @return the project with the specified projectId, or null if there is none
      */
     public Project getProjectById(long projectId) {
-        return this.projects.get(projectId);
+        Project project;
+        synchronized (PROJECT_LIST) {
+            project = this.projects.get(projectId);
+        }
+        return project;
     }
 
     /**
@@ -125,12 +147,17 @@ public class SessionStorage {
      * @param projects the list of projects to set
      */
     public void setProjects(List<Project> projects) {
-        List<Project> oldValue = getProjects();
-        this.projects = new HashMap<>();
-        for (Project project : projects) {
-            this.projects.put(project.getProjectID(), project);
+        List<Project> oldValue;
+        List<Project> newList;
+        synchronized (PROJECT_LIST) {
+            oldValue = new ArrayList<>(this.projects.values());
+            this.projects = new HashMap<>();
+            for (Project project : projects) {
+                this.projects.put(project.getProjectID(), project);
+            }
+            newList = new ArrayList<>(this.projects.values());
         }
-        notifyListeners(PROJECT_LIST, oldValue, getProjects());
+        notifyListeners(PROJECT_LIST, oldValue, newList);
     }
 
     /**
@@ -139,7 +166,9 @@ public class SessionStorage {
      * @param project the project to add
      */
     public void setProject(Project project) {
-        this.projects.put(project.getProjectID(), project);
+        synchronized (PROJECT_LIST) {
+            this.projects.put(project.getProjectID(), project);
+        }
         notifyListeners(PROJECT_LIST, null, project);
     }
 
@@ -148,7 +177,10 @@ public class SessionStorage {
      * @param id the id of the project to remove
      */
     public void removeProjectById(long id) {
-        Project old = this.projects.remove(id);
+        Project old;
+        synchronized (PROJECT_LIST) {
+            old = this.projects.remove(id);
+        }
         notifyListeners(PROJECT_LIST, old, null);
     }
 
@@ -157,8 +189,14 @@ public class SessionStorage {
      * @param id to set subscribed
      */
     public void setSubscribed(long id) {
-        if (this.projects.containsKey(id)) {
-            this.subscribedIds.add(id);
+        boolean notify = false;
+        synchronized (SUBSCRIBED_PROJECTS) {
+            if (this.projects.containsKey(id)) {
+                this.subscribedIds.add(id);
+                notify = true;
+            }
+        }
+        if (notify) {
             notifyListeners(SUBSCRIBED_PROJECTS, null, id);
         }
     }
@@ -168,8 +206,14 @@ public class SessionStorage {
      * @param id to remove from subscribed set
      */
     public void setUnsubscribed(long id) {
-        if (this.projects.containsKey(id)) {
-            this.subscribedIds.remove(id);
+        boolean notify = false;
+        synchronized (SUBSCRIBED_PROJECTS) {
+            if (this.projects.containsKey(id)) {
+                this.subscribedIds.remove(id);
+                notify = true;
+            }
+        }
+        if (notify) {
             notifyListeners(SUBSCRIBED_PROJECTS, id, null);
         }
     }
@@ -179,7 +223,11 @@ public class SessionStorage {
      * @return set of subscribed ids
      */
     public Set<Long> getSubscribedIds() {
-        return this.subscribedIds;
+        Set<Long> ids;
+        synchronized (SUBSCRIBED_PROJECTS) {
+            ids = this.subscribedIds;
+        }
+        return ids;
     }
 
     /**
@@ -189,12 +237,12 @@ public class SessionStorage {
      */
     public void changeProjectUserStatus(String projectUserKey, OnlineStatus status) {
         AbstractMap.SimpleEntry<String, OnlineStatus> oldValue;
-        synchronized (this) {
+        synchronized (PROJECT_USER_STATUS) {
             oldValue = new AbstractMap.SimpleEntry<>(projectUserKey, projectUserStatus.get(projectUserKey));
             projectUserStatus.put(projectUserKey, status);
         }
         notifyListeners(PROJECT_USER_STATUS, oldValue,
-                new AbstractMap.SimpleEntry<>(projectUserKey, projectUserStatus.get(projectUserKey)));
+                new AbstractMap.SimpleEntry<>(projectUserKey, status));
     }
 
     /**
@@ -202,9 +250,8 @@ public class SessionStorage {
      * @param projectUserKey the user-project key of which to remove the value
      */
     public void removeProjectUserStatus(String projectUserKey) {
-        OnlineStatus status;
         synchronized (this) {
-            status = projectUserStatus.remove(projectUserKey);
+            projectUserStatus.remove(projectUserKey);
         }
         notifyListeners(PROJECT_USER_STATUS, projectUserKey, null);
     }
@@ -214,7 +261,11 @@ public class SessionStorage {
      * @return the permission constants
      */
     public BiMap<String, Byte> getPermissionConstants() {
-        return permissionConstants;
+        BiMap<String, Byte> constants;
+        synchronized (PERMISSION_CONSTANTS) {
+            constants = permissionConstants;
+        }
+        return constants;
     }
 
     /**
@@ -222,9 +273,12 @@ public class SessionStorage {
      * @param permissionConstants permission constants BiMap to set
      */
     public void setPermissionConstants(BiMap<String, Byte> permissionConstants) {
-        BiMap<String, Byte> oldValue = this.permissionConstants;
-        this.permissionConstants = permissionConstants;
-        notifyListeners(PERMISSION_CONSTANTS, oldValue, this.permissionConstants);
+        BiMap<String, Byte> oldValue;
+        synchronized (PERMISSION_CONSTANTS) {
+            oldValue = this.permissionConstants;
+            this.permissionConstants = permissionConstants;
+        }
+        notifyListeners(PERMISSION_CONSTANTS, oldValue, permissionConstants);
     }
 
     private void notifyListeners(String identifier, Object oldValue, Object newValue) {

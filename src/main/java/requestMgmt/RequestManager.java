@@ -305,6 +305,73 @@ public abstract class RequestManager {
         this.wsManager.sendAuthenticatedRequest(getPermyConstants);
     }
 
+    /**
+     * Creates the given file on the server
+     *
+     * @param name
+     * @param relativePath
+     * @param projectID
+     * @param fileBytes
+     */
+    public void createFile(String name, String relativePath, long projectID, byte[] fileBytes) {
+        Request createFileReq = new FileCreateRequest(name, relativePath, projectID, fileBytes).getRequest(response -> {
+            int status = response.getStatus();
+            if (status != 200) {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to create file \"" + name +
+                        "\" on the server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(createFileReq);
+    }
+
+    /**
+     * Renames the given file on the server
+     *
+     * @param fileID
+     * @param newName
+     */
+    public void renameFile(long fileID, String newName) {
+        Request renameFileReq = new FileRenameRequest(fileID, newName).getRequest(response -> {
+            int status = response.getStatus();
+            if (status != 200) {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to rename file to \"" + newName +
+                        "\" on server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(renameFileReq);
+    }
+
+    /**
+     * Deletes the given file on the server
+     *
+     * @param fileID
+     */
+    public void deleteFile(long fileID) {
+        Request deleteFileReq = new FileDeleteRequest(fileID).getRequest(response -> {
+            int status = response.getStatus();
+            if (status != 200) {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to delete file from server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(deleteFileReq);
+    }
+
+    /**
+     * Renames the given project on the server
+     *
+     * @param projectID
+     * @param newName
+     */
+    public void renameProject(long projectID, String newName) {
+        Request renameProjectReq = new ProjectRenameRequest(projectID, newName).getRequest(response -> {
+            int status = response.getStatus();
+            if (status != 200) {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to rename project to \"" + newName +
+                        "\" on server.");
+            }
+        }, requestSendErrorHandler);
+    }
+
     public void setRequestSendErrorHandler(IRequestSendErrorHandler handler) {
         this.requestSendErrorHandler = handler;
     }

@@ -3,6 +3,8 @@ package requestMgmt;
 import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
 import dataMgmt.SessionStorage;
+import dataMgmt.models.FileMetadata;
+import dataMgmt.models.ProjectMetadata;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.File;
@@ -306,17 +308,27 @@ public abstract class RequestManager {
     }
 
     /**
-     * Creates the given file on the server
+     * Creates the given file on the server.
+     * Also creates the metadata for this file.
      *
      * @param name
+     * @param fullPath
      * @param relativePath
      * @param projectID
      * @param fileBytes
      */
-    public void createFile(String name, String relativePath, long projectID, byte[] fileBytes) {
+    public void createFile(String name, String fullPath, String relativePath, long projectID, byte[] fileBytes) {
         Request createFileReq = new FileCreateRequest(name, relativePath, projectID, fileBytes).getRequest(response -> {
             int status = response.getStatus();
-            if (status != 200) {
+            if (status == 200) {
+                long fileID = ((FileCreateResponse) response.getData()).getFileID();
+                FileMetadata fMeta =  new FileMetadata();
+                fMeta.setFileID(fileID);
+                fMeta.setFilename(name);
+                fMeta.setRelativePath(relativePath);
+                fMeta.setVersion(0);
+                this.dataManager.getMetadataManager().putFileMetadata(fullPath, projectID, fMeta);
+            } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Failed to create file \"" + name +
                         "\" on the server.");
             }
@@ -325,15 +337,19 @@ public abstract class RequestManager {
     }
 
     /**
-     * Renames the given file on the server
+     * Renames the given file on the server and changes the corresponding metadata.
      *
      * @param fileID
      * @param newName
+     * @param relativePath
      */
-    public void renameFile(long fileID, String newName) {
+    public void renameFile(long fileID, String newName, String relativePath) {
         Request renameFileReq = new FileRenameRequest(fileID, newName).getRequest(response -> {
             int status = response.getStatus();
-            if (status != 200) {
+            if (status == 200) {
+                FileMetadata fileMD = dataManager.getMetadataManager().getFileMetadata(fileID);
+                fileMD.setFilename(newName);
+            } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Failed to rename file to \"" + newName +
                         "\" on server.");
             }
@@ -342,22 +358,25 @@ public abstract class RequestManager {
     }
 
     /**
-     * Deletes the given file on the server
+     * Deletes the given file on the server and within the metadata.
      *
      * @param fileID
      */
     public void deleteFile(long fileID) {
         Request deleteFileReq = new FileDeleteRequest(fileID).getRequest(response -> {
             int status = response.getStatus();
-            if (status != 200) {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to delete file from server.");
+            if (status == 200) {
+                this.dataManager.getMetadataManager().fileDeleted(fileID);
+            } else {
+                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to delete file from server: " + status);
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(deleteFileReq);
     }
 
     /**
-     * Renames the given project on the server
+     * Renames the given project on the server.
+     * Also renames the project in its corresponding metadata file.
      *
      * @param projectID
      * @param newName
@@ -365,7 +384,10 @@ public abstract class RequestManager {
     public void renameProject(long projectID, String newName) {
         Request renameProjectReq = new ProjectRenameRequest(projectID, newName).getRequest(response -> {
             int status = response.getStatus();
-            if (status != 200) {
+            if (status == 200) {
+                ProjectMetadata pMeta = this.dataManager.getMetadataManager().getProjectMetadata(projectID);
+                pMeta.setName(newName);
+            } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Failed to rename project to \"" + newName +
                         "\" on server.");
             }

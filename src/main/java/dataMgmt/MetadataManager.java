@@ -122,7 +122,7 @@ public class MetadataManager {
 
         // Attempt to read file
         ProjectMetadata metadata;
-        try {
+            try {
             metadata = mapper.readValue(file, ProjectMetadata.class);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/') + " - " + e.getMessage());
@@ -139,7 +139,7 @@ public class MetadataManager {
             for (FileMetadata f : metadata.getFiles()) {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
-                    String filePath = Paths.get(projectRoot, f.getFilePath()).toAbsolutePath().toString().replace('\\', '/');
+                    String filePath = Paths.get(projectRoot, f.getFilePath().substring(2)).toAbsolutePath().toString().replace('\\', '/');
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }

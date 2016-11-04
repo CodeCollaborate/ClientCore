@@ -139,7 +139,8 @@ public class MetadataManager {
             for (FileMetadata f : metadata.getFiles()) {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
-                    String filePath = Paths.get(projectRoot, f.getFilePath().substring(2)).toAbsolutePath().toString().replace('\\', '/');
+                    String relPath = f.getFilePath();
+                    String filePath = Paths.get(projectRoot, relPath).normalize().toAbsolutePath().toString().replace('\\', '/');
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }

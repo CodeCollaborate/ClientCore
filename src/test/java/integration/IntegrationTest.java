@@ -672,7 +672,7 @@ public class IntegrationTest {
                 Assert.assertEquals("Incorrect number of projects returned", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
                 Assert.assertEquals("Incorrect ProjectID returned", projectID, ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
                 Assert.assertEquals("Incorrect project name returned", projectName, ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
-                Assert.assertEquals("Incorrect project permissions level returned", 10, ((UserProjectsResponse) response.getData()).getProjects()[0].getPermissionLevel());
+                Assert.assertEquals("Incorrect project permissions level returned", 10, ((UserProjectsResponse) response.getData()).getProjects()[0].getPermissions().get(user1ID).getPermissionLevel());
             } else {
                 Assert.assertEquals("Incorrect number of projects returned", 0, ((UserProjectsResponse) response.getData()).getProjects().length);
             }

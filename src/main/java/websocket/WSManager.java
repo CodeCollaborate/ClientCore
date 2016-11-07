@@ -5,18 +5,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import patching.Patch;
 import websocket.models.*;
+import websocket.models.notifications.FileChangeNotification;
+import websocket.models.requests.FileChangeRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 /**
  * Created by fahslaj on 4/14/2016.
  */
 public class WSManager implements IMessageHandler {
     static Logger logger = LoggerFactory.getLogger("websocket");
+    private final ArrayList<String> patchBatchingQueue = new ArrayList<>();
     // HashMap for keeping track of sent requests (Tag -> Request)
     HashMap<Long, Request> requestHashMap;
     // HashMap for registered notification handlers (Resource.Method -> Handler)
@@ -29,6 +35,8 @@ public class WSManager implements IMessageHandler {
     private ObjectMapper mapper = new ObjectMapper();
     // queued requests that require authentication
     private List<Request> queuedAuthenticatedRequests;
+    private String[] lastResponsePatches = new String[0];
+    private Semaphore batchingSem = new Semaphore(0);
 
     public WSManager(ConnectionConfig config) {
         this(new WSConnection(config));
@@ -43,6 +51,7 @@ public class WSManager implements IMessageHandler {
         socket.registerIncomingMessageHandler(this);
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        batchingSem.release();
     }
 
     public void connect() throws ConnectException {
@@ -96,7 +105,7 @@ public class WSManager implements IMessageHandler {
 
     public void sendAuthenticatedRequest(Request request) throws ConnectException {
         if (userID == null || userToken == null) {
-            synchronized(this.queuedAuthenticatedRequests) {
+            synchronized (this.queuedAuthenticatedRequests) {
                 this.queuedAuthenticatedRequests.add(request);
             }
             return;
@@ -120,6 +129,67 @@ public class WSManager implements IMessageHandler {
             } catch (Exception e) {
                 logger.error("WebSocket connection could not connect: " + e.getMessage());
                 throw new ConnectException("Could not connect to WebSocket.", e);
+            }
+        }
+
+        if (request.data instanceof FileChangeRequest) {
+            synchronized (patchBatchingQueue) {
+                patchBatchingQueue.addAll(Arrays.asList(((FileChangeRequest) request.data).getChanges()));
+            }
+            if (batchingSem.tryAcquire()) {
+                String[] patches;
+
+                // Send request
+                synchronized (patchBatchingQueue) {
+                    patches = patchBatchingQueue.toArray(new String[patchBatchingQueue.size()]);
+                    patchBatchingQueue.clear();
+                }
+
+                // Transform patches against missing patches before sending
+                for (int i = 0; i < patches.length; i++) {
+                    Patch patch = new Patch(patches[i]);
+
+                    for (int j = 0; j < lastResponsePatches.length; j++) {
+                        Patch pastPatch = new Patch(lastResponsePatches[j]);
+
+                        // If the new patch's base version is earlier or equal, we need to update it.
+                        // If the base versions are the same, the server patch wins.
+                        if (patch.getBaseVersion() <= pastPatch.getBaseVersion()) {
+                            patches[i] = patch.transform(pastPatch).toString();
+                        }
+                    }
+                }
+
+                ((FileChangeRequest) request.data).setChanges(patches);
+
+                // Release
+                request.setResponseHandler(response -> {
+                    synchronized (patchBatchingQueue) {
+                        // Remove the sent patches
+                        for (int i = 0; i < patches.length; i++) {
+                            patchBatchingQueue.remove(0);
+                        }
+                    }
+                    lastResponsePatches = ((FileChangeNotification) response.getData()).changes;
+                    request.getResponseHandler().handleResponse(response);
+
+                    batchingSem.drainPermits();
+                    batchingSem.release();
+                });
+            } else {
+                // TODO(benedictwong): Handle timed-out/dropped-packet case
+//                Timer timer = new Timer();
+//                timer.schedule(new TimerTask() {
+//                    @Override
+//                    public void run() {
+//                        synchronized (batchingSem) {
+//                            if (batchingSem.availablePermits() == 0) {
+//                                batchingSem.release();
+//                            }
+//                        }
+//                    }
+//                }, TimeUnit.SECONDS.toMillis(5));
+                return;
             }
         }
 
@@ -252,7 +322,7 @@ public class WSManager implements IMessageHandler {
     }
 
     private void sendAllAuthenticatedRequests() {
-        synchronized(this.queuedAuthenticatedRequests) {
+        synchronized (this.queuedAuthenticatedRequests) {
             List<Request> reqList = this.queuedAuthenticatedRequests;
             this.queuedAuthenticatedRequests = new ArrayList<>();
             reqList.forEach(this::sendAuthenticatedRequest);

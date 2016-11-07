@@ -30,4 +30,20 @@ public class FileChangeRequest implements IRequestData {
         // TODO Auto-generated method stub
         return new Request("File", "Change", this, responseHandler, requestSendErrorHandler);
     }
+
+    public String[] getChanges() {
+        return changes;
+    }
+
+    public void setChanges(String[] changes) {
+        this.changes = changes;
+    }
+
+    public long getBaseFileVersion() {
+        return baseFileVersion;
+    }
+
+    public void setBaseFileVersion(long baseFileVersion) {
+        this.baseFileVersion = baseFileVersion;
+    }
 }

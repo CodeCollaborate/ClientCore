@@ -179,10 +179,9 @@ public class WSManager implements IMessageHandler {
                         if (patch.getBaseVersion() <= pastPatch.getBaseVersion()) {
                             patch = patch.transform(pastPatch);
                         }
-
-                        // TODO(benedictwong): What happens if the patch's base version is greater than the maxVersionSeen? In other words, we have additional patches that were applied for that patch.
                     }
-
+                    
+                    // If the patch's base version is greater than the maxVersionSeen, we leave it's version as is; it has been built on a newer version than we can handle here.
                     if (patch.getBaseVersion() < batchingCtrl.maxVersionSeen) {
                         patch.setBaseVersion(batchingCtrl.maxVersionSeen); // Set this to the latest version we have.
                     }
@@ -205,7 +204,7 @@ public class WSManager implements IMessageHandler {
                         batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
                         batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).getFileVersion();
                     }
-                    if (respHandler != null){
+                    if (respHandler != null) {
                         respHandler.handleResponse(response);
                     }
 

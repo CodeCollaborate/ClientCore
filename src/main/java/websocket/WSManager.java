@@ -6,12 +6,21 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import patching.Patch;
-import websocket.models.*;
+import websocket.models.ConnectionConfig;
+import websocket.models.Notification;
+import websocket.models.Request;
+import websocket.models.Response;
+import websocket.models.ServerMessageWrapper;
 import websocket.models.requests.FileChangeRequest;
 import websocket.models.responses.FileChangeResponse;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -146,10 +155,11 @@ public class WSManager implements IMessageHandler {
             // Create releaser to make sure it only is ever done once
             Runnable releaser = new Runnable() {
                 boolean released = false;
+                final Object synchronizationObj = new Object();
 
                 @Override
                 public void run() {
-                    synchronized (this) {
+                    synchronized (synchronizationObj) {
                         if (!released) {
                             batchingCtrl.batchingSem.drainPermits();
                             batchingCtrl.batchingSem.release();

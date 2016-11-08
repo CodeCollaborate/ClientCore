@@ -89,7 +89,7 @@ public class TestWSManager {
                 "v3:\n5:+5:test5",
                 "v6:\n10:+6:test10",
                 "v10:\n15:+6:test15",
-
+                "v10:\n20:+6:test16",
         };
 
         Request req = new FileChangeRequest(1, new String[]{patches[0]}, 0).getRequest(null, null);
@@ -145,12 +145,6 @@ public class TestWSManager {
             }
         }), anyInt());
 
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         // Test sending two patches; one for a version that is out of date, the other with a version greater than the last response
         manager.handleMessage(String.format("{\"Type\":\"Response\",\"Timestamp\":%d,\"ServerMessage\":{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s}}}",
                 System.currentTimeMillis(), req.tag, 200, 9, "[\"v6:\\n0:+5:test0\",\"v7:\\n1:+5:test1\"]"));
@@ -162,6 +156,23 @@ public class TestWSManager {
             @Override
             public boolean matches(Object argument) {
                 return ((String) argument).contains("[\"v9:\\n20:+6:test10\",\"v10:\\n15:+6:test15\"]");
+            }
+        }), anyInt());
+
+        // Test the auto-release after timeout
+        req = new FileChangeRequest(1, new String[]{patches[8]}, 6).getRequest(null, null);
+        manager.sendRequest(req);
+
+        try {
+            Thread.sleep(5500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v9:\\n20:+6:test10\",\"v10:\\n15:+6:test15\",\"v10:\\n20:+6:test16\"]");
             }
         }), anyInt());
 

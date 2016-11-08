@@ -235,6 +235,13 @@ public class WSManager implements IMessageHandler {
                 @Override
                 public void run() {
                     releaser.run();
+
+                    // Immediately send a request if queue non-empty
+                    if (!batchingCtrl.patchBatchingQueue.isEmpty()) {
+                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
+                                request.getResponseHandler(), request.getErrorHandler()
+                        ));
+                    }
                 }
             }, TimeUnit.SECONDS.toMillis(5));
         }

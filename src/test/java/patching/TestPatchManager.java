@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Created by Benedict on 5/9/2016.
@@ -21,14 +22,14 @@ public class TestPatchManager {
         String expectedString2 = "The quick brown fox jumped the lazy dog";
         String expectedString3 = "The brown fox jumped the lazy dog.";
 
-        Patch patch1 = new Patch("v1:\n4:-6:quick+,\n38:+1:.");
+        Patch patch1 = new Patch("v1:\n4:-6:quick+,\n44:+1:.");
         Patch patch2 = new Patch("v1:\n27:-5:over+");
         Patch patch3 = patch2.transform(patch1);
 
         PatchManager mgr = new PatchManager();
 
-        Assert.assertEquals(expectedString1, mgr.applyPatch(baseString, Arrays.asList(patch1)));
-        Assert.assertEquals(expectedString2, mgr.applyPatch(baseString, Arrays.asList(patch2)));
+        Assert.assertEquals(expectedString1, mgr.applyPatch(baseString, Collections.singletonList(patch1)));
+        Assert.assertEquals(expectedString2, mgr.applyPatch(baseString, Collections.singletonList(patch2)));
         Assert.assertEquals(expectedString3, mgr.applyPatch(baseString, Arrays.asList(patch1, patch3)));
     }
 

@@ -180,7 +180,7 @@ public class WSManager implements IMessageHandler {
                             patch = patch.transform(pastPatch);
                         }
                     }
-                    
+
                     // If the patch's base version is greater than the maxVersionSeen, we leave it's version as is; it has been built on a newer version than we can handle here.
                     if (patch.getBaseVersion() < batchingCtrl.maxVersionSeen) {
                         patch.setBaseVersion(batchingCtrl.maxVersionSeen); // Set this to the latest version we have.
@@ -218,15 +218,15 @@ public class WSManager implements IMessageHandler {
                     }
                 });
             } else {
-                Timer timer = new Timer();
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        releaser.run();
-                    }
-                }, TimeUnit.SECONDS.toMillis(5));
                 return;
             }
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    releaser.run();
+                }
+            }, TimeUnit.SECONDS.toMillis(5));
         }
 
         // Set authentication information, if available.

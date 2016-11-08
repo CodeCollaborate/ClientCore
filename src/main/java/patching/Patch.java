@@ -9,10 +9,10 @@ import java.util.List;
 
 public class Patch {
 
-    private final int baseVersion;
+    private long baseVersion;
     private final List<Diff> diffs;
 
-    public Patch(int baseVersion, List<Diff> diffs) {
+    public Patch(long baseVersion, List<Diff> diffs) {
         this.baseVersion = baseVersion;
         this.diffs = diffs;
     }
@@ -33,8 +33,12 @@ public class Patch {
         return diffs;
     }
 
-    public int getBaseVersion() {
+    public long getBaseVersion() {
         return baseVersion;
+    }
+
+    public void setBaseVersion(long baseVersion) {
+        this.baseVersion = baseVersion;
     }
 
     public Patch convertToCRLF(String base) {
@@ -82,10 +86,10 @@ public class Patch {
     @Override
     public int hashCode() {
         final int prime = 31;
-        int result = 1;
+        long result = 1;
         result = prime * result + baseVersion;
         result = prime * result + ((diffs == null) ? 0 : diffs.hashCode());
-        return result;
+        return (int)result;
     }
 
     @Override
@@ -113,7 +117,7 @@ public class Patch {
 
     public Patch transform(Patch... patches) {
         List<Diff> intermediateDiffs = diffs;
-        int maxVersionSeen = baseVersion;
+        long maxVersionSeen = baseVersion;
 
         for (Patch patch : patches) {
             // Must be able to transform backwards as well?

@@ -31,6 +31,10 @@ public class FileChangeRequest implements IRequestData {
         return new Request("File", "Change", this, responseHandler, requestSendErrorHandler);
     }
 
+    public long getFileID() {
+        return fileID;
+    }
+
     public String[] getChanges() {
         return changes;
     }

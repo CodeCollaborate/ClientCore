@@ -93,9 +93,9 @@ public class IntegrationTest {
     private static WSManager ws1 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
     private static WSManager ws2 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
     private static WSManager ws3 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
-    private static Project proj1 = new Project(-1, "_testProject1", new HashMap<>(), -1);
+    private static Project proj1 = new Project(-1, "_testProject1", new HashMap<>());
     private static File file1 = new File(-1, "_testFile1", "_test1/file/path", 1, null, null);
-    private static Project proj2 = new Project(-1, "_testProject2", new HashMap<>(), -1);
+    private static Project proj2 = new Project(-1, "_testProject2", new HashMap<>());
     private static File file2 = new File(-1, "_testFile2", "_test2/file/path", 1, null, null);
 
     private static Map<Project, HashSet<WSManager>> projToWS = new HashMap<>();

@@ -200,7 +200,7 @@ public class SessionStorage {
             projectUserStatus.put(projectUserKey, status);
         }
         notifyListeners(PROJECT_USER_STATUS, oldValue,
-                new OnlineStatusKeyPair(projectUserKey, projectUserStatus.get(projectUserKey)));
+                new OnlineStatusKeyPair(projectUserKey, status));
     }
 
     class OnlineStatusKeyPair {

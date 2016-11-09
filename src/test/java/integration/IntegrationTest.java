@@ -38,7 +38,7 @@ public class IntegrationTest {
     private static final String user2LastName = "_testLastName2";
     private static final String user2Email = "_testEmail2@testDomain.com";
 
-    private static final String SERVER_URL = "ws://localhost:8000/ws/";
+    private static final String SERVER_URL = "ws://cody.csse.rose-hulman.edu:8000/ws/";
     private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
 
     private static BiMap<String, Byte> apiConstants;

@@ -62,7 +62,7 @@ public class TestSessionStorage {
         };
         storage.addPropertyChangeListener(listener);
         Assert.assertEquals(0, storage.getProjects().size());
-        Project project = new Project(0, "hi", null, 0);
+        Project project = new Project(0, "hi", null);
         storage.setProject(project);
         Assert.assertEquals(1, access[0]);
         Assert.assertEquals(project, storage.getProjectById(0));

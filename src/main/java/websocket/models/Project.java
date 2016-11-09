@@ -14,19 +14,13 @@ public class Project {
     @JsonProperty("Permissions")
     private HashMap<String, Permission> permissions;
 
-    // Used in User.Projects - needs to use permissions eventually.
-    @JsonProperty("PermissionLevel")
-    private int permissionLevel;
-
     public Project(@JsonProperty("ProjectID") long projectID,
                    @JsonProperty("Name") String name,
-                   @JsonProperty("Permissions") HashMap<String, Permission> permissions,
-                   @JsonProperty("PermissionLevel") int permissionLevel) {
+                   @JsonProperty("Permissions") HashMap<String, Permission> permissions) {
         super();
         this.projectID = projectID;
         this.name = name;
         this.permissions = permissions;
-        this.permissionLevel = permissionLevel;
     }
 
     public long getProjectID() {
@@ -51,13 +45,5 @@ public class Project {
 
     public void setPermissions(HashMap<String, Permission> permissions) {
         this.permissions = permissions;
-    }
-
-    public int getPermissionLevel() {
-        return permissionLevel;
-    }
-
-    public void setPermissionLevel(int permissionLevel) {
-        this.permissionLevel = permissionLevel;
     }
 }

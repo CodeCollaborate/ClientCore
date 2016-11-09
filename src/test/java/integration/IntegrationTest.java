@@ -60,9 +60,6 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-// TODO: Remove all "Acquire timed out"
-// NOTE: User2 should always have 1 level lower permissions on User1's projects.
-
 public class IntegrationTest {
     private static final Logger logger = LoggerFactory.getLogger("integrationTest");
 
@@ -84,12 +81,7 @@ public class IntegrationTest {
     private static final String user3Email = "_testEmail3@testDomain.com";
     private static final String fileData1 = "FileData1: _test data1\ntest data 2";
     private static final String fileData2 = "FileData2: _test data1\ntest data 2";
-    private static final IRequestSendErrorHandler errHandler = new IRequestSendErrorHandler() {
-        @Override
-        public void handleRequestSendError() {
-            Assert.fail("Failed to send message");
-        }
-    };
+    private static final IRequestSendErrorHandler errHandler = () -> Assert.fail("Failed to send message");
     private static WSManager ws1 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
     private static WSManager ws2 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
     private static WSManager ws3 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
@@ -155,6 +147,7 @@ public class IntegrationTest {
         testProjectCreateInvalid();
         testUserProjects();
         testProjectLookup();
+        testProjectLookupInvalid();
         testProjectGetFiles(); // should have 0 files
         testProjectGetFilesInvalid();
         testProjectSubscribe(ws1, proj1);

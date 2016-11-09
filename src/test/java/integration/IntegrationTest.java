@@ -143,8 +143,7 @@ public class IntegrationTest {
         // Test valid flow
         testUserRegister();
         testUserRegisterDuplicate();
-        testUserLogin(ws1, user1ID, user1Pass);
-        testUserLogin(ws2, user2ID, user2Pass);
+        testUserLogin();
         testUserLoginInvalidCredentials();
         testProjectGetPermissionConstants();
         testProjectGetPermissionConstantsInvalid();
@@ -155,8 +154,7 @@ public class IntegrationTest {
         testProjectCreate();
         testProjectCreateInvalid();
         testUserProjects();
-        testProjectLookup(ws1, user1ID, proj1);
-        testProjectLookup(ws2, user2ID, proj2);
+        testProjectLookup();
         testProjectGetFiles(); // should have 0 files
         testProjectGetFilesInvalid();
         testProjectSubscribe(ws1, proj1);
@@ -166,7 +164,8 @@ public class IntegrationTest {
         testProjectCrossSubscribeInvalid();
         testProjectSubscribe(ws2, proj1);
         testProjectCrossSubscribeInvalid(); // Check to make sure User1 cannot subscribe to Proj2
-        testProjectRename();
+        testProjectRename(ws1, proj1, "_Renamed", new WSManager[]{ws2});
+        testProjectRename(ws2, proj2, "_Renamed", new WSManager[]{});
         testProjectRenameInvalid();
 
         testFileCreate(ws1, file1, proj1, fileData1, new WSManager[]{ws2});
@@ -249,44 +248,24 @@ public class IntegrationTest {
         Thread.sleep(1000);
     }
 
-    private void testUserRegister() throws InterruptedException, ConnectException {
+    private void testUserRegister() throws ConnectException, InterruptedException {
+        testUserRegister(ws1, user1ID, user1FirstName, user1LastName, user1Email, user1Pass);
+        testUserRegister(ws2, user2ID, user2FirstName, user2LastName, user2Email, user2Pass);
+        testUserRegister(ws3, user3ID, user3FirstName, user3LastName, user3Email, user3Pass);
+    }
+
+    private void testUserRegister(WSManager wsMgr, String userID, String userFirstName, String userLastName, String userEmail, String userPass) throws InterruptedException, ConnectException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserRegisterRequest(user1ID, user1FirstName, user1LastName, user1Email, user1Pass).getRequest(response -> {
+        req = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass).getRequest(response -> {
             // If registration fails, probably is already there.
-            Assert.assertNotEquals(String.format("user %s already registered, rerun test", user1ID), 404, response.getStatus());
-            Assert.assertEquals(String.format("Failed to register user: %s", user1ID), 200, response.getStatus());
+            Assert.assertNotEquals(String.format("user %s already registered, rerun test", userID), 404, response.getStatus());
+            Assert.assertEquals(String.format("Failed to register user: %s", userID), 200, response.getStatus());
 
             waiter.release();
         }, errHandler);
 
-        ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
-            Assert.fail("testUserRegister timed out");
-        }
-
-        req = new UserRegisterRequest(user2ID, user2FirstName, user2LastName, user2Email, user2Pass).getRequest(response -> {
-            // If registration fails, probably is already there.
-            Assert.assertNotEquals(String.format("user %s already registered, rerun test", user2ID), 404, response.getStatus());
-            Assert.assertEquals(String.format("Failed to register user: %s", user2ID), 200, response.getStatus());
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
-            Assert.fail("testUserRegister timed out");
-        }
-
-        req = new UserRegisterRequest(user3ID, user3FirstName, user3LastName, user3Email, user3Pass).getRequest(response -> {
-            // If registration fails, probably is already there.
-            Assert.assertNotEquals(String.format("user %s already registered, rerun test", user3ID), 404, response.getStatus());
-            Assert.assertEquals(String.format("Failed to register user: %s", user3ID), 200, response.getStatus());
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
+        wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
             Assert.fail("testUserRegister timed out");
         }
@@ -316,6 +295,11 @@ public class IntegrationTest {
         if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
             Assert.fail("testUserRegisterDuplicateEmail timed out");
         }
+    }
+
+    private void testUserLogin() throws ConnectException, InterruptedException {
+        testUserLogin(ws1, user1ID, user1Pass);
+        testUserLogin(ws2, user2ID, user2Pass);
     }
 
     private void testUserLogin(WSManager wsMgr, String userID, String userPass) throws InterruptedException, ConnectException {
@@ -399,39 +383,29 @@ public class IntegrationTest {
         }
     }
 
-    private void testUserLookup() throws ConnectException, InterruptedException {
+    private void testUserLookup() throws InterruptedException, ConnectException {
+        testUserLookup(ws1, user1ID, user1FirstName, user1LastName, user1Email);
+        testUserLookup(ws2, user1ID, user1FirstName, user1LastName, user1Email);
+        testUserLookup(ws1, user2ID, user2FirstName, user2LastName, user2Email);
+        testUserLookup(ws2, user2ID, user2FirstName, user2LastName, user2Email);
+    }
+
+    private void testUserLookup(WSManager wsMgr, String userID, String userFirstName, String userLastName, String userEmail) throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserLookupRequest(new String[]{user2ID}).getRequest(response -> {
+        req = new UserLookupRequest(new String[]{userID}).getRequest(response -> {
             Assert.assertEquals("Failed to lookup user 2", 200, response.getStatus());
 
             Assert.assertEquals("Incorrect number of users returned when looking up user 2", 1, ((UserLookupResponse) response.getData()).getUsers().length);
-            Assert.assertEquals("Incorrect first name returned when looking up user 2", user2FirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
-            Assert.assertEquals("Incorrect last name returned when looking up user 2", user2LastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
-            Assert.assertEquals("Incorrect email returned when looking up user 2", user2Email, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
-            Assert.assertEquals("Incorrect username returned when looking up user 2", user2ID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
+            Assert.assertEquals("Incorrect first name returned when looking up user 2", userFirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
+            Assert.assertEquals("Incorrect last name returned when looking up user 2", userLastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
+            Assert.assertEquals("Incorrect email returned when looking up user 2", userEmail, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
+            Assert.assertEquals("Incorrect username returned when looking up user 2", userID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
 
             waiter.release();
         }, errHandler);
 
-        ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
-            Assert.fail("Acquire timed out");
-        }
-
-        req = new UserLookupRequest(new String[]{user1ID}).getRequest(response -> {
-            Assert.assertEquals("Failed to lookup user 1", 200, response.getStatus());
-
-            Assert.assertEquals("Incorrect number of users returned when looking up user 1", 1, ((UserLookupResponse) response.getData()).getUsers().length);
-            Assert.assertEquals("Incorrect first name returned when looking up user 1", user1FirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
-            Assert.assertEquals("Incorrect last name returned when looking up user 1", user1LastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
-            Assert.assertEquals("Incorrect email returned when looking up user 1", user1Email, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
-            Assert.assertEquals("Incorrect username returned when looking up user 1", user1ID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
+        wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
@@ -464,39 +438,29 @@ public class IntegrationTest {
     }
 
     private void testUserProjects() throws ConnectException, InterruptedException {
+        testUserProjects(ws1, proj1);
+        testUserProjects(ws2, proj2);
+    }
+
+    private void testUserProjects(WSManager wsMgr, Project proj) throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
         req = new UserProjectsRequest().getRequest(response -> {
-            Assert.assertEquals("Failed to lookup projects for user 1", 200, response.getStatus());
+            Assert.assertEquals("Failed to lookup projects", 200, response.getStatus());
 
-            if (proj1.getProjectID() != -1) {
-                Assert.assertEquals("Incorrect number of projects returned when looking up projects for user 1", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
-                Assert.assertEquals("Incorrect ProjectID returned when looking up projects for user 1", proj1.getProjectID(), ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
-                Assert.assertEquals("Incorrect project name returned when looking up projects for user 1", proj1.getName(), ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
+            if (proj.getProjectID() != -1) {
+                Assert.assertEquals("Incorrect number of projects returned when looking up projects", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
+                Assert.assertEquals("Incorrect ProjectID returned when looking up projects", proj.getProjectID(), ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
+                Assert.assertEquals("Incorrect project name returned when looking up projects", proj.getName(), ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
             } else {
-                Assert.assertEquals("Incorrect number of projects returned when looking up projects for user 1", 0, ((UserProjectsResponse) response.getData()).getProjects().length);
+                Assert.assertEquals("Incorrect number of projects returned when looking up projects", 0, ((UserProjectsResponse) response.getData()).getProjects().length);
             }
 
             waiter.release();
         }, errHandler);
 
-        ws1.sendRequest(req);
-        req = new UserProjectsRequest().getRequest(response -> {
-            Assert.assertEquals("Failed to lookup projects for user 2", 200, response.getStatus());
-
-            if (proj2.getProjectID() != -1) {
-                Assert.assertEquals("Incorrect number of projects returned when looking up projects for user 2", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
-                Assert.assertEquals("Incorrect ProjectID returned when looking up projects for user 2", proj2.getProjectID(), ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
-                Assert.assertEquals("Incorrect project name returned when looking up projects for user 2", proj2.getName(), ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
-            } else {
-                Assert.assertEquals("Incorrect number of projects returned when looking up projects for user 2", 0, ((UserProjectsResponse) response.getData()).getProjects().length);
-            }
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
-        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -516,31 +480,24 @@ public class IntegrationTest {
         }
     }
 
-    private void testProjectCreate() throws ConnectException, InterruptedException {
+    private void testProjectCreate() throws InterruptedException, ConnectException {
+        testProjectCreate(ws1, proj1);
+        testProjectCreate(ws2, proj2);
+    }
+
+    private void testProjectCreate(WSManager wsMgr, Project proj) throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new ProjectCreateRequest(proj1.getName()).getRequest(response -> {
+        req = new ProjectCreateRequest(proj.getName()).getRequest(response -> {
             Assert.assertEquals("Failed to create project", 200, response.getStatus());
 
-            proj1.setProjectID(((ProjectCreateResponse) response.getData()).getProjectID());
+            proj.setProjectID(((ProjectCreateResponse) response.getData()).getProjectID());
 
             waiter.release();
         }, errHandler);
+        wsMgr.sendRequest(req);
 
-        ws1.sendRequest(req);
-        projToWS.put(proj1, new HashSet<>()); // Don't put ws1 in, since it won't receive notifications
-
-        req = new ProjectCreateRequest(proj2.getName()).getRequest(response -> {
-            Assert.assertEquals("Failed to create project", 200, response.getStatus());
-
-            proj2.setProjectID(((ProjectCreateResponse) response.getData()).getProjectID());
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
-        projToWS.put(proj2, new HashSet<>()); // Don't put ws1 in, since it won't receive notifications
-        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -571,51 +528,33 @@ public class IntegrationTest {
         }
     }
 
-    private void testProjectGetFiles() throws ConnectException, InterruptedException {
+    private void testProjectGetFiles() throws InterruptedException, ConnectException {
+        testProjectGetFiles(ws1, proj1, file1);
+        testProjectGetFiles(ws2, proj2, file2);
+    }
+
+    private void testProjectGetFiles(WSManager wsMgr, Project proj, File file) throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new ProjectGetFilesRequest(proj1.getProjectID()).getRequest(response -> {
+        req = new ProjectGetFilesRequest(proj.getProjectID()).getRequest(response -> {
             Assert.assertEquals("Failed to get files for project1", 200, response.getStatus());
 
-            if (file1.getFileID() != -1) {
-                Assert.assertEquals("Incorrect number of files for Proj1 returned", 1, ((ProjectGetFilesResponse) response.getData()).files.length);
-                Assert.assertEquals("Incorrect file ID returned for Proj1, file at index 0", file1.getFileID(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileID());
-                Assert.assertEquals("Incorrect file name returned for Proj1, file at index 0", file1.getFilename(), ((ProjectGetFilesResponse) response.getData()).files[0].getFilename());
+            if (file.getFileID() != -1) {
+                Assert.assertEquals("Incorrect number of files for Proj returned", 1, ((ProjectGetFilesResponse) response.getData()).files.length);
+                Assert.assertEquals("Incorrect file ID returned for Proj, file at index 0", file.getFileID(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileID());
+                Assert.assertEquals("Incorrect file name returned for Proj, file at index 0", file.getFilename(), ((ProjectGetFilesResponse) response.getData()).files[0].getFilename());
                 // Disabled until mysql os-filepath fix implemented in server
 //                Assert.assertEquals("Incorrect file path returned for file at index 0", filePath, ((ProjectGetFilesResponse) response.getData()).files[0].getPermissions());
-                Assert.assertEquals("Incorrect file version returned for Proj1, file at index 0", file1.getFileVersion(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileVersion());
-                Assert.assertEquals("Incorrect file location returned for Proj1, file at index 0", file1.getRelativePath(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().replace('\\', '/'));
+                Assert.assertEquals("Incorrect file version returned for Proj, file at index 0", file.getFileVersion(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileVersion());
+                Assert.assertEquals("Incorrect file location returned for Proj, file at index 0", file.getRelativePath(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().replace('\\', '/'));
             } else {
-                Assert.assertEquals("Incorrect number of files returned for Proj1", 0, ((ProjectGetFilesResponse) response.getData()).files.length);
+                Assert.assertEquals("Incorrect number of files returned for Proj", 0, ((ProjectGetFilesResponse) response.getData()).files.length);
             }
 
             waiter.release();
         }, errHandler);
 
-        ws1.sendRequest(req);
-        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
-            Assert.fail("Acquire timed out");
-        }
-
-        req = new ProjectGetFilesRequest(proj2.getProjectID()).getRequest(response -> {
-            Assert.assertEquals("Failed to get files for project2", 200, response.getStatus());
-
-            if (file2.getFileID() != -1) {
-                Assert.assertEquals("Incorrect number of files for Proj2 returned", 1, ((ProjectGetFilesResponse) response.getData()).files.length);
-                Assert.assertEquals("Incorrect file ID returned for Proj2, file at index 0", file2.getFileID(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileID());
-                Assert.assertEquals("Incorrect file name returned for Proj2, file at index 0", file2.getFilename(), ((ProjectGetFilesResponse) response.getData()).files[0].getFilename());
-                // Disabled until mysql os-filepath fix implemented in server
-//                Assert.assertEquals("Incorrect file path returned for file at index 0", filePath, ((ProjectGetFilesResponse) response.getData()).files[0].getPermissions());
-                Assert.assertEquals("Incorrect file version returned for Proj2, file at index 0", file2.getFileVersion(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileVersion());
-                Assert.assertEquals("Incorrect file location returned for Proj2, file at index 0", file2.getRelativePath(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().replace('\\', '/'));
-            } else {
-                Assert.assertEquals("Incorrect number of files returned for Proj2", 0, ((ProjectGetFilesResponse) response.getData()).files.length);
-            }
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
+        wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
@@ -668,7 +607,6 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        projToWS.get(proj).add(wsMgr);
 
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
@@ -757,40 +695,33 @@ public class IntegrationTest {
         }
     }
 
-    private void testProjectRename() throws ConnectException, InterruptedException {
+    private void testProjectRename(WSManager wsMgr, Project proj, String postfix, WSManager[] expectNotification) throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        proj1.setName(proj1.getName() + "_Renamed");
-        proj2.setName(proj2.getName() + "_Renamed");
+        String newName = proj.getName() + postfix;
 
-        req = new ProjectRenameRequest(proj1.getProjectID(), proj1.getName()).getRequest(response -> {
-            Assert.assertEquals("Failed to rename project", 200, response.getStatus());
-
-            waiter.release();
-        }, errHandler);
-        ws2.registerNotificationHandler("Project", "Rename", notification -> { // Create notification handler
-            Assert.assertEquals("ProjectRenameNotification gave wrong project ID for Proj1", proj1.getProjectID(), notification.getResourceID());
-            Assert.assertEquals("ProjectRenameNotification gave wrong newName for Proj1", proj1.getName(), ((ProjectRenameNotification) notification.getData()).newName);
-
-            ws2.deregisterNotificationHandler("Project", "Rename");
-            waiter.release();
-        });
-
-        ws1.sendRequest(req);
-        if (!waiter.tryAcquire(2, 5, TimeUnit.SECONDS)) {
-            Assert.fail("Acquire timed out");
-        }
-
-        req = new ProjectRenameRequest(proj2.getProjectID(), proj2.getName()).getRequest(response -> {
+        req = new ProjectRenameRequest(proj.getProjectID(), newName).getRequest(response -> {
             Assert.assertEquals("Failed to rename project", 200, response.getStatus());
 
             waiter.release();
         }, errHandler);
 
-        ws2.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        for (WSManager otherWSMgr : expectNotification) {
+            otherWSMgr.registerNotificationHandler("Project", "Rename", notification -> { // Create notification handler
+                Assert.assertEquals("ProjectRenameNotification gave wrong project ID for Proj1", proj.getProjectID(), notification.getResourceID());
+                Assert.assertEquals("ProjectRenameNotification gave wrong newName for Proj1", newName, ((ProjectRenameNotification) notification.getData()).newName);
+
+                otherWSMgr.deregisterNotificationHandler("Project", "Rename");
+                waiter.release();
+            });
+        }
+
+        wsMgr.sendRequest(req);
+        if (!waiter.tryAcquire(1 + expectNotification.length, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
+
+        proj.setName(newName);
     }
 
     private void testProjectRenameInvalid() throws ConnectException, InterruptedException {
@@ -1516,6 +1447,11 @@ public class IntegrationTest {
         if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
+    }
+
+    private void testProjectLookup() throws ConnectException, InterruptedException {
+        testProjectLookup(ws1, user1ID, proj1);
+        testProjectLookup(ws2, user2ID, proj2);
     }
 
     private void testProjectLookup(WSManager wsMgr, String ownerID, Project proj) throws ConnectException, InterruptedException {

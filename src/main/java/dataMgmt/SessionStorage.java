@@ -1,15 +1,31 @@
 package dataMgmt;
 
 import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import websocket.models.Project;
 
-import java.util.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * The storage unit for session data.
  * Created by fahslaj on 5/3/2016.
  */
-public class SessionStorage extends Observable {
+public class SessionStorage {
+
+    public static final String USERNAME = "username";
+    public static final String AUTH_TOKEN = "authtoken";
+    public static final String PROJECT_LIST = "projectlist";
+    public static final String SUBSCRIBED_PROJECTS = "subscribedlist";
+    public static final String PROJECT_USER_STATUS = "projectuserstatus";
+    public static final String PERMISSION_CONSTANTS = "permissionconstants";
 
     // the username for the user
     private String username;
@@ -20,11 +36,17 @@ public class SessionStorage extends Observable {
     // the list of loaded projects
     private HashMap<Long, Project> projects = new HashMap<>();
 
+    // the set of subscribed project ids
+    private HashSet<Long> subscribedIds = new HashSet<>();
+
     // the map of users-project keys and their online status
-    private Map<String, OnlineStatus> projectUserStatus;
+    private Map<String, OnlineStatus> projectUserStatus = new HashMap<>();
 
     // the map of permission constants
-    private BiMap<String, Byte> permissionConstants;
+    private BiMap<String, Byte> permissionConstants = HashBiMap.create();
+
+    // list of listeners for this class's properties
+    private final List<PropertyChangeListener> listeners = new ArrayList<>();
 
     /**
      * Create a new SessionStorage with an empty user status map.
@@ -46,9 +68,9 @@ public class SessionStorage extends Observable {
      * @param username
      */
     public void setUsername(String username) {
+        String oldValue = this.username;
         this.username = username;
-        setChanged();
-        notifyObservers(username);
+        notifyListeners(USERNAME, oldValue, this.username);
     }
 
     /**
@@ -64,7 +86,9 @@ public class SessionStorage extends Observable {
      * @param authenticationToken the new authentication token
      */
     public void setAuthenticationToken(String authenticationToken) {
+        String oldValue = this.authenticationToken;
         this.authenticationToken = authenticationToken;
+        notifyListeners(AUTH_TOKEN, oldValue, this.authenticationToken);
     }
 
     /**
@@ -72,6 +96,14 @@ public class SessionStorage extends Observable {
      * @return projects list
      */
     public List<Project> getProjects() {
+        return new ArrayList<>(this.projects.values());
+    }
+
+    /**
+     * Get the current user's loaded projects sorted by name.
+     * @return projects list
+     */
+    public List<Project> getSortedProjects() {
         List<Project> projects = new ArrayList<>(this.projects.values());
         Collections.sort(projects, (o1, o2) -> {
             if (o1.getName() == null) {
@@ -99,12 +131,12 @@ public class SessionStorage extends Observable {
      * @param projects the list of projects to set
      */
     public void setProjects(List<Project> projects) {
+        List<Project> oldValue = getProjects();
         this.projects = new HashMap<>();
         for (Project project : projects) {
             this.projects.put(project.getProjectID(), project);
         }
-        setChanged();
-        notifyObservers(projects);
+        notifyListeners(PROJECT_LIST, oldValue, getProjects());
     }
 
     /**
@@ -112,10 +144,48 @@ public class SessionStorage extends Observable {
      * it will be overwritten.
      * @param project the project to add
      */
-    public void addProject(Project project) {
+    public void setProject(Project project) {
         this.projects.put(project.getProjectID(), project);
-        setChanged();
-        notifyObservers(projects);
+        notifyListeners(PROJECT_LIST, null, project);
+    }
+
+    /**
+     * Remove a project by its id, if it exists.
+     * @param id the id of the project to remove
+     */
+    public void removeProjectById(long id) {
+        Project old = this.projects.remove(id);
+        notifyListeners(PROJECT_LIST, old, null);
+    }
+
+    /**
+     * Set the given project id as a subscribed project, if it exists.
+     * @param id to set subscribed
+     */
+    public void setSubscribed(long id) {
+        if (this.projects.containsKey(id)) {
+            this.subscribedIds.add(id);
+            notifyListeners(SUBSCRIBED_PROJECTS, null, id);
+        }
+    }
+
+    /**
+     * Remove the given project id from the set of subscribed ids, if it exists.
+     * @param id to remove from subscribed set
+     */
+    public void setUnsubscribed(long id) {
+        if (this.projects.containsKey(id)) {
+            this.subscribedIds.remove(id);
+            notifyListeners(SUBSCRIBED_PROJECTS, id, null);
+        }
+    }
+
+    /**
+     * Get the set of subscribed ids
+     * @return set of subscribed ids
+     */
+    public Set<Long> getSubscribedIds() {
+        return this.subscribedIds;
     }
 
     /**
@@ -123,26 +193,44 @@ public class SessionStorage extends Observable {
      * @param projectUserKey the user-project combo to change
      * @param status the new status
      */
-    // notifyObservers() is called to prompt the gui to change online displays
     public void changeProjectUserStatus(String projectUserKey, OnlineStatus status) {
+        OnlineStatusKeyPair oldValue;
         synchronized (this) {
+            oldValue = new OnlineStatusKeyPair(projectUserKey, projectUserStatus.get(projectUserKey));
             projectUserStatus.put(projectUserKey, status);
         }
-        setChanged();
-        notifyObservers(projectUserStatus);
+        notifyListeners(PROJECT_USER_STATUS, oldValue,
+                new OnlineStatusKeyPair(projectUserKey, status));
+    }
+
+    class OnlineStatusKeyPair {
+        String projectUserKey;
+        OnlineStatus onlineStatus;
+
+        public OnlineStatusKeyPair(String projectUserKey, OnlineStatus onlineStatus) {
+            this.projectUserKey = projectUserKey;
+            this.onlineStatus = onlineStatus;
+        }
+
+        public String getProjectUserKey() {
+            return projectUserKey;
+        }
+
+        public OnlineStatus getOnlineStatus() {
+            return onlineStatus;
+        }
     }
 
     /**
      * Remove the status of a user-project key from the map and notify observers of this change.
      * @param projectUserKey the user-project key of which to remove the value
      */
-    // notifyObservers() is called to prompt the gui to change online displays
     public void removeProjectUserStatus(String projectUserKey) {
+        OnlineStatus status;
         synchronized (this) {
-            projectUserStatus.remove(projectUserKey);
+            status = projectUserStatus.remove(projectUserKey);
         }
-        setChanged();
-        notifyObservers(projectUserStatus);
+        notifyListeners(PROJECT_USER_STATUS, projectUserKey, null);
     }
 
     /**
@@ -158,8 +246,36 @@ public class SessionStorage extends Observable {
      * @param permissionConstants permission constants BiMap to set
      */
     public void setPermissionConstants(BiMap<String, Byte> permissionConstants) {
+        BiMap<String, Byte> oldValue = this.permissionConstants;
         this.permissionConstants = permissionConstants;
-        setChanged();
-        notifyObservers(permissionConstants);
+        notifyListeners(PERMISSION_CONSTANTS, oldValue, this.permissionConstants);
+    }
+
+    private void notifyListeners(String identifier, Object oldValue, Object newValue) {
+        synchronized(this.listeners) {
+            for (PropertyChangeListener listener : this.listeners) {
+                listener.propertyChange(new PropertyChangeEvent(this, identifier, oldValue, newValue));
+            }
+        }
+    }
+
+    /**
+     * Add a property change listener
+     * @param listener listener to add
+     */
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        synchronized(this.listeners) {
+            this.listeners.add(listener);
+        }
+    }
+
+    /**
+     * Remove a property change listener
+     * @param listener listener to remove
+     */
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        synchronized(this.listeners) {
+            this.listeners.remove(listener);
+        }
     }
 }

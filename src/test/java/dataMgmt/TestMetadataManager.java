@@ -7,6 +7,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by fahslaj on 5/2/2016.
@@ -31,18 +34,20 @@ public class TestMetadataManager {
         expectedMetadata.setProjectID(10248523);
 
         int size = 3;
-        FileMetadata[] fileMetadatas = new FileMetadata[size];
+        List<FileMetadata> fileMetadatas = new ArrayList<FileMetadata>();
 
         long[] ids = {123, 456, 789};
         String[] paths = {"testClass.java", "otherStuff.txt", "weirdFile.dank"};
         long[] versions = {184, 1, 56};
 
+        FileMetadata meta;
         for (int i = 0; i < size; i++) {
-            fileMetadatas[i] = new FileMetadata();
-            fileMetadatas[i].setFileID(ids[i]);
-            fileMetadatas[i].setRelativePath("./");
-            fileMetadatas[i].setFilename(paths[i]);
-            fileMetadatas[i].setVersion(versions[i]);
+            meta = new FileMetadata();
+            meta.setFileID(ids[i]);
+            meta.setRelativePath("./");
+            meta.setFilename(paths[i]);
+            meta.setVersion(versions[i]);
+            fileMetadatas.add(meta);
         }
         expectedMetadata.setFiles(fileMetadatas);
 
@@ -75,7 +80,7 @@ public class TestMetadataManager {
         ProjectMetadata expectedMetadata = new ProjectMetadata();
         expectedMetadata.setProjectID(12948745);
         expectedMetadata.setName("MyProjectName");
-        expectedMetadata.setFiles(new FileMetadata[0]);
+        expectedMetadata.setFiles(new ArrayList<>());
 
         DataManager.getInstance().getMetadataManager().readProjectMetadataFromFile(configRoot, testNoFilesMetadata);
         ProjectMetadata resultMetadata = DataManager.getInstance().getMetadataManager().getProjectMetadata(configRoot);
@@ -87,11 +92,12 @@ public class TestMetadataManager {
         ProjectMetadata sampleMetadata = new ProjectMetadata();
         sampleMetadata.setProjectID(98);
         sampleMetadata.setName("sampleName");
-        FileMetadata[] files = new FileMetadata[1];
-        files[0] = new FileMetadata();
-        files[0].setFilename("TEST");
-        files[0].setRelativePath("./");
-        files[0].setVersion(1);
+        List<FileMetadata> files = new ArrayList<>();
+        FileMetadata meta = new FileMetadata();
+        meta.setFilename("TEST");
+        meta.setRelativePath("./");
+        meta.setVersion(1);
+        files.add(meta);
         sampleMetadata.setFiles(files);
 
         DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);
@@ -109,7 +115,7 @@ public class TestMetadataManager {
         ProjectMetadata sampleMetadata = new ProjectMetadata();
         sampleMetadata.setProjectID(203);
         sampleMetadata.setName("memes");
-        sampleMetadata.setFiles(new FileMetadata[0]);
+        sampleMetadata.setFiles(new ArrayList<>());
 
         DataManager.getInstance().getMetadataManager().writeProjectMetadataToFile(sampleMetadata, testWriteRoot, testWriteFile);
 

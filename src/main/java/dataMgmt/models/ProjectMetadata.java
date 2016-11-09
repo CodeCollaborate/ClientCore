@@ -2,9 +2,11 @@ package dataMgmt.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import websocket.models.Permission;
+import websocket.models.Project;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * The structure for project metadata read from the project's root.
@@ -18,10 +20,20 @@ public class ProjectMetadata {
     private String name;
 
     @JsonProperty("Files")
-    private FileMetadata[] files;
+    private List<FileMetadata> files;
 
-    @JsonProperty("FileVersion")
-    private long fileVersion;
+    public ProjectMetadata() {}
+
+    public ProjectMetadata(Project p) {
+        this.projectID = p.getProjectID();
+        this.name = p.getName();
+    }
+
+    public ProjectMetadata(Project p, List<FileMetadata> files) {
+        this.projectID = p.getProjectID();
+        this.name = p.getName();
+        this.files = files;
+    }
 
     public long getProjectID() {
         return projectID;
@@ -39,20 +51,12 @@ public class ProjectMetadata {
         this.name = name;
     }
 
-    public FileMetadata[] getFiles() {
+    public List<FileMetadata> getFiles() {
         return files;
     }
 
-    public void setFiles(FileMetadata[] files) {
+    public void setFiles(List<FileMetadata> files) {
         this.files = files;
-    }
-
-    public long getFileVersion() {
-        return fileVersion;
-    }
-
-    public void setFileVersion(long fileVersion) {
-        this.fileVersion = fileVersion;
     }
 
     @Override
@@ -63,19 +67,17 @@ public class ProjectMetadata {
         ProjectMetadata that = (ProjectMetadata) o;
 
         if (projectID != that.projectID) return false;
-        if (fileVersion != that.fileVersion) return false;
         if (name != null ? !name.equals(that.name) : that.name != null) return false;
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
-        return Arrays.equals(files, that.files);
-
+        if (files != null ? !files.equals(that.files) : that.files != null) return false;
+        return true;
     }
 
     @Override
     public int hashCode() {
         int result = (int) (projectID ^ (projectID >>> 32));
         result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + Arrays.hashCode(files);
-        result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
+        result = 31 * result + files.hashCode();
         return result;
     }
 }

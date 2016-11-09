@@ -10,8 +10,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -36,6 +39,8 @@ public class MetadataManager {
     private Map<Long, String> projectIDtoRootPath = new HashMap<>();
     // stores conversions between fileID and filePath
     private Map<Long, String> fileIDtoFilePath = new HashMap<>();
+    // stores conversions between fileID and projectID
+    private Map<Long, Long> fileIDtoProjectID = new HashMap<>();
 
     public Collection<FileMetadata> getAllFiles(){
         return fileMetadataMap.values();
@@ -77,6 +82,15 @@ public class MetadataManager {
      */
     public ProjectMetadata getProjectMetadata(String rootPath) {
         return projectMetadataMap.get(rootPath);
+    }
+
+    /**
+     * Gets projectID that the file for the provided FileID belongs to
+     * @param fileID the fileID to lookup the project for
+     * @return the ProjectID that the file belongs to, or null if no such entry exists.
+     */
+    public Long getProjectIDForFileID(long fileID){
+        return fileIDtoProjectID.get(fileID);
     }
 
     /**
@@ -131,19 +145,40 @@ public class MetadataManager {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
                     String filePath = Paths.get(projectRoot, f.getFilePath()).toAbsolutePath().toString().replace('\\', '/');
-                    putFileMetadata(filePath, f);
+                    putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }
         }
     }
 
-    public void putFileMetadata(String filePath, FileMetadata metadata) {
+    public void putFileMetadata(String filePath, long projectID, FileMetadata metadata) {
         fileMetadataMap.put(filePath, metadata);
         fileIDtoFilePath.put(metadata.getFileID(), filePath);
+        fileIDtoProjectID.put(metadata.getFileID(), projectID);
+        ProjectMetadata meta = projectMetadataMap.get(projectIDtoRootPath.get(projectID));
+        List<FileMetadata> files;
+        if (meta.getFiles() == null) {
+            files = new ArrayList<>();
+            files.add(metadata);
+            meta.setFiles(files);
+        } else {
+            files = meta.getFiles();
+            if (!files.contains(metadata)) {
+                files.add(metadata);
+            }
+        }
     }
 
     public void projectMoved(long projectID, String newRootPath) {
         projectIDtoRootPath.put(projectID, newRootPath);
+    }
+
+    public void projectDeleted(long projectID) {
+        String rootPath = getProjectLocation(projectID);
+        if (rootPath != null){
+            projectMetadataMap.remove(rootPath);
+        }
+        projectIDtoRootPath.remove(projectID);
     }
 
     public void fileMoved(long fileID, String newFilePath) {
@@ -154,6 +189,33 @@ public class MetadataManager {
         getFileMetadata(fileID).setRelativePath(filePath);
         getFileMetadata(fileID).setFilename(fileName);
         fileIDtoFilePath.put(fileID, newFilePath);
+    }
+
+    public void fileDeleted(Long fileID) {
+        String filePath = fileIDtoFilePath.get(fileID);
+        if (filePath != null){
+            fileIDtoFilePath.remove(fileID);
+            fileMetadataMap.remove(filePath);
+        }
+
+        Long id = fileIDtoProjectID.get(fileID);
+        fileIDtoProjectID.remove(fileID);
+        String rootPath = projectIDtoRootPath.get(id);
+        if (rootPath != null) {
+            ProjectMetadata projectMetadata = projectMetadataMap.get(rootPath);
+            List<FileMetadata> metas = projectMetadata.getFiles();
+            if (metas != null) {
+                FileMetadata toRemove = null;
+                for (FileMetadata meta : metas) {
+                    if (meta.getFileID() == fileID) {
+                        toRemove = meta;
+                    }
+                }
+                if (toRemove != null) {
+                    metas.remove(toRemove);
+                }
+            }
+        }
     }
 
     /**

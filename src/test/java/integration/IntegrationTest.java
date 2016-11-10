@@ -259,7 +259,7 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("testUserRegister timed out");
         }
     }
@@ -274,7 +274,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("testUserRegisterDuplicateUsername timed out");
         }
 
@@ -285,7 +285,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("testUserRegisterDuplicateEmail timed out");
         }
     }
@@ -308,7 +308,7 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("testUserLogin timed out");
         }
     }
@@ -323,7 +323,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("testUserLogin timed out");
         }
 
@@ -334,7 +334,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("testUserLogin timed out");
         }
     }
@@ -399,7 +399,7 @@ public class IntegrationTest {
         }, errHandler);
 
         wsMgr.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -414,7 +414,7 @@ public class IntegrationTest {
         }, errHandler);
         ws3.sendRequest(req);
 
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -425,7 +425,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -468,7 +468,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -490,7 +490,7 @@ public class IntegrationTest {
         }, errHandler);
         wsMgr.sendRequest(req);
 
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -727,7 +727,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -738,7 +738,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -749,7 +749,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws2.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -808,22 +808,22 @@ public class IntegrationTest {
         req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
-            waiter.release(1);
+            waiter.release();
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
         req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
-            waiter.release(1);
+            waiter.release();
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -834,11 +834,11 @@ public class IntegrationTest {
         req = new FileCreateRequest("dummyFileName", "dummyFilePath", -1, "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw error on invalid projectID", 200, response.getStatus());
 
-            waiter.release(1);
+            waiter.release();
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -849,22 +849,22 @@ public class IntegrationTest {
         req = new FileCreateRequest("dummyFileName", "dummyFilePath", proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw permissions error on lack of write permissions", 200, response.getStatus());
 
-            waiter.release(1);
+            waiter.release();
         }, errHandler);
 
         ws2.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
         req = new FileCreateRequest("dummyFileName", "dummyFilePath", proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw permissions error on lack of write permissions", 200, response.getStatus());
 
-            waiter.release(1);
+            waiter.release();
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -875,22 +875,22 @@ public class IntegrationTest {
 //        req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
 //            Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
 //
-//            waiter.release(1);
+//            waiter.release();
 //        }, errHandler);
 //
 //        ws1.sendRequest(req);
-//        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+//        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
 //            Assert.fail("Acquire timed out");
 //        }
 //
 //        req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
 //            Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
 //
-//            waiter.release(1);
+//            waiter.release();
 //        }, errHandler);
 //
 //        ws2.sendRequest(req);
-//        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+//        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
 //            Assert.fail("Acquire timed out");
 //        }
     }
@@ -1092,7 +1092,7 @@ public class IntegrationTest {
         for (WSManager otherWSMgr : expectNotification) {
             otherWSMgr.registerNotificationHandler("File", "Move", notification -> { // Create notification handler
                 Assert.assertEquals("FileMoveNotification gave wrong file ID", file.getFileID(), notification.getResourceID());
-                Assert.assertEquals("FileMoveNotification gave wrong changes", newFilePath, ((FileMoveNotification) notification.getData()).newPath);
+                Assert.assertEquals("FileMoveNotification gave wrong path", newFilePath, ((FileMoveNotification) notification.getData()).newPath);
 
                 otherWSMgr.deregisterNotificationHandler("File", "Move");
                 waiter.release();
@@ -1117,7 +1117,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1129,7 +1129,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1141,7 +1141,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -1213,7 +1213,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1225,7 +1225,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1236,7 +1236,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1247,7 +1247,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws2.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1259,7 +1259,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1271,7 +1271,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -1316,7 +1316,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1328,7 +1328,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1340,7 +1340,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -1402,7 +1402,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1414,7 +1414,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1425,7 +1425,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws2.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1437,7 +1437,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }
@@ -1486,7 +1486,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws3.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1498,7 +1498,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
 
@@ -1510,7 +1510,7 @@ public class IntegrationTest {
         }, errHandler);
 
         ws1.sendRequest(req);
-        if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }

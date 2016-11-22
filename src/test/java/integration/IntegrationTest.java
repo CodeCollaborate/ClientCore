@@ -1032,7 +1032,7 @@ public class IntegrationTest {
         /*
          * Check authentication
          */
-        String[] changes = new String[]{generateDummyPatch(1) + file1.getFileVersion()};
+        String[] changes = new String[]{generateDummyPatch(1)};
         req = new FileChangeRequest(file1.getFileID(), changes, file1.getFileVersion()).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 

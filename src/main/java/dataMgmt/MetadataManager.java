@@ -10,7 +10,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Manages the metadata of projects and files.
@@ -122,7 +127,7 @@ public class MetadataManager {
 
         // Attempt to read file
         ProjectMetadata metadata;
-            try {
+        try {
             metadata = mapper.readValue(file, ProjectMetadata.class);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/') + " - " + e.getMessage());
@@ -139,8 +144,7 @@ public class MetadataManager {
             for (FileMetadata f : metadata.getFiles()) {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
-                    String relPath = f.getFilePath();
-                    String filePath = Paths.get(projectRoot, relPath).normalize().toAbsolutePath().toString().replace('\\', '/');
+                    String filePath = Paths.get(projectRoot, f.getFilePath()).toAbsolutePath().toString().replace('\\', '/');
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }
@@ -152,14 +156,16 @@ public class MetadataManager {
         fileIDtoFilePath.put(metadata.getFileID(), filePath);
         fileIDtoProjectID.put(metadata.getFileID(), projectID);
         ProjectMetadata meta = projectMetadataMap.get(projectIDtoRootPath.get(projectID));
+        List<FileMetadata> files;
         if (meta.getFiles() == null) {
-            meta.setFiles(new FileMetadata[] {metadata});
+            files = new ArrayList<>();
+            files.add(metadata);
+            meta.setFiles(files);
         } else {
-            ArrayList<FileMetadata> files = new ArrayList<>(Arrays.asList(meta.getFiles()));
+            files = meta.getFiles();
             if (!files.contains(metadata)) {
                 files.add(metadata);
             }
-            meta.setFiles(files.toArray(new FileMetadata[0]));
         }
     }
 
@@ -185,27 +191,31 @@ public class MetadataManager {
         fileIDtoFilePath.put(fileID, newFilePath);
     }
 
-    public void fileDeleted(long fileID) {
+    public void fileDeleted(Long fileID) {
         String filePath = fileIDtoFilePath.get(fileID);
         if (filePath != null){
+            fileIDtoFilePath.remove(fileID);
             fileMetadataMap.remove(filePath);
         }
-        fileIDtoFilePath.remove(fileID);
 
-        long id = fileIDtoProjectID.get(fileID);
+        Long id = fileIDtoProjectID.get(fileID);
         fileIDtoProjectID.remove(fileID);
-        ProjectMetadata projectMetadata = projectMetadataMap.get(projectIDtoRootPath.get(id));
-        FileMetadata[] metas = projectMetadata.getFiles();
-        FileMetadata[] newMetas = new FileMetadata[metas.length - 1];
-        int offset = 0;
-        for (int i = 0; i < metas.length; i++) {
-            if (metas[i].getFileID() == fileID) {
-                offset = 1;
-            } else {
-                newMetas[i - offset] = metas[i];
+        String rootPath = projectIDtoRootPath.get(id);
+        if (rootPath != null) {
+            ProjectMetadata projectMetadata = projectMetadataMap.get(rootPath);
+            List<FileMetadata> metas = projectMetadata.getFiles();
+            if (metas != null) {
+                FileMetadata toRemove = null;
+                for (FileMetadata meta : metas) {
+                    if (meta.getFileID() == fileID) {
+                        toRemove = meta;
+                    }
+                }
+                if (toRemove != null) {
+                    metas.remove(toRemove);
+                }
             }
         }
-        projectMetadata.setFiles(newMetas);
     }
 
     /**

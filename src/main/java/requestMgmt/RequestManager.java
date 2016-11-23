@@ -14,6 +14,7 @@ import websocket.models.responses.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -25,15 +26,15 @@ public abstract class RequestManager {
     private WSManager wsManager;
 
     private IRequestSendErrorHandler requestSendErrorHandler;
-    private IInvalidResponseHandler invalidResponseHandler;
+    private IInvalidResponseHandler incorrectResponseStatusHandler;
 
     public RequestManager(DataManager dataManager, WSManager wsManager,
                           IRequestSendErrorHandler requestSendErrorHandler,
-                          IInvalidResponseHandler invalidResponseHandler) {
+                          IInvalidResponseHandler incorrectResponseStatusHandler) {
         this.dataManager = dataManager;
         this.wsManager = wsManager;
         this.requestSendErrorHandler = requestSendErrorHandler;
-        this.invalidResponseHandler = invalidResponseHandler;
+        this.incorrectResponseStatusHandler = incorrectResponseStatusHandler;
     }
 
     /**
@@ -51,7 +52,7 @@ public abstract class RequestManager {
                 storage.setAuthenticationToken(loginResponse.getToken());
                 this.wsManager.setAuthInfo(username, loginResponse.getToken());
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Could not login to the CodeCollaborate server.");
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Could not login to the CodeCollaborate server.");
             }
         }, requestSendErrorHandler);
         this.wsManager.sendRequest(loginRequest);
@@ -75,7 +76,7 @@ public abstract class RequestManager {
                 List<Project> projects = Arrays.asList(((UserProjectsResponse) response.getData()).getProjects());
                 sendProjectsLookupRequest(projects);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching projects");
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Error fetching projects");
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getProjectsRequest);
@@ -90,7 +91,7 @@ public abstract class RequestManager {
                 List<Project> lookedUpProjects = Arrays.asList(((ProjectLookupResponse) response.getData()).getProjects());
                 this.dataManager.getSessionStorage().setProjects(lookedUpProjects);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching projects' details");
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Error fetching projects' details");
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getProjectDetails);
@@ -111,12 +112,12 @@ public abstract class RequestManager {
                         ProjectGetFilesResponse r = (ProjectGetFilesResponse) response2.getData();
                         finishSubscribeToProject(id, r.files);
                     } else {
-                        this.invalidResponseHandler.handleInvalidResponse(status, "Error getting project files: " + id);
+                        this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Error getting project files: " + id);
                     }
                 }, this.requestSendErrorHandler);
                 wsManager.sendAuthenticatedRequest(requestForFiles);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Error subscribing to project: " + id);
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Error subscribing to project: " + id);
             }
         }, this.requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(subscribeRequest);
@@ -139,7 +140,7 @@ public abstract class RequestManager {
             if (status == 200) {
                 dataManager.getSessionStorage().setUnsubscribed(id);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to unsubscribe from project: " + id);
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to unsubscribe from project: " + id);
             }
         }, this.requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(request);
@@ -160,7 +161,7 @@ public abstract class RequestManager {
                     subscribeToProject(id);
                 }
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status2, "Error fetching projects");
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status2, "Error fetching projects");
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getProjectsRequest);
@@ -187,19 +188,19 @@ public abstract class RequestManager {
                                 dataManager.getSessionStorage().setSubscribed(project.getProjectID());
                                 finishCreateProject(project);
                             } else {
-                                this.invalidResponseHandler.handleInvalidResponse(status3,
+                                this.incorrectResponseStatusHandler.handleInvalidResponse(status3,
                                         "Failed to lookup project: " + pid);
                             }
                         }, requestSendErrorHandler);
                         wsManager.sendAuthenticatedRequest(request3);
                     } else {
-                        this.invalidResponseHandler.handleInvalidResponse(status2,
+                        this.incorrectResponseStatusHandler.handleInvalidResponse(status2,
                                 "Failed to subscribe to project: " + pid);
                     }
                 }, requestSendErrorHandler);
                 wsManager.sendAuthenticatedRequest(request2);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to create project: " + projectName);
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to create project: " + projectName);
             }
         }, requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(request);
@@ -223,7 +224,7 @@ public abstract class RequestManager {
                 dataManager.getSessionStorage().removeProjectById(id);
                 dataManager.getMetadataManager().projectDeleted(id);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to delete project: " + id);
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to delete project: " + id);
             }
         },  requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(request);
@@ -243,7 +244,7 @@ public abstract class RequestManager {
                 project.getPermissions().put(username, new Permission(username, permissionLevel, null, null));
                 dataManager.getSessionStorage().setProject(project);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to add user to project: " + id);
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to add user to project: " + id);
             }
         }, requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(request);
@@ -262,7 +263,7 @@ public abstract class RequestManager {
                 project.getPermissions().remove(id);
                 dataManager.getSessionStorage().setProject(project);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Failed to remove user from project: " + id);
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to remove user from project: " + id);
             }
         }, requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(request);
@@ -281,7 +282,7 @@ public abstract class RequestManager {
                 dataManager.getSessionStorage().removeProjectById(id);
                 dataManager.getMetadataManager().projectDeleted(id);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status,
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status,
                         "Failed to remove logged in user from project: " + id);
             }
         }, requestSendErrorHandler);
@@ -299,7 +300,7 @@ public abstract class RequestManager {
                         (((ProjectGetPermissionConstantsResponse) response.getData()).getConstants());
                 this.dataManager.getSessionStorage().setPermissionConstants(permConstants);
             } else {
-                this.invalidResponseHandler.handleInvalidResponse(status, "Error fetching permission constants");
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Error fetching permission constants");
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getPermConstants);
@@ -309,15 +310,15 @@ public abstract class RequestManager {
         this.requestSendErrorHandler = handler;
     }
 
-    public void setInvalidResponseHandler(IInvalidResponseHandler handler) {
-        this.invalidResponseHandler = handler;
+    public void setIncorrectResponseStatusHandler(IInvalidResponseHandler handler) {
+        this.incorrectResponseStatusHandler = handler;
     }
 
     public IRequestSendErrorHandler getRequestSendErrorHandler() {
         return requestSendErrorHandler;
     }
 
-    public IInvalidResponseHandler getInvalidResponseHandler() {
-        return invalidResponseHandler;
+    public IInvalidResponseHandler getIncorrectResponseStatusHandler() {
+        return incorrectResponseStatusHandler;
     }
 }

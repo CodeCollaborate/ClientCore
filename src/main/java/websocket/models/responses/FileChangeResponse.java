@@ -10,7 +10,14 @@ public class FileChangeResponse implements IResponseData{
     @JsonProperty("FileVersion")
     protected int fileVersion;
 
+    @JsonProperty("MissingPatches")
+    protected String[] missingPatches;
+
     public int getFileVersion() {
         return fileVersion;
+    }
+
+    public String[] getMissingPatches() {
+        return missingPatches;
     }
 }

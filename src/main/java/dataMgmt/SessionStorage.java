@@ -6,7 +6,14 @@ import websocket.models.Project;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * The storage unit for session data.
@@ -236,13 +243,31 @@ public class SessionStorage {
      * @param status the new status
      */
     public void changeProjectUserStatus(String projectUserKey, OnlineStatus status) {
-        AbstractMap.SimpleEntry<String, OnlineStatus> oldValue;
-        synchronized (PROJECT_USER_STATUS) {
-            oldValue = new AbstractMap.SimpleEntry<>(projectUserKey, projectUserStatus.get(projectUserKey));
+        OnlineStatusKeyPair oldValue;
+        synchronized (this) {
+            oldValue = new OnlineStatusKeyPair(projectUserKey, projectUserStatus.get(projectUserKey));
             projectUserStatus.put(projectUserKey, status);
         }
         notifyListeners(PROJECT_USER_STATUS, oldValue,
-                new AbstractMap.SimpleEntry<>(projectUserKey, status));
+                new OnlineStatusKeyPair(projectUserKey, status));
+    }
+
+    class OnlineStatusKeyPair {
+        String projectUserKey;
+        OnlineStatus onlineStatus;
+
+        public OnlineStatusKeyPair(String projectUserKey, OnlineStatus onlineStatus) {
+            this.projectUserKey = projectUserKey;
+            this.onlineStatus = onlineStatus;
+        }
+
+        public String getProjectUserKey() {
+            return projectUserKey;
+        }
+
+        public OnlineStatus getOnlineStatus() {
+            return onlineStatus;
+        }
     }
 
     /**

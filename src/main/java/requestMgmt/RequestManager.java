@@ -221,14 +221,22 @@ public abstract class RequestManager {
             int status = response.getStatus();
             if (status == 200) {
                 dataManager.getSessionStorage().setUnsubscribed(id);
+                Project project = dataManager.getSessionStorage().getProjectById(id);
                 dataManager.getSessionStorage().removeProjectById(id);
                 dataManager.getMetadataManager().projectDeleted(id);
+                finishDeleteProject(project);
             } else {
                 this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to delete project: " + id);
             }
         },  requestSendErrorHandler);
         wsManager.sendAuthenticatedRequest(request);
     }
+
+    /**
+     * Finish deleting a project by deleting the metadata file for it on disk
+     * @param project
+     */
+    public abstract void finishDeleteProject(Project project);
 
     /**
      * Add a user to a project with the given permission level

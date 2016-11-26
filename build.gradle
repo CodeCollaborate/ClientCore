@@ -29,6 +29,7 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-databind:2.7.3'
     compile 'org.slf4j:slf4j-simple:1.7.21'
     compile 'com.google.guava:guava:19.0'
+    compile 'javax.mail:mail:1.4.1'
 }
 test {
     exclude 'integration/**'

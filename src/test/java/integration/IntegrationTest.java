@@ -451,7 +451,6 @@ public class IntegrationTest {
 
             waiter.release();
         }, errHandler);
-
         wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
@@ -489,7 +488,6 @@ public class IntegrationTest {
             waiter.release();
         }, errHandler);
         wsMgr.sendRequest(req);
-
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
@@ -546,7 +544,6 @@ public class IntegrationTest {
 
             waiter.release();
         }, errHandler);
-
         wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
@@ -598,9 +595,7 @@ public class IntegrationTest {
 
             waiter.release();
         }, errHandler);
-
         wsMgr.sendRequest(req);
-
         if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }

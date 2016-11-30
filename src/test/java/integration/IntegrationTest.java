@@ -866,28 +866,27 @@ public class IntegrationTest {
         /*
          * Check duplicate file
          */
-        // TODO: Apparently the server doesn't check duplicate files; this does not work...
-//        req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
-//            Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
-//
-//            waiter.release();
-//        }, errHandler);
-//
-//        ws1.sendRequest(req);
-//        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
-//            Assert.fail("Acquire timed out");
-//        }
-//
-//        req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
-//            Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
-//
-//            waiter.release();
-//        }, errHandler);
-//
-//        ws2.sendRequest(req);
-//        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
-//            Assert.fail("Acquire timed out");
-//        }
+       req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
+           Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
+
+           waiter.release();
+       }, errHandler);
+
+       ws1.sendRequest(req);
+       if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+           Assert.fail("Acquire timed out");
+       }
+
+       req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
+           Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
+
+           waiter.release();
+       }, errHandler);
+
+       ws2.sendRequest(req);
+       if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+           Assert.fail("Acquire timed out");
+       }
     }
 
     private void testFilePull() throws InterruptedException, ConnectException {

@@ -12,10 +12,10 @@ import websocket.models.Request;
 import websocket.models.requests.*;
 import websocket.models.responses.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import javax.mail.*;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import java.util.*;
 
 /**
  * Created by fahslaj on 10/15/2016.
@@ -320,6 +320,40 @@ public abstract class RequestManager {
 
     public void setIncorrectResponseStatusHandler(IInvalidResponseHandler handler) {
         this.incorrectResponseStatusHandler = handler;
+    }
+
+    /**
+     * Send a recovery email for the given username
+     * @param username
+     */
+    public void sendRecoveryEmail(String username) {
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+
+        Session session = Session.getDefaultInstance(props,
+                new javax.mail.Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication("codecollaboratesuprequest@gmail.com",
+                                "k)^W!*aLsw_mc*m*@7=6RKd8");
+                    }
+                });
+        try {
+
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress("codecollaboratesuprequest@gmail.com"));
+            message.setRecipients(Message.RecipientType.TO,
+                    InternetAddress.parse("codecollaboratesup@gmail.com"));
+            message.setSubject("Password Recovery Request - " + username);
+            message.setText("Please reset the password for username: " + username);
+
+            Transport.send(message);
+
+        } catch (MessagingException e) {
+            requestSendErrorHandler.handleRequestSendError();
+        }
     }
 
     public IRequestSendErrorHandler getRequestSendErrorHandler() {

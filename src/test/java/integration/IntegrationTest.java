@@ -63,7 +63,6 @@ import java.util.concurrent.TimeUnit;
 public class IntegrationTest {
     private static final Logger logger = LoggerFactory.getLogger("integrationTest");
 
-//    private static final String SERVER_URL = "wss://codecollaborate.obsessiveorange.com:8000/ws/";
     private static final String SERVER_URL = "ws://localhost:8000/ws/";
     private static final String user1ID = "_testUser1";
     private static final String user1Pass = "_testPass1";

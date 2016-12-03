@@ -1,5 +1,6 @@
 package websocket;
 
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
@@ -72,7 +73,8 @@ public class WSConnection {
     public void connect() throws Exception {
         try {
             if (this.client == null) {
-                this.client = new WebSocketClient();
+                SslContextFactory ssl = new SslContextFactory();
+                this.client = new WebSocketClient(ssl);
             }
             this.client.start();
             URI uri = new URI(config.getUriString());

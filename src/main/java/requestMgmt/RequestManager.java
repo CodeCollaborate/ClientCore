@@ -352,6 +352,7 @@ public abstract class RequestManager {
             if (status == 200) {
                 FileMetadata fileMD = dataManager.getMetadataManager().getFileMetadata(fileID);
                 fileMD.setFilename(newName);
+                finishRenameFile(fileMD);
             } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Failed to rename file to \"" + newName +
                         "\" on server.");
@@ -359,6 +360,8 @@ public abstract class RequestManager {
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(renameFileReq);
     }
+
+    public abstract void finishRenameFile(FileMetadata fMeta);
 
     /**
      * Moves the given file to the specified relative path on the server.
@@ -372,13 +375,18 @@ public abstract class RequestManager {
         Request moveFileReq = new FileMoveRequest(fileID, newRelativePath).getRequest(response -> {
             int status = response.getStatus();
             if (status == 200) {
-                dataManager.getMetadataManager().fileMoved(fileID, newFullPath);
+                MetadataManager mm = dataManager.getMetadataManager();
+                mm.fileMoved(fileID, newFullPath);
+                FileMetadata fMeta = mm.getFileMetadata(fileID);
+                finishMoveFile(fMeta);
             } else {
                 this.invalidResponseHandler.handleInvalidResponse(status, "Failed to move file on server: " + fileID);
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(moveFileReq);
     }
+
+    public abstract void finishMoveFile(FileMetadata fMeta);
 
     /**
      * Deletes the given file on the server and within the metadata.

@@ -1,4 +1,4 @@
-package requestMgmt;
+package integration;
 
 import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
@@ -9,6 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import requestMgmt.RequestManager;
 import websocket.ConnectException;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;

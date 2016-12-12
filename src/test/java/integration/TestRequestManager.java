@@ -17,13 +17,11 @@ import websocket.models.ConnectionConfig;
 import websocket.models.File;
 import websocket.models.Project;
 import websocket.models.Request;
-import websocket.models.requests.UserDeleteRequest;
-import websocket.models.requests.UserLoginRequest;
 import websocket.models.requests.UserRegisterRequest;
-import websocket.models.responses.UserLoginResponse;
 
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -33,11 +31,9 @@ import java.util.stream.Collectors;
 /**
  * Created by fahslaj on 10/31/2016.
  */
-public class TestRequestManager {
+public class TestRequestManager extends UserBasedIntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger("requestManagerIntegrationTest");
-
-    private static final String SERVER_URL = "ws://localhost:8000/ws/";
 
     private static final String user1ID = "_testUser1";
     private static final String user1Pass = "_testPass1";
@@ -94,24 +90,9 @@ public class TestRequestManager {
     @After
     public void cleanup() throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
-        cleanupUser(user1ID, user1Pass, waiter);
-        cleanupUser(user2ID, user2Pass, waiter);
+        cleanupUser(logger, user1ID, user1Pass, waiter, errHandler);
+        cleanupUser(logger, user2ID, user2Pass, waiter, errHandler);
         waiter.tryAcquire(2, 10, TimeUnit.SECONDS);
-    }
-
-    private void cleanupUser(String userID, String userPass, Semaphore waiter) {
-        logger.info("Cleaning up user " + userID);
-        WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
-
-        wsMgr.sendRequest(new UserLoginRequest(userID, userPass).getRequest(response -> {
-            if (response.getStatus() == 200) {
-                String senderToken = ((UserLoginResponse) response.getData()).getToken();
-                wsMgr.setAuthInfo(userID, senderToken);
-
-                wsMgr.sendRequest(new UserDeleteRequest().getRequest(null, null));
-            }
-            waiter.release();
-        }, errHandler));
     }
 
     @Test
@@ -124,9 +105,7 @@ public class TestRequestManager {
         testAddUserToProject(proj1.getProjectID(), proj1.getName(), user2ID, "admin", apiConstants);
         testRemoveUserFromProject(proj1.getProjectID(), proj1.getName(), user2ID);
         proj2 = testCreateProject(proj2.getName());
-        List<Long> projectIDs = new ArrayList<>();
-        projectIDs.add(proj1.getProjectID());
-        projectIDs.add(proj2.getProjectID());
+        List<Long> projectIDs = Arrays.asList(proj1.getProjectID(), proj2.getProjectID());
         testFetchAndSubscribeAll(projectIDs);
         testUnsubscribeFromProject(proj1.getProjectID());
         testFetchProjects();

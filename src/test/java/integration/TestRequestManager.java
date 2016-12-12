@@ -335,10 +335,8 @@ public class TestRequestManager extends UserBasedIntegrationTest {
         sesSto.removePropertyChangeListener(listener);
     }
 
-    private void testDeleteProject(long projId) throws InterruptedException {
-        logger.info("Deleting project");
-        Semaphore waiter = new Semaphore(0);
-        PropertyChangeListener listener = (event) -> {
+    private PropertyChangeListener getProjectRemovedChangeListener(long projId, Semaphore waiter) {
+        return (event) -> {
             if (event.getPropertyName().equals(SessionStorage.PROJECT_LIST)) {
                 Project p = (Project) event.getOldValue();
                 if (projId == p.getProjectID()) {
@@ -351,7 +349,14 @@ public class TestRequestManager extends UserBasedIntegrationTest {
                 }
             }
         };
+    }
+
+    private void testDeleteProject(long projId) throws InterruptedException {
+        logger.info("Deleting project");
+        Semaphore waiter = new Semaphore(0);
+        PropertyChangeListener listener = getProjectRemovedChangeListener(projId, waiter);
         sesSto.addPropertyChangeListener(listener);
+
         reqMgr.deleteProject(projId);
         if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
@@ -385,19 +390,8 @@ public class TestRequestManager extends UserBasedIntegrationTest {
     private void testRemoveSelfFromProject(long projId) throws InterruptedException {
         logger.info("Removing self from project");
         Semaphore waiter = new Semaphore(0);
-        PropertyChangeListener listener = (event) -> {
-            if (event.getPropertyName().equals(SessionStorage.PROJECT_LIST)) {
-                Project p = (Project) event.getOldValue();
-                if (projId == p.getProjectID()) {
-                    waiter.release();
-                }
-            } else if (event.getPropertyName().equals(SessionStorage.SUBSCRIBED_PROJECTS)) {
-                long id = (long) event.getOldValue();
-                if (projId == id) {
-                    waiter.release();
-                }
-            }
-        };
+        PropertyChangeListener listener = getProjectRemovedChangeListener(projId, waiter);
+
         sesSto.addPropertyChangeListener(listener);
         reqMgr.removeSelfFromProject(projId);
         if (!waiter.tryAcquire(1, 5, TimeUnit.SECONDS)) {

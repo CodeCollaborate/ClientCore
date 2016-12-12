@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -97,25 +98,31 @@ public class TestRequestManager extends UserBasedIntegrationTest {
 
     @Test
     public void testRequestManager() throws java.net.ConnectException, InterruptedException {
+        // register, login, get permission constants
         registerUser(user1ID, user1FirstName, user1LastName, user1Email, user1Pass);
         testLogin(user1ID, user1Pass);
         testFetchPermissionConstants();
+        // create a project, register user 2, add them to the project, and remove them from the project
         proj1 = testCreateProject(proj1.getName());
         registerUser(user2ID, user2FirstName, user2LastName, user2Email, user2Pass);
         testAddUserToProject(proj1.getProjectID(), proj1.getName(), user2ID, "admin", apiConstants);
         testRemoveUserFromProject(proj1.getProjectID(), proj1.getName(), user2ID);
+        // create project 2, fetch and subscribe to both projects, unsubscribe from project 1
         proj2 = testCreateProject(proj2.getName());
         List<Long> projectIDs = Arrays.asList(proj1.getProjectID(), proj2.getProjectID());
         testFetchAndSubscribeAll(projectIDs);
         testUnsubscribeFromProject(proj1.getProjectID());
+        // fetch projects, subscribe to project 1, add user2 to project2, delete project 1, logout user 1
         testFetchProjects();
         testSubscribeToProject(proj1.getProjectID());
         testAddUserToProject(proj2.getProjectID(), proj2.getName(), user2ID, "write", apiConstants);
         testDeleteProject(proj1.getProjectID());
         testLogout();
+        // login as user 2, remove self from project 2, logout as user 2
         testLogin(user2ID, user2Pass);
         testRemoveSelfFromProject(proj2.getProjectID());
         testLogout();
+        // login as user 1, delete project 2
         testLogin(user1ID, user1Pass);
         deleteProject(proj2.getProjectID());
     }
@@ -155,7 +162,6 @@ public class TestRequestManager extends UserBasedIntegrationTest {
     private void testLogin(String userID, String userPass) throws InterruptedException {
         logger.info("Logging in");
         Semaphore waiter = new Semaphore(0);
-        final String[] senderToken = new String[1];
         PropertyChangeListener listener = (event) -> {
             if (event.getPropertyName().equals(SessionStorage.USERNAME)) {
                 if (userID.equals(event.getNewValue())) {
@@ -163,7 +169,6 @@ public class TestRequestManager extends UserBasedIntegrationTest {
                 }
             } else if (event.getPropertyName().equals(SessionStorage.AUTH_TOKEN)) {
                 if (event.getNewValue() != null) {
-                    senderToken[0] = sesSto.getAuthenticationToken();
                     waiter.release();
                 }
             }
@@ -176,15 +181,15 @@ public class TestRequestManager extends UserBasedIntegrationTest {
         sesSto.removePropertyChangeListener(listener);
     }
 
+    private Project tempCreateProj;
     private Project testCreateProject(String name) throws InterruptedException {
         logger.info("Creating project");
         Semaphore waiter = new Semaphore(0);
-        final Project[] toReturn = new Project[1];
         PropertyChangeListener listener = (event) -> {
             if (event.getPropertyName().equals(SessionStorage.PROJECT_LIST)) {
                 Project project = (Project) event.getNewValue();
                 if (project.getName().equals(name)) {
-                    toReturn[0] = project;
+                    tempCreateProj = project;
                     waiter.release();
                 }
             }
@@ -195,7 +200,7 @@ public class TestRequestManager extends UserBasedIntegrationTest {
             Assert.fail("Acquire timed out");
         }
         sesSto.removePropertyChangeListener(listener);
-        return toReturn[0];
+        return tempCreateProj;
     }
 
     private void testAddUserToProject(long projId, String projName, String userId, String level, BiMap<String, Byte> apiConstants) throws InterruptedException {
@@ -243,7 +248,7 @@ public class TestRequestManager extends UserBasedIntegrationTest {
         logger.info("Fetch and subscribe all");
         Semaphore waiter = new Semaphore(0);
         List<Long> subscribedIds = new ArrayList<>();
-        final int[] counter = {0};
+        AtomicInteger counter = new AtomicInteger();
         PropertyChangeListener listener = (event) -> {
             if (event.getPropertyName().equals(SessionStorage.PROJECT_LIST)) {
                 List<Project> projects = (List<Project>) event.getNewValue();
@@ -253,12 +258,12 @@ public class TestRequestManager extends UserBasedIntegrationTest {
                 }
                 if (responseIds.containsAll(projectIds)) {
                     waiter.release();
-                    counter[0]++;
+                    counter.getAndAdd(1);
                 }
             } else if (event.getPropertyName().equals(SessionStorage.SUBSCRIBED_PROJECTS)) {
                 subscribedIds.add((Long) event.getNewValue());
                 waiter.release();
-                counter[0]++;
+                counter.getAndAdd(1);
             }
         };
         sesSto.addPropertyChangeListener(listener);

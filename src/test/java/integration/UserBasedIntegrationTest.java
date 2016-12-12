@@ -17,7 +17,7 @@ public class UserBasedIntegrationTest {
 
     protected static final String SERVER_URL = "ws://localhost:8000/ws/";
 
-    public void cleanupUser(Logger logger, String userID, String userPass, Semaphore waiter, IRequestSendErrorHandler errHandler) {
+    void cleanupUser(Logger logger, String userID, String userPass, Semaphore waiter, IRequestSendErrorHandler errHandler) {
         logger.info("Cleaning up user " + userID);
         WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
 

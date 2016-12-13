@@ -3,6 +3,6 @@ Client-side API connection logic
 
 ## License
 
-Copyright (c) CodeCollaborate Corporation. All rights reserved.
+Copyright (c) CodeCollaborate. All rights reserved.
 
 Licensed under the [MIT](LICENSE.md) License

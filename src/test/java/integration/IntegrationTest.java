@@ -60,10 +60,9 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-public class IntegrationTest {
+public class IntegrationTest extends UserBasedIntegrationTest {
     private static final Logger logger = LoggerFactory.getLogger("integrationTest");
 
-    private static final String SERVER_URL = "ws://localhost:8000/ws/";
     private static final String user1ID = "_testUser1";
     private static final String user1Pass = "_testPass1";
     private static final String user1FirstName = "_testFirstName1";
@@ -101,27 +100,12 @@ public class IntegrationTest {
     public void cleanup() throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        cleanupUser(user1ID, user1Pass, waiter);
-        cleanupUser(user2ID, user2Pass, waiter);
-        cleanupUser(user3ID, user3Pass, waiter);
+        cleanupUser(logger, user1ID, user1Pass, waiter, errHandler);
+        cleanupUser(logger, user2ID, user2Pass, waiter, errHandler);
+        cleanupUser(logger, user3ID, user3Pass, waiter, errHandler);
 
         // Wait for cleanup to finish
         waiter.tryAcquire(3, 10, TimeUnit.SECONDS);
-    }
-
-    private void cleanupUser(String userID, String userPass, Semaphore waiter) {
-        logger.info("Cleaning up user " + userID);
-        WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
-
-        wsMgr.sendRequest(new UserLoginRequest(userID, userPass).getRequest(response -> {
-            if (response.getStatus() == 200) {
-                String senderToken = ((UserLoginResponse) response.getData()).getToken();
-                wsMgr.setAuthInfo(userID, senderToken);
-
-                wsMgr.sendRequest(new UserDeleteRequest().getRequest(null, null));
-            }
-            waiter.release();
-        }, errHandler));
     }
 
     @Before

@@ -14,7 +14,6 @@ import websocket.models.responses.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -63,6 +62,7 @@ public abstract class RequestManager {
      */
     public void logout() {
         this.dataManager.getSessionStorage().setUsername(null);
+        this.dataManager.getSessionStorage().setAuthenticationToken(null);
         this.wsManager.setAuthInfo(null, null);
     }
 
@@ -268,7 +268,7 @@ public abstract class RequestManager {
             int status = response.getStatus();
             if (status == 200) {
                 Project project = dataManager.getSessionStorage().getProjectById(id);
-                project.getPermissions().remove(id);
+                project.getPermissions().remove(username);
                 dataManager.getSessionStorage().setProject(project);
             } else {
                 this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to remove user from project: " + id);

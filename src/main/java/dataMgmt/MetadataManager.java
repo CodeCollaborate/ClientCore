@@ -133,7 +133,9 @@ public class MetadataManager {
             throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/') + " - " + e.getMessage());
         }
 
-        putProjectMetadata(projectRoot, metadata);
+        if (metadata != null){
+            putProjectMetadata(projectRoot, metadata);
+        }
     }
 
     public void putProjectMetadata(String projectRoot, ProjectMetadata metadata) {
@@ -144,7 +146,7 @@ public class MetadataManager {
             for (FileMetadata f : metadata.getFiles()) {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
-                    String filePath = Paths.get(projectRoot, f.getFilePath()).toAbsolutePath().toString().replace('\\', '/');
+                    String filePath = Paths.get(projectRoot, f.getFilePath()).normalize().toAbsolutePath().toString().replace('\\', '/');
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }
@@ -223,6 +225,7 @@ public class MetadataManager {
      *
      * @param metadata    the ProjectMetadata object to write
      * @param projectRoot the root path of the project
+     * @param configFileName the name of the config file
      */
     public void writeProjectMetadataToFile(ProjectMetadata metadata, String projectRoot, String configFileName) {
         File file = new File(projectRoot, configFileName);

@@ -41,7 +41,7 @@ public class WSManager implements IMessageHandler {
     // Jackson Mapper
     private ObjectMapper mapper = new ObjectMapper();
     // queued requests that require authentication
-    private List<Request> queuedAuthenticatedRequests;
+    private final List<Request> queuedAuthenticatedRequests;
 
     public WSManager(ConnectionConfig config) {
         this(new WSConnection(config));
@@ -204,24 +204,30 @@ public class WSManager implements IMessageHandler {
                 // Save response data, and fire off the actual responseHandler
                 IResponseHandler respHandler = request.getResponseHandler();
                 request.setResponseHandler(response -> {
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        // Remove the sent patches
-                        for (int i = 0; i < patches.length; i++) {
-                            batchingCtrl.patchBatchingQueue.remove(0);
+                    if (response.getStatus() == 200) {
+                        synchronized (batchingCtrl.patchBatchingQueue) {
+                            // Remove the sent patches
+                            for (int i = 0; i < patches.length; i++) {
+                                batchingCtrl.patchBatchingQueue.remove(0);
+                            }
                         }
-                    }
-                    if (((FileChangeResponse) response.getData()).getMissingPatches() != null) {
-                        batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
-                        batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).getFileVersion();
-                    }
-                    if (respHandler != null) {
-                        respHandler.handleResponse(response);
+                        if (((FileChangeResponse) response.getData()).getMissingPatches() != null) {
+                            batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
+                            batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).getFileVersion();
+                        }
+                        if (respHandler != null) {
+                            respHandler.handleResponse(response);
+                        }
                     }
 
                     releaser.run();
 
                     // Immediately send a request if queue non-empty
-                    if (!batchingCtrl.patchBatchingQueue.isEmpty()) {
+                    boolean isEmpty;
+                    synchronized (batchingCtrl.patchBatchingQueue) {
+                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
+                    }
+                    if (!isEmpty) {
                         sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
                                 respHandler, request.getErrorHandler()
                         ));
@@ -237,7 +243,11 @@ public class WSManager implements IMessageHandler {
                     releaser.run();
 
                     // Immediately send a request if queue non-empty
-                    if (!batchingCtrl.patchBatchingQueue.isEmpty()) {
+                    boolean isEmpty;
+                    synchronized (batchingCtrl.patchBatchingQueue) {
+                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
+                    }
+                    if (!isEmpty) {
                         sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
                                 request.getResponseHandler(), request.getErrorHandler()
                         ));
@@ -377,7 +387,7 @@ public class WSManager implements IMessageHandler {
     private void sendAllAuthenticatedRequests() {
         synchronized (this.queuedAuthenticatedRequests) {
             List<Request> reqList = this.queuedAuthenticatedRequests;
-            this.queuedAuthenticatedRequests = new ArrayList<>();
+            this.queuedAuthenticatedRequests.clear();
             reqList.forEach(this::sendAuthenticatedRequest);
         }
     }

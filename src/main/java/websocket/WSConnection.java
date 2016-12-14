@@ -59,7 +59,7 @@ public class WSConnection {
         if (runnables == null) {
             return;
         }
-        runnables.stream().filter(r -> r != null).forEach(Runnable::run);
+        runnables.stream().filter(Objects::nonNull).forEach(Runnable::run);
     }
 
     /**
@@ -68,7 +68,7 @@ public class WSConnection {
      * <p>
      * This method puts the WSConnection into State.CONNECT
      *
-     * @return true if connection request sent successfully, false otherwise.
+     * @throws Exception throws an exception for websocket connections
      */
     public void connect() throws Exception {
         try {

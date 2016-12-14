@@ -225,6 +225,7 @@ public class MetadataManager {
      *
      * @param metadata    the ProjectMetadata object to write
      * @param projectRoot the root path of the project
+     * @param configFileName the name of the config file
      */
     public void writeProjectMetadataToFile(ProjectMetadata metadata, String projectRoot, String configFileName) {
         File file = new File(projectRoot, configFileName);

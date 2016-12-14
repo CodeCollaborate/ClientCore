@@ -2,7 +2,7 @@ group 'io.codecollaborate'
 version '0.00'
 
 apply plugin: 'java'
-apply plugin: 'eu.appsatori.fatjar'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -13,7 +13,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'eu.appsatori:gradle-fatjar-plugin:0.3'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
     }
 }
 
@@ -34,8 +34,25 @@ test {
     exclude 'integration/**'
 }
 
-fatJar {
-    archiveName "${baseName}.${extension}"
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+    archiveName "${baseName}-sources.${extension}"
 }
 
-fatJar.dependsOn(build)
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+    archiveName "${baseName}-javadoc.${extension}"
+}
+
+shadowJar {
+    archiveName "${baseName}.${extension}"
+    dependsOn sourcesJar
+}
+
+artifacts {
+    shadowJar
+    archives sourcesJar
+    archives javadocJar
+}

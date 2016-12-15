@@ -386,7 +386,7 @@ public class WSManager implements IMessageHandler {
 
     private void sendAllAuthenticatedRequests() {
         synchronized (this.queuedAuthenticatedRequests) {
-            List<Request> reqList = this.queuedAuthenticatedRequests;
+            List<Request> reqList = new ArrayList<>(this.queuedAuthenticatedRequests);
             this.queuedAuthenticatedRequests.clear();
             reqList.forEach(this::sendAuthenticatedRequest);
         }

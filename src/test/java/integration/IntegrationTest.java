@@ -986,7 +986,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         Semaphore waiter = new Semaphore(0);
 
         String[] changes = new String[]{generateDummyPatch(file.getFileVersion())};
-        req = new FileChangeRequest(file.getFileID(), changes, file.getFileVersion()).getRequest(response -> {
+        req = new FileChangeRequest(file.getFileID(), changes).getRequest(response -> {
             Assert.assertEquals("Failed to change File1", 200, response.getStatus());
             Assert.assertEquals("FileChangeResponse gave wrong version for File1", file.getFileVersion() + 1, ((FileChangeResponse) response.getData()).getFileVersion());
 
@@ -1011,7 +1011,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
          * Check authentication
          */
         String[] changes = new String[]{generateDummyPatch(1)};
-        req = new FileChangeRequest(file1.getFileID(), changes, file1.getFileVersion()).getRequest(response -> {
+        req = new FileChangeRequest(file1.getFileID(), changes).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
             waiter.release();
@@ -1026,7 +1026,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         /*
          * Test invalid fileID
          */
-        req = new FileChangeRequest(-1, changes, -1).getRequest(response -> {
+        req = new FileChangeRequest(-1, changes).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw error on invalid file", 200, response.getStatus());
 
             waiter.release();
@@ -1040,7 +1040,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         /*
          * Test invalid permissions
          */
-        req = new FileChangeRequest(file2.getFileID(), changes, file2.getFileVersion()).getRequest(response -> {
+        req = new FileChangeRequest(file2.getFileID(), changes).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw permissions error on lack of write permissions", 200, response.getStatus());
 
             waiter.release();

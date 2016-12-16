@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class WSManager implements IMessageHandler {
     static Logger logger = LoggerFactory.getLogger("websocket");
-    final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     // HashMap for keeping track of sent requests (Tag -> Request)
     HashMap<Long, Request> requestHashMap;
     // HashMap for registered notification handlers (Resource.Method -> Handler)
@@ -134,127 +133,6 @@ public class WSManager implements IMessageHandler {
                 logger.error("WebSocket connection could not connect: " + e.getMessage());
                 throw new ConnectException("Could not connect to WebSocket.", e);
             }
-        }
-
-        // Batch FileChangeRequests
-        if (request.data instanceof FileChangeRequest) {
-            // Add to batching queue
-            FileChangeRequest data = (FileChangeRequest) request.data;
-
-            if (!batchingByFile.containsKey(data.getFileID())) {
-                BatchingControl batchingControl = new BatchingControl();
-                batchingByFile.put(data.getFileID(), batchingControl);
-                batchingControl.maxVersionSeen = data.getBaseFileVersion();
-            }
-            BatchingControl batchingCtrl = batchingByFile.get(data.getFileID());
-
-            synchronized (batchingCtrl.patchBatchingQueue) {
-                logger.debug(String.format("Adding %s to batching queue; batching queue currently %s", Arrays.toString(((FileChangeRequest) request.data).getChanges()), batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
-                batchingCtrl.patchBatchingQueue.addAll(Arrays.asList(((FileChangeRequest) request.data).getChanges()));
-            }
-
-            // Create releaser to make sure it only is ever done once
-            Runnable releaser = new Runnable() {
-                boolean released = false;
-                final Object synchronizationObj = new Object();
-                IResponseHandler respHandler = request.getResponseHandler();
-
-                @Override
-                public void run() {
-                    synchronized (synchronizationObj) {
-                        if (!released) {
-                            batchingCtrl.batchingSem.drainPermits();
-                            batchingCtrl.batchingSem.release();
-                            released = true;
-                        }
-                    }
-
-                    // Immediately send a request if queue non-empty
-                    boolean isEmpty;
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
-                    }
-                    if (!isEmpty) {
-                        logger.debug(String.format("Triggering new fileChangeRequest; current batching queue is:  %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
-                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
-                                respHandler, request.getErrorHandler()
-                        ));
-                    }
-                }
-            };
-
-            Timer timer = new Timer();
-
-            if (batchingCtrl.batchingSem.tryAcquire()) {
-                String[] patches;
-
-                // Send request
-                synchronized (batchingCtrl.patchBatchingQueue) {
-                    patches = batchingCtrl.patchBatchingQueue.toArray(new String[batchingCtrl.patchBatchingQueue.size()]);
-                    logger.debug(String.format("Sending patches %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
-
-                }
-
-                // Transform patches against missing patches before sending
-                for (int i = 0; i < patches.length; i++) {
-                    Patch patch = new Patch(patches[i]);
-
-                    for (int j = 0; j < batchingCtrl.lastResponsePatches.length; j++) {
-                        Patch pastPatch = new Patch(batchingCtrl.lastResponsePatches[j]);
-
-                        // If the new patch's base version is earlier or equal, we need to update it.
-                        // If the base versions are the same, the server patch wins.
-                        if (patch.getBaseVersion() <= pastPatch.getBaseVersion()) {
-                            logger.debug(String.format("FileChange: Transforming %s against missing patch %s", patch.toString(), pastPatch.toString()).replace("\n", "\\n") + "\n");
-                            patch = patch.transform(pastPatch);
-                        }
-                    }
-
-                    // If the patch's base version is greater than the maxVersionSeen, we leave it's version as is; it has been built on a newer version than we can handle here.
-                    if (patch.getBaseVersion() < batchingCtrl.maxVersionSeen) {
-                        patch.setBaseVersion(batchingCtrl.maxVersionSeen); // Set this to the latest version we have.
-                    }
-                    patches[i] = patch.toString(); // Write-back
-                }
-
-                ((FileChangeRequest) request.data).setChanges(patches);
-                ((FileChangeRequest) request.data).setBaseFileVersion(batchingCtrl.maxVersionSeen);
-
-                // Save response data, and fire off the actual responseHandler
-                IResponseHandler respHandler = request.getResponseHandler();
-                request.setResponseHandler(response -> {
-                    if (response.getStatus() == 200) {
-                        synchronized (batchingCtrl.patchBatchingQueue) {
-                            logger.debug(String.format("Removing patches %s; patch queue", batchingCtrl.patchBatchingQueue.subList(0, patches.length)).replace("\n", "\\n") + "\n");
-                            // Remove the sent patches
-                            for (int i = 0; i < patches.length; i++) {
-                                batchingCtrl.patchBatchingQueue.remove(0);
-                            }
-                        }
-                        if (((FileChangeResponse) response.getData()).getMissingPatches() != null) {
-                            batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
-                            batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).getFileVersion();
-                        }
-                        if (respHandler != null) {
-                            respHandler.handleResponse(response);
-                        }
-                    }
-
-                    logger.debug(String.format("File Change Success; running releaser. Changes sent: %s", Arrays.toString(patches)).replace("\n", "\\n") + "\n");
-                    releaser.run();
-                    timer.purge();
-                    timer.cancel();
-                });
-            } else {
-                return;
-            }
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    logger.debug("Request timed out, running releaser.");
-                    releaser.run();
-                }
-            }, TimeUnit.SECONDS.toMillis(5));
         }
 
         // Set authentication information, if available.

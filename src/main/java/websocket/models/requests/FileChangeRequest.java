@@ -15,13 +15,9 @@ public class FileChangeRequest implements IRequestData {
     @JsonProperty("Changes")
     protected String[] changes;
 
-    @JsonProperty("BaseFileVersion")
-    protected long baseFileVersion;
-
-    public FileChangeRequest(long fileID, String[] changes, long baseFileVersion) {
+    public FileChangeRequest(long fileID, String[] changes) {
         this.fileID = fileID;
         this.changes = changes;
-        this.baseFileVersion = baseFileVersion;
     }
 
     @JsonIgnore
@@ -41,13 +37,5 @@ public class FileChangeRequest implements IRequestData {
 
     public void setChanges(String[] changes) {
         this.changes = changes;
-    }
-
-    public long getBaseFileVersion() {
-        return baseFileVersion;
-    }
-
-    public void setBaseFileVersion(long baseFileVersion) {
-        this.baseFileVersion = baseFileVersion;
     }
 }

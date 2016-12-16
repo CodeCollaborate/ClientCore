@@ -149,6 +149,7 @@ public class WSManager implements IMessageHandler {
             BatchingControl batchingCtrl = batchingByFile.get(data.getFileID());
 
             synchronized (batchingCtrl.patchBatchingQueue) {
+                logger.debug(String.format("Adding %s to batching queue; batching queue currently %s", Arrays.toString(((FileChangeRequest) request.data).getChanges()), batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
                 batchingCtrl.patchBatchingQueue.addAll(Arrays.asList(((FileChangeRequest) request.data).getChanges()));
             }
 
@@ -156,6 +157,7 @@ public class WSManager implements IMessageHandler {
             Runnable releaser = new Runnable() {
                 boolean released = false;
                 final Object synchronizationObj = new Object();
+                IResponseHandler respHandler = request.getResponseHandler();
 
                 @Override
                 public void run() {
@@ -166,8 +168,22 @@ public class WSManager implements IMessageHandler {
                             released = true;
                         }
                     }
+
+                    // Immediately send a request if queue non-empty
+                    boolean isEmpty;
+                    synchronized (batchingCtrl.patchBatchingQueue) {
+                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
+                    }
+                    if (!isEmpty) {
+                        logger.debug(String.format("Triggering new fileChangeRequest; current batching queue is:  %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
+                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
+                                respHandler, request.getErrorHandler()
+                        ));
+                    }
                 }
             };
+
+            Timer timer = new Timer();
 
             if (batchingCtrl.batchingSem.tryAcquire()) {
                 String[] patches;
@@ -175,6 +191,8 @@ public class WSManager implements IMessageHandler {
                 // Send request
                 synchronized (batchingCtrl.patchBatchingQueue) {
                     patches = batchingCtrl.patchBatchingQueue.toArray(new String[batchingCtrl.patchBatchingQueue.size()]);
+                    logger.debug(String.format("Sending patches %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
+
                 }
 
                 // Transform patches against missing patches before sending
@@ -187,6 +205,7 @@ public class WSManager implements IMessageHandler {
                         // If the new patch's base version is earlier or equal, we need to update it.
                         // If the base versions are the same, the server patch wins.
                         if (patch.getBaseVersion() <= pastPatch.getBaseVersion()) {
+                            logger.debug(String.format("FileChange: Transforming %s against missing patch %s", patch.toString(), pastPatch.toString()).replace("\n", "\\n") + "\n");
                             patch = patch.transform(pastPatch);
                         }
                     }
@@ -206,6 +225,7 @@ public class WSManager implements IMessageHandler {
                 request.setResponseHandler(response -> {
                     if (response.getStatus() == 200) {
                         synchronized (batchingCtrl.patchBatchingQueue) {
+                            logger.debug(String.format("Removing patches %s; patch queue", batchingCtrl.patchBatchingQueue.subList(0, patches.length)).replace("\n", "\\n") + "\n");
                             // Remove the sent patches
                             for (int i = 0; i < patches.length; i++) {
                                 batchingCtrl.patchBatchingQueue.remove(0);
@@ -220,38 +240,19 @@ public class WSManager implements IMessageHandler {
                         }
                     }
 
+                    logger.debug(String.format("File Change Success; running releaser. Changes sent: %s", Arrays.toString(patches)).replace("\n", "\\n") + "\n");
                     releaser.run();
-
-                    // Immediately send a request if queue non-empty
-                    boolean isEmpty;
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
-                    }
-                    if (!isEmpty) {
-                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
-                                respHandler, request.getErrorHandler()
-                        ));
-                    }
+                    timer.purge();
+                    timer.cancel();
                 });
             } else {
                 return;
             }
-            Timer timer = new Timer();
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
+                    logger.debug("Request timed out, running releaser.");
                     releaser.run();
-
-                    // Immediately send a request if queue non-empty
-                    boolean isEmpty;
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
-                    }
-                    if (!isEmpty) {
-                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
-                                request.getResponseHandler(), request.getErrorHandler()
-                        ));
-                    }
                 }
             }, TimeUnit.SECONDS.toMillis(5));
         }

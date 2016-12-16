@@ -1,11 +1,34 @@
 package patching;
 
+import websocket.WSManager;
+import websocket.models.Notification;
+import websocket.models.Response;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 /**
  * Created by fahslaj on 5/5/2016.
  */
 public class PatchManager {
+    private WSManager wsMgr;
+
+    public PatchManager(WSManager wsMgr){
+        this.wsMgr = wsMgr;
+    }
+
+    public void sendPatch(Patch patch){
+
+    }
+
+    public void handlePatchNotification(Notification n){
+
+    }
+
+    public void handlePatchResponse(Response r){
+
+    }
 
     public String applyPatch(String content, List<Patch> patches) {
         boolean useCRLF = content.contains("\r\n");
@@ -56,5 +79,12 @@ public class PatchManager {
         }
 
         return content;
+    }
+
+    private class BatchingControl {
+        final Semaphore batchingSem = new Semaphore(1);
+        private final ArrayList<String> patchBatchingQueue = new ArrayList<>();
+        String[] lastResponsePatches = new String[0];
+        long maxVersionSeen = -1;
     }
 }

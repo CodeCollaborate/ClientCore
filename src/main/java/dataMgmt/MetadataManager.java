@@ -185,9 +185,6 @@ public class MetadataManager {
     public void fileMoved(long fileID, String newFilePath) {
         Path p = Paths.get(newFilePath.replace("\\", "/"));
         String projLocation = getProjectLocation(fileIDtoProjectID.get(fileID));
-//        System.out.println("Before relativize: " + p.toString());
-//        p = p.resolve(Paths.get(projLocation));
-//        System.out.println("After relativize: " + p.toString());
         String filePath = p.toString().replace(projLocation + "/", "").replace("\\", "/");
         String fileName = p.getFileName().toString().replace("\\", "/");
 

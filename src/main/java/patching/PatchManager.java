@@ -1,14 +1,14 @@
 package patching;
 
-import org.omg.CORBA.portable.ResponseHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import websocket.INotificationHandler;
 import websocket.IRequestSendErrorHandler;
 import websocket.IResponseHandler;
 import websocket.WSManager;
 import websocket.models.Notification;
 import websocket.models.Request;
-import websocket.models.Response;
+import websocket.models.notifications.FileChangeNotification;
 import websocket.models.requests.FileChangeRequest;
 import websocket.models.responses.FileChangeResponse;
 
@@ -19,13 +19,18 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by fahslaj on 5/5/2016.
  */
-public class PatchManager {
+public class PatchManager implements INotificationHandler {
     static Logger logger = LoggerFactory.getLogger("patching");
     final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     private WSManager wsMgr;
+    private INotificationHandler notifHandler;
 
     public void setWsMgr(WSManager wsMgr) {
         this.wsMgr = wsMgr;
+    }
+
+    public void setNotifHandler(INotificationHandler notifHandler) {
+        this.notifHandler = notifHandler;
     }
 
     public void sendPatch(long fileID, long baseFileVersion, Patch[] patches, IResponseHandler respHandler, IRequestSendErrorHandler sendErrHandler) {
@@ -93,16 +98,20 @@ public class PatchManager {
 
         // Transform patches against missing patches before sending
         for (int i = 0; i < patches.length; i++) {
+            ArrayList<Patch> toTransformAgainst = new ArrayList<>();
             for (int j = 0; j < batchingCtrl.lastResponsePatches.length; j++) {
                 Patch pastPatch = new Patch(batchingCtrl.lastResponsePatches[j]);
 
                 // If the new patch's base version is earlier or equal, we need to update it.
                 // If the base versions are the same, the server patch wins.
                 if (patches[i].getBaseVersion() <= pastPatch.getBaseVersion()) {
-                    logger.debug(String.format("PatchManager: Transforming %s against missing patch %s", patches[i].toString(), pastPatch.toString()).replace("\n", "\\n") + "\n");
-                    patches[i] = patches[i].transform(pastPatch);
+                    toTransformAgainst.add(pastPatch);
                 }
             }
+
+            // Do the transformations all at once; otherwise the base versions mess up the outcome.
+            logger.debug(String.format("PatchManager: Transforming %s against missing patches %s", patches[i].toString(), toTransformAgainst).replace("\n", "\\n") + "\n");
+            patches[i] = patches[i].transform(toTransformAgainst);
 
             // If the patch's base version is greater than the maxVersionSeen, we leave it's version as is; it has been built on a newer version than we can handle here.
             if (patches[i].getBaseVersion() < batchingCtrl.maxVersionSeen) {
@@ -148,8 +157,32 @@ public class PatchManager {
         }, TimeUnit.SECONDS.toMillis(5));
     }
 
-    public void handlePatchNotification(Notification n) {
+    @Override
+    public void handleNotification(Notification notification) {
+        FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
+        long fileID = notification.getResourceID();
 
+        if (!batchingByFile.containsKey(fileID)) {
+            BatchingControl batchingControl = new BatchingControl();
+            batchingByFile.put(fileID, batchingControl);
+            batchingControl.maxVersionSeen = -1;
+        }
+        BatchingControl batchingCtrl = batchingByFile.get(fileID);
+
+        synchronized (batchingCtrl.patchBatchingQueue) {
+            String[] changes = fileChangeNotif.changes;
+
+            for (int i = 0; i < changes.length; i++) {
+                Patch patch = new Patch(changes[i]);
+
+                patch = patch.transform(batchingCtrl.patchBatchingQueue);
+
+                // Changes the ones in the notification as well.
+                changes[i] = patch.toString();
+            }
+        }
+
+        notifHandler.handleNotification(notification);
     }
 
     public String applyPatch(String content, List<Patch> patches) {

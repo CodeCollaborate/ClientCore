@@ -1,5 +1,6 @@
 package websocket;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import websocket.models.Notification;
 
 /**

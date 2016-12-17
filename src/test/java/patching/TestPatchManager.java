@@ -6,22 +6,20 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import websocket.WSConnection;
 import websocket.WSManager;
+import websocket.models.Notification;
 import websocket.models.Request;
 import websocket.models.Response;
+import websocket.models.notifications.FileChangeNotification;
 import websocket.models.requests.FileChangeRequest;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Created by Benedict on 5/9/2016.
@@ -72,7 +70,47 @@ public class TestPatchManager {
         }
     }
 
+    @Test
+    public void testNotificationHandler() throws IOException, ClassNotFoundException {
+        WSManager fakeWSMgr = mock(WSManager.class);
+        PatchManager patchMgr = new PatchManager();
+        patchMgr.setWsMgr(fakeWSMgr);
+        ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
 
+        String[] patches = new String[]{
+                "v0:\n0:+5:test0",
+                "v1:\n1:+5:test1",
+                "v1:\n2:+5:test2",
+                "v3:\n3:+5:test3",
+                "v3:\n4:+5:test4",
+                "v3:\n5:+5:test5",
+                "v6:\n10:+6:test10",
+                "v10:\n15:+6:test15",
+                "v10:\n20:+6:test16",
+        };
+
+        // Add patches to queue
+        patchMgr.sendPatch(1, 0, new Patch[]{new Patch(patches[0]), new Patch(patches[1]), new Patch(patches[2])}, null, null);
+
+        Notification notif = mapper.readValue("{\"Resource\": \"File\", \"Method\": \"Change\", \"ResourceID\": 1, \"Data\": {\"BaseFileVersion\": 1, \"FileVersion\": 2, \"Changes\": [\"v3:\\n3:+5:test3\"]}}", Notification.class);
+        notif.parseData();
+        patchMgr.setNotifHandler(notification -> {
+            //Expect transform against 3 and 1.
+            Patch transformedPatch = new Patch(patches[3]);
+            transformedPatch = transformedPatch.transform(new Patch(patches[0]), new Patch(patches[1]), new Patch(patches[2]));
+
+            Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
+            Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);
+        });
+        patchMgr.handleNotification(notif);
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
 
     @Test
     public void testSendBatchedRequest() throws IOException, ClassNotFoundException {

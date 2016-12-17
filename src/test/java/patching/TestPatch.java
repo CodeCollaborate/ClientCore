@@ -158,14 +158,14 @@ public class TestPatch {
         Patch patch2 = new Patch("v0:\n3:-8:deletion,\n3:+6:insert");
         Patch newPatch = patch2.transform(Collections.singletonList(patch1));
         Assert.assertEquals(2, newPatch.getDiffs().size());
-        Assert.assertEquals("v1:\n2:-8:deletion,\n2:+6:insert", newPatch.toString());
+        Assert.assertEquals("v2:\n2:-8:deletion,\n2:+6:insert", newPatch.toString());
 
         patch1 = new Patch("v1:\n0:-1:a");
         patch2 = new Patch("v2:\n0:-1:b");
         Patch patch3 = new Patch("v0:\n3:-8:deletion,\n3:+6:insert");
         newPatch = patch3.transform(Arrays.asList(patch1, patch2));
         Assert.assertEquals(2, newPatch.getDiffs().size());
-        Assert.assertEquals("v2:\n1:-8:deletion,\n1:+6:insert", newPatch.toString());
+        Assert.assertEquals("v3:\n1:-8:deletion,\n1:+6:insert", newPatch.toString());
     }
 
     @Test

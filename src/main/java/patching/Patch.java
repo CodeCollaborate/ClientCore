@@ -9,7 +9,7 @@ import java.util.List;
 
 public class Patch {
 
-    private final long baseVersion;
+    private long baseVersion;
     private final List<Diff> diffs;
 
     public Patch(long baseVersion, List<Diff> diffs) {
@@ -35,6 +35,10 @@ public class Patch {
 
     public long getBaseVersion() {
         return baseVersion;
+    }
+
+    public void setBaseVersion(long baseVersion) {
+        this.baseVersion = baseVersion;
     }
 
     public Patch convertToCRLF(String base) {
@@ -82,10 +86,10 @@ public class Patch {
     @Override
     public int hashCode() {
         final int prime = 31;
-        int result = 1;
-        result = prime * result + (int) baseVersion;
+        long result = 1;
+        result = prime * result + baseVersion;
         result = prime * result + ((diffs == null) ? 0 : diffs.hashCode());
-        return result;
+        return (int)result;
     }
 
     @Override

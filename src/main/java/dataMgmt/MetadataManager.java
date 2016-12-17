@@ -10,8 +10,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -130,7 +132,9 @@ public class MetadataManager {
             throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/') + " - " + e.getMessage());
         }
 
-        putProjectMetadata(projectRoot, metadata);
+        if (metadata != null){
+            putProjectMetadata(projectRoot, metadata);
+        }
     }
 
     public void putProjectMetadata(String projectRoot, ProjectMetadata metadata) {
@@ -141,7 +145,7 @@ public class MetadataManager {
             for (FileMetadata f : metadata.getFiles()) {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
-                    String filePath = Paths.get(projectRoot, f.getFilePath()).toAbsolutePath().toString().replace('\\', '/');
+                    String filePath = Paths.get(projectRoot, f.getFilePath()).normalize().toAbsolutePath().toString().replace('\\', '/');
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }
@@ -152,6 +156,18 @@ public class MetadataManager {
         fileMetadataMap.put(filePath, metadata);
         fileIDtoFilePath.put(metadata.getFileID(), filePath);
         fileIDtoProjectID.put(metadata.getFileID(), projectID);
+        ProjectMetadata meta = projectMetadataMap.get(projectIDtoRootPath.get(projectID));
+        List<FileMetadata> files;
+        if (meta.getFiles() == null) {
+            files = new ArrayList<>();
+            files.add(metadata);
+            meta.setFiles(files);
+        } else {
+            files = meta.getFiles();
+            if (!files.contains(metadata)) {
+                files.add(metadata);
+            }
+        }
     }
 
     public void projectMoved(long projectID, String newRootPath) {
@@ -176,13 +192,31 @@ public class MetadataManager {
         fileIDtoFilePath.put(fileID, newFilePath);
     }
 
-    public void fileDeleted(long fileID) {
+    public void fileDeleted(Long fileID) {
         String filePath = fileIDtoFilePath.get(fileID);
         if (filePath != null){
+            fileIDtoFilePath.remove(fileID);
             fileMetadataMap.remove(filePath);
         }
-        fileIDtoFilePath.remove(fileID);
+
+        Long id = fileIDtoProjectID.get(fileID);
         fileIDtoProjectID.remove(fileID);
+        String rootPath = projectIDtoRootPath.get(id);
+        if (rootPath != null) {
+            ProjectMetadata projectMetadata = projectMetadataMap.get(rootPath);
+            List<FileMetadata> metas = projectMetadata.getFiles();
+            if (metas != null) {
+                FileMetadata toRemove = null;
+                for (FileMetadata meta : metas) {
+                    if (meta.getFileID() == fileID) {
+                        toRemove = meta;
+                    }
+                }
+                if (toRemove != null) {
+                    metas.remove(toRemove);
+                }
+            }
+        }
     }
 
     /**
@@ -190,6 +224,7 @@ public class MetadataManager {
      *
      * @param metadata    the ProjectMetadata object to write
      * @param projectRoot the root path of the project
+     * @param configFileName the name of the config file
      */
     public void writeProjectMetadataToFile(ProjectMetadata metadata, String projectRoot, String configFileName) {
         File file = new File(projectRoot, configFileName);

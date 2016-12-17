@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.slf4j.Logger;
 import websocket.ExampleEchoServer.ServerRunner;
 import websocket.models.ConnectionConfig;
 import websocket.models.Request;
 import websocket.models.ServerMessageWrapper;
+import websocket.models.requests.FileChangeRequest;
 
 import java.io.IOException;
 
@@ -57,6 +60,127 @@ public class TestWSManager {
         }
         verify(fakeConn, times(2)).getState();
         verify(fakeConn, times(1)).enqueueMessage(anyString(), anyInt());
+    }
+
+    @Test
+    public void testSendBatchedRequest() {
+        WSConnection fakeConn = mock(WSConnection.class);
+        WSManager manager = new WSManager(fakeConn);
+        ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
+        long versionNumber = 0;
+
+        manager.setAuthInfo("test_user", "test_token");
+
+//        ArrayList<String> patches = new ArrayList<>();
+//        for (int i = 0; i < 50; i++) {
+//            if (i < 10) {
+//                patches.add(String.format("v%d:\n%d:+5:test%d", i, i, i));
+//            } else {
+//                patches.add(String.format("v%d:\n%d:+6:test%d", i, i, i));
+//            }
+//        }
+
+        String[] patches = new String[]{
+                "v0:\n0:+5:test0",
+                "v1:\n1:+5:test1",
+                "v1:\n2:+5:test2",
+                "v3:\n3:+5:test3",
+                "v3:\n4:+5:test4",
+                "v3:\n5:+5:test5",
+                "v6:\n10:+6:test10",
+                "v10:\n15:+6:test15",
+                "v10:\n20:+6:test16",
+        };
+
+        Request req = new FileChangeRequest(1, new String[]{patches[0]}, 0).getRequest(null, null);
+        manager.sendRequest(req);
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v0:\\n0:+5:test0\"]");
+            }
+        }), anyInt());
+
+        manager.handleMessage(String.format("{\"Type\":\"Response\",\"Timestamp\":%d,\"ServerMessage\":{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s}}}",
+                System.currentTimeMillis(), req.tag, 200, 1, "[]"));
+
+        // Send 2 patches in same request
+        req = new FileChangeRequest(1, new String[]{patches[1], patches[2]}, 1).getRequest(null, null);
+        manager.sendRequest(req);
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v1:\\n1:+5:test1\",\"v1:\\n2:+5:test2\"]");
+            }
+        }), anyInt());
+
+        // Send 2 patches in two requests; delay previous response until after this one has been submitted.
+        req = new FileChangeRequest(1, new String[]{patches[3]}, 3).getRequest(null, null);
+        manager.sendRequest(req);
+        req = new FileChangeRequest(1, new String[]{patches[4]}, 3).getRequest(null, null);
+        manager.sendRequest(req);
+
+        manager.handleMessage(String.format("{\"Type\":\"Response\",\"Timestamp\":%d,\"ServerMessage\":{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s}}}",
+                System.currentTimeMillis(), req.tag - 2, 200, 3, "[]"));
+
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v3:\\n3:+5:test3\",\"v3:\\n4:+5:test4\"]");
+            }
+        }), anyInt());
+
+        // Test sending a patch for a version that is "out of date"
+        // Use prevTag + 1; since the previous one was generated after the response came back
+        manager.handleMessage(String.format("{\"Type\":\"Response\",\"Timestamp\":%d,\"ServerMessage\":{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s}}}",
+                System.currentTimeMillis(), req.tag+1, 200, 6, "[\"v3:\\n0:+5:test0\",\"v4:\\n1:+5:test1\"]"));
+
+        req = new FileChangeRequest(1, new String[]{patches[5]}, 3).getRequest(null, null);
+        manager.sendRequest(req);
+
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v6:\\n15:+5:test5\"]");
+            }
+        }), anyInt());
+
+        // Test sending two patches; one for a version that is out of date, the other with a version greater than the last response
+        manager.handleMessage(String.format("{\"Type\":\"Response\",\"Timestamp\":%d,\"ServerMessage\":{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s}}}",
+                System.currentTimeMillis(), req.tag, 200, 9, "[\"v6:\\n0:+5:test0\",\"v7:\\n1:+5:test1\"]"));
+
+        req = new FileChangeRequest(1, new String[]{patches[6], patches[7]}, 6).getRequest(null, null);
+        manager.sendRequest(req);
+
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v9:\\n20:+6:test10\",\"v10:\\n15:+6:test15\"]");
+            }
+        }), anyInt());
+
+        // Test the auto-release after timeout
+        req = new FileChangeRequest(1, new String[]{patches[8]}, 6).getRequest(null, null);
+        manager.sendRequest(req);
+
+        try {
+            Thread.sleep(5500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        verify(fakeConn).enqueueMessage(argThat(new ArgumentMatcher<String>() {
+            @Override
+            public boolean matches(Object argument) {
+                return ((String) argument).contains("[\"v9:\\n20:+6:test10\",\"v10:\\n15:+6:test15\",\"v10:\\n20:+6:test16\"]");
+            }
+        }), anyInt());
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -253,7 +377,7 @@ public class TestWSManager {
         ServerMessageWrapper smw = null;
 
         try {
-            smw = mapper.readValue( "{\n" +
+            smw = mapper.readValue("{\n" +
                     "  \"Type\":\"Notification\",\n" +
                     "  \"ServerMessage\": {\n" +
                     "    \"Resource\":\"Project\",\n" +

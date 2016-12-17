@@ -66,7 +66,7 @@ public class FileMetadata {
 
     @JsonIgnore
     public String getFilePath(){
-        return Paths.get(relativePath, filename).toString().replace('\\','/');
+        return Paths.get(relativePath, filename).normalize().toString().replace('\\','/');
     }
 
     public long getVersion() {

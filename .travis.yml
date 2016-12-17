@@ -19,7 +19,7 @@ script:
 # Run checks & tests
 - gradle check
 # Compile to binary
-- gradle fatJar
+- gradle shadow
 
 deploy:
   on:

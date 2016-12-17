@@ -8,10 +8,10 @@ public class ProjectGrantPermissionsNotification implements INotificationData {
     public final String grantUsername;
 
     @JsonProperty("PermissionLevel")
-    public final int permissionLevel;
+    public final Byte permissionLevel;
 
     public ProjectGrantPermissionsNotification(@JsonProperty("GrantUsername") String grantUsername,
-                                               @JsonProperty("PermissionLevel") int permissionLevel) {
+                                               @JsonProperty("PermissionLevel") Byte permissionLevel) {
         this.grantUsername = grantUsername;
         this.permissionLevel = permissionLevel;
     }

@@ -86,6 +86,10 @@ public class Request {
         return responseHandler;
     }
 
+    public void setResponseHandler(IResponseHandler responseHandler) {
+        this.responseHandler = responseHandler;
+    }
+
     public IRequestSendErrorHandler getErrorHandler() {
         return errorHandler;
     }

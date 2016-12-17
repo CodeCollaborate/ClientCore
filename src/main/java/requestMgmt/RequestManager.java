@@ -1,9 +1,16 @@
 package requestMgmt;
 
 import com.google.common.collect.BiMap;
+
+import constants.CoreStringConstants;
 import dataMgmt.DataManager;
+import dataMgmt.MetadataManager;
 import dataMgmt.SessionStorage;
+import dataMgmt.models.FileMetadata;
+import dataMgmt.models.ProjectMetadata;
+import websocket.ConnectException;
 import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
 import websocket.WSManager;
 import websocket.models.File;
 import websocket.models.Permission;
@@ -301,7 +308,7 @@ public abstract class RequestManager {
      * Fetch permission constants from the server
      */
     public void fetchPermissionConstants() {
-        Request getPermConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
+    	Request getPermConstants = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
             int status = response.getStatus();
             if (status == 200) {
                 BiMap<String, Byte> permConstants =
@@ -312,6 +319,168 @@ public abstract class RequestManager {
             }
         }, requestSendErrorHandler);
         this.wsManager.sendAuthenticatedRequest(getPermConstants);
+    }
+    
+    
+
+    /**
+     * Creates the given file on the server.
+     * Also creates the metadata for this file.
+     *
+     * @param name
+     * @param fullPath
+     * @param relativePath
+     * @param projectID
+     * @param fileBytes
+     */
+    public void createFile(String name, String fullPath, String relativePath, long projectID, byte[] fileBytes) {
+        Request createFileReq = new FileCreateRequest(name, relativePath, projectID, fileBytes).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                long fileID = ((FileCreateResponse) response.getData()).getFileID();
+                FileMetadata fMeta =  new FileMetadata();
+                fMeta.setFileID(fileID);
+                fMeta.setFilename(name);
+                fMeta.setRelativePath(relativePath);
+                fMeta.setVersion(0);
+                this.dataManager.getMetadataManager().putFileMetadata(fullPath, projectID, fMeta);
+            } else {
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to create file \"" + name +
+                        "\" on the server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(createFileReq);
+    }
+
+    /**
+     * Renames the given file on the server and changes the corresponding metadata.
+     *
+     * @param fileID
+     * @param newName
+     */
+    public void renameFile(long fileID, String newName) {
+        Request renameFileReq = new FileRenameRequest(fileID, newName).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                FileMetadata fileMD = dataManager.getMetadataManager().getFileMetadata(fileID);
+                fileMD.setFilename(newName);
+                finishRenameFile(fileMD);
+            } else {
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to rename file to \"" + newName +
+                        "\" on server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(renameFileReq);
+    }
+
+    public abstract void finishRenameFile(FileMetadata fMeta);
+
+    /**
+     * Moves the given file to the specified relative path on the server.
+     * The full path is needed for the mapping of the file's metadata.
+     *
+     * @param fileID
+     * @param newFullPath
+     * @param newRelativePath
+     */
+    public void moveFile(long fileID, String newFullPath, String newRelativePath) {
+        Request moveFileReq = new FileMoveRequest(fileID, newRelativePath).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                MetadataManager mm = dataManager.getMetadataManager();
+                mm.fileMoved(fileID, newFullPath);
+                FileMetadata fMeta = mm.getFileMetadata(fileID);
+                finishMoveFile(fMeta);
+            } else {
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to move file on server: " + fileID);
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(moveFileReq);
+    }
+
+    public abstract void finishMoveFile(FileMetadata fMeta);
+
+    /**
+     * Deletes the given file on the server and within the metadata.
+     *
+     * @param fileID
+     */
+    public void deleteFile(long fileID) {
+        Request deleteFileReq = new FileDeleteRequest(fileID).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                this.dataManager.getMetadataManager().fileDeleted(fileID);
+            } else {
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to delete file from server: " + status);
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(deleteFileReq);
+    }
+
+    /**
+     * Renames the given project on the server.
+     * Also renames the project in its corresponding metadata file.
+     *
+     * @param projectID
+     * @param newName
+     */
+    public void renameProject(long projectID, String newName, String newPath) {
+        Request renameProjectReq = new ProjectRenameRequest(projectID, newName).getRequest(response -> {
+            int status = response.getStatus();
+            if (status == 200) {
+                ProjectMetadata pMeta = this.dataManager.getMetadataManager().getProjectMetadata(projectID);
+                pMeta.setName(newName);
+                this.dataManager.getMetadataManager().putProjectMetadata(newPath, pMeta);
+            } else {
+                this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to rename project to \"" + newName +
+                        "\" on server.");
+            }
+        }, requestSendErrorHandler);
+        this.wsManager.sendAuthenticatedRequest(renameProjectReq);
+    }
+
+    public void sendFileChanges(long fileID, String[] changes, long baseFileVersion) {
+        MetadataManager mm = this.dataManager.getMetadataManager();
+
+        FileMetadata fMeta = mm.getFileMetadata(fileID);
+        ProjectMetadata pMeta = mm.getProjectMetadata(mm.getProjectIDForFileID(fileID));
+        String projRootPath = mm.getProjectLocation(pMeta.getProjectID());
+
+        Request req = getFileChangeRequest(fMeta, changes, response -> {
+            fMeta.setVersion(((FileChangeResponse) response.getData()).getFileVersion());
+            this.dataManager.getMetadataManager().writeProjectMetadataToFile(pMeta, projRootPath,
+                    CoreStringConstants.CONFIG_FILE_NAME);
+        }, null, 1);
+
+        try {
+            this.wsManager.sendRequest(req);
+        } catch (ConnectException e) {
+            System.out.println("Failed to send change request.");
+            e.printStackTrace();
+        }
+
+    }
+
+    private Request getFileChangeRequest(FileMetadata fileMeta, String[] changes, IResponseHandler respHandler,
+                                         IRequestSendErrorHandler sendErrHandler, int retryCount) {
+
+        return new FileChangeRequest(fileMeta.getFileID(), changes, fileMeta.getVersion()).getRequest(response -> {
+
+            // If we failed the first time around, update the fileVersion and
+            // retry.
+            if (response.getStatus() == 409 && retryCount > 0) {
+                Request req = getFileChangeRequest(fileMeta, changes, respHandler, sendErrHandler, retryCount - 1);
+                try {
+                    this.wsManager.sendRequest(req);
+                } catch (ConnectException e) {
+                    System.out.println("Failed to send change request.");
+                    e.printStackTrace();
+                }
+                return;
+            }
+
+            respHandler.handleResponse(response);
+        }, sendErrHandler);
     }
 
     public void setRequestSendErrorHandler(IRequestSendErrorHandler handler) {

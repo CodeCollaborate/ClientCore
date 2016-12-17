@@ -3,6 +3,8 @@ package integration;
 import com.google.common.collect.BiMap;
 import dataMgmt.DataManager;
 import dataMgmt.SessionStorage;
+import dataMgmt.models.FileMetadata;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -85,6 +87,16 @@ public class TestRequestManager extends UserBasedIntegrationTest {
             public void finishDeleteProject(Project project) {
 
             }
+
+			@Override
+			public void finishRenameFile(FileMetadata fMeta) {
+				
+			}
+
+			@Override
+			public void finishMoveFile(FileMetadata fMeta) {
+				
+			}
         };
     }
 

@@ -275,8 +275,9 @@ public class SessionStorage {
      * @param projectUserKey the user-project key of which to remove the value
      */
     public void removeProjectUserStatus(String projectUserKey) {
+        OnlineStatus status;
         synchronized (this) {
-            projectUserStatus.remove(projectUserKey);
+            status = projectUserStatus.remove(projectUserKey);
         }
         notifyListeners(PROJECT_USER_STATUS, projectUserKey, null);
     }

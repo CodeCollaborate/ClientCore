@@ -37,7 +37,7 @@ public class TestPatch {
         patch2String = "v0:\n3:-8:deletion,\n3:+6:insert";
         patch1 = new Patch(patch1String);
         patch2 = new Patch(patch2String);
-        expectedString = "v1:\n2:-8:deletion,\n2:+6:insert";
+        expectedString = "v2:\n2:-8:deletion,\n2:+6:insert";
         Patch result = patch2.transform(patch1);
         Assert.assertEquals(expectedString, result.toString());
 
@@ -47,7 +47,7 @@ public class TestPatch {
         patch1 = new Patch(patch1String);
         patch2 = new Patch(patch2String);
         patch3 = new Patch(patch3String);
-        expectedString = "v2:\n1:-8:deletion,\n1:+6:insert";
+        expectedString = "v3:\n1:-8:deletion,\n1:+6:insert";
         result = patch3.transform(patch1, patch2);
         Assert.assertEquals(expectedString, result.toString());
     }

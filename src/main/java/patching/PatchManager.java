@@ -185,7 +185,7 @@ public class PatchManager implements INotificationHandler {
         notifHandler.handleNotification(notification);
     }
 
-    public static String applyPatch(String content, List<Patch> patches) {
+    public String applyPatch(String content, List<Patch> patches) {
         boolean useCRLF = content.contains("\r\n");
 
         for (Patch patch : patches) {

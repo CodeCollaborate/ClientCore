@@ -1,8 +1,13 @@
 package dataMgmt;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import patching.Patch;
 import patching.PatchManager;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +17,7 @@ import java.util.Map;
  * Created by fahslaj on 5/5/2016.
  */
 public class FileContentWriter {
+    static Logger logger = LoggerFactory.getLogger("datamgmt");
 
     // The number of patches to flush to disc at a time
     static final int WRITE_THRESHOLD = 5;
@@ -40,13 +46,36 @@ public class FileContentWriter {
      */
     public void enqueuePatchesForWriting(long fileId, String absolutePath, List<Patch> patches) {
         synchronized (FileContentWriter.class) {
-            if (!fileBuffers.containsKey(fileId))
-                fileBuffers.put(fileId, new FixedSizeWritingQueue(patchManager));
-
-            IFileWritingQueue fsq = fileBuffers.get(fileId);
-            for (Patch patch : patches){
-                fsq.offerPatch(patch, absolutePath);
+            File file = new File(absolutePath);
+            if (!file.exists()) {
+                logger.error("Cannot apply patches to non-existent file: " + absolutePath);
+                return;
             }
+            String contents = null;
+            try {
+                byte[] data = Files.readAllBytes(Paths.get(file.getPath()));
+                contents = new String(data);
+            } catch (IOException e) {
+                logger.error("Error reading file: " + absolutePath);
+            }
+
+            String newContents = patchManager.applyPatch(contents, patches);
+            FileWriter writer = null;
+            try {
+                writer = new FileWriter(file);
+                writer.write(newContents);
+                writer.close();
+            } catch (IOException e) {
+                logger.error("Error writing to file: " + absolutePath);
+            }
+
+//            if (!fileBuffers.containsKey(fileId))
+//                fileBuffers.put(fileId, new FixedSizeWritingQueue(patchManager));
+//
+//            IFileWritingQueue fsq = fileBuffers.get(fileId);
+//            for (Patch patch : patches){
+//                fsq.offerPatch(patch, absolutePath);
+//            }
         }
     }
 }

@@ -21,11 +21,13 @@ public class Patch {
         String[] parts = str.split(":\n");
         this.baseVersion = Integer.parseInt(parts[0].substring(1));
 
-        String[] diffStrs = parts[1].split(",\n");
         diffs = new ArrayList<>();
+        if(parts.length >= 2) {
+            String[] diffStrs = parts[1].split(",\n");
 
-        for (String diffStr : diffStrs) {
-            diffs.add(new Diff(diffStr));
+            for (String diffStr : diffStrs) {
+                diffs.add(new Diff(diffStr));
+            }
         }
     }
 
@@ -117,7 +119,7 @@ public class Patch {
 
     public Patch transform(Patch... patches) {
         List<Diff> intermediateDiffs = diffs;
-        long maxVersionSeen = baseVersion;
+        long maxVersionSeen = baseVersion-1;
 
         for (Patch patch : patches) {
             // Must be able to transform backwards as well?
@@ -131,6 +133,6 @@ public class Patch {
             maxVersionSeen = patch.baseVersion;
         }
 
-        return new Patch(maxVersionSeen, intermediateDiffs);
+        return new Patch(maxVersionSeen+1, intermediateDiffs);
     }
 }

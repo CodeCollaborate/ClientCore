@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class WSManager implements IMessageHandler {
     static Logger logger = LoggerFactory.getLogger("websocket");
-    final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     // HashMap for keeping track of sent requests (Tag -> Request)
     HashMap<Long, Request> requestHashMap;
     // HashMap for registered notification handlers (Resource.Method -> Handler)
@@ -134,126 +133,6 @@ public class WSManager implements IMessageHandler {
                 logger.error("WebSocket connection could not connect: " + e.getMessage());
                 throw new ConnectException("Could not connect to WebSocket.", e);
             }
-        }
-
-        // Batch FileChangeRequests
-        if (request.data instanceof FileChangeRequest) {
-            // Add to batching queue
-            FileChangeRequest data = (FileChangeRequest) request.data;
-
-            if (!batchingByFile.containsKey(data.getFileID())) {
-                BatchingControl batchingControl = new BatchingControl();
-                batchingByFile.put(data.getFileID(), batchingControl);
-                batchingControl.maxVersionSeen = data.getBaseFileVersion();
-            }
-            BatchingControl batchingCtrl = batchingByFile.get(data.getFileID());
-
-            synchronized (batchingCtrl.patchBatchingQueue) {
-                batchingCtrl.patchBatchingQueue.addAll(Arrays.asList(((FileChangeRequest) request.data).getChanges()));
-            }
-
-            // Create releaser to make sure it only is ever done once
-            Runnable releaser = new Runnable() {
-                boolean released = false;
-                final Object synchronizationObj = new Object();
-
-                @Override
-                public void run() {
-                    synchronized (synchronizationObj) {
-                        if (!released) {
-                            batchingCtrl.batchingSem.drainPermits();
-                            batchingCtrl.batchingSem.release();
-                            released = true;
-                        }
-                    }
-                }
-            };
-
-            if (batchingCtrl.batchingSem.tryAcquire()) {
-                String[] patches;
-
-                // Send request
-                synchronized (batchingCtrl.patchBatchingQueue) {
-                    patches = batchingCtrl.patchBatchingQueue.toArray(new String[batchingCtrl.patchBatchingQueue.size()]);
-                }
-
-                // Transform patches against missing patches before sending
-                for (int i = 0; i < patches.length; i++) {
-                    Patch patch = new Patch(patches[i]);
-
-                    for (int j = 0; j < batchingCtrl.lastResponsePatches.length; j++) {
-                        Patch pastPatch = new Patch(batchingCtrl.lastResponsePatches[j]);
-
-                        // If the new patch's base version is earlier or equal, we need to update it.
-                        // If the base versions are the same, the server patch wins.
-                        if (patch.getBaseVersion() <= pastPatch.getBaseVersion()) {
-                            patch = patch.transform(pastPatch);
-                        }
-                    }
-
-                    // If the patch's base version is greater than the maxVersionSeen, we leave it's version as is; it has been built on a newer version than we can handle here.
-                    if (patch.getBaseVersion() < batchingCtrl.maxVersionSeen) {
-                        patch.setBaseVersion(batchingCtrl.maxVersionSeen); // Set this to the latest version we have.
-                    }
-                    patches[i] = patch.toString(); // Write-back
-                }
-
-                ((FileChangeRequest) request.data).setChanges(patches);
-                ((FileChangeRequest) request.data).setBaseFileVersion(batchingCtrl.maxVersionSeen);
-
-                // Save response data, and fire off the actual responseHandler
-                IResponseHandler respHandler = request.getResponseHandler();
-                request.setResponseHandler(response -> {
-                    if (response.getStatus() == 200) {
-                        synchronized (batchingCtrl.patchBatchingQueue) {
-                            // Remove the sent patches
-                            for (int i = 0; i < patches.length; i++) {
-                                batchingCtrl.patchBatchingQueue.remove(0);
-                            }
-                        }
-                        if (((FileChangeResponse) response.getData()).getMissingPatches() != null) {
-                            batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
-                            batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).getFileVersion();
-                        }
-                        if (respHandler != null) {
-                            respHandler.handleResponse(response);
-                        }
-                    }
-
-                    releaser.run();
-
-                    // Immediately send a request if queue non-empty
-                    boolean isEmpty;
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
-                    }
-                    if (!isEmpty) {
-                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
-                                respHandler, request.getErrorHandler()
-                        ));
-                    }
-                });
-            } else {
-                return;
-            }
-            Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    releaser.run();
-
-                    // Immediately send a request if queue non-empty
-                    boolean isEmpty;
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
-                    }
-                    if (!isEmpty) {
-                        sendRequest(new FileChangeRequest(data.getFileID(), new String[]{}, batchingCtrl.maxVersionSeen).getRequest(
-                                request.getResponseHandler(), request.getErrorHandler()
-                        ));
-                    }
-                }
-            }, TimeUnit.SECONDS.toMillis(5));
         }
 
         // Set authentication information, if available.
@@ -386,7 +265,7 @@ public class WSManager implements IMessageHandler {
 
     private void sendAllAuthenticatedRequests() {
         synchronized (this.queuedAuthenticatedRequests) {
-            List<Request> reqList = this.queuedAuthenticatedRequests;
+            List<Request> reqList = new ArrayList<>(this.queuedAuthenticatedRequests);
             this.queuedAuthenticatedRequests.clear();
             reqList.forEach(this::sendAuthenticatedRequest);
         }

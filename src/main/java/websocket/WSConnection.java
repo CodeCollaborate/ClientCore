@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import websocket.models.ConnectionConfig;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.*;
@@ -30,13 +31,14 @@ import java.util.concurrent.atomic.AtomicLong;
 public class WSConnection {
     private static final Logger logger = LoggerFactory.getLogger("websocket");
     private static final int IDLE_TIMEOUT = 5;
+    private static final long PING_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
     // Queue of messages. Priority given to messages that need to be retried.
     final Queue<WSMessage> messageQueue = new PriorityQueue<>();
-
     // List of handlers that incoming messages should be sent to.
     final List<IMessageHandler> incomingMessageHandlers = new ArrayList<>();
     final HashMap<EventType, List<Runnable>> eventHandlers;
+    private final Timer pingTimer;
     // Jetty objects
     WebSocketClient client;
     Session session;
@@ -52,6 +54,7 @@ public class WSConnection {
         setState(State.CREATED);
         this.config = config;
         this.eventHandlers = new HashMap<>();
+        this.pingTimer = new Timer();
     }
 
     public void handleEvent(EventType event) {
@@ -111,6 +114,8 @@ public class WSConnection {
 
         Thread sendingThread = new Thread(this::messageLoop);
         sendingThread.start();
+
+        pingTimer.schedule(new PingTask(session), PING_TIMEOUT);
     }
 
     /**
@@ -373,6 +378,24 @@ public class WSConnection {
             }
 
             return result;
+        }
+    }
+
+    private class PingTask extends TimerTask {
+        private Session session;
+
+        PingTask(Session session){
+            this.session = session;
+        }
+
+        @Override
+        public void run() {
+            try {
+                this.session.getRemote().sendPing(null);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            pingTimer.schedule(new PingTask(session), PING_TIMEOUT);
         }
     }
 }

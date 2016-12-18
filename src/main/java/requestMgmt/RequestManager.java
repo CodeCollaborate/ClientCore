@@ -8,6 +8,7 @@ import dataMgmt.MetadataManager;
 import dataMgmt.SessionStorage;
 import dataMgmt.models.FileMetadata;
 import dataMgmt.models.ProjectMetadata;
+import patching.Patch;
 import websocket.ConnectException;
 import websocket.IRequestSendErrorHandler;
 import websocket.IResponseHandler;
@@ -439,48 +440,21 @@ public abstract class RequestManager {
         this.wsManager.sendAuthenticatedRequest(renameProjectReq);
     }
 
-    public void sendFileChanges(long fileID, String[] changes, long baseFileVersion) {
+    public void sendFileChanges(long fileID, Patch[] patches) {
         MetadataManager mm = this.dataManager.getMetadataManager();
 
-        FileMetadata fMeta = mm.getFileMetadata(fileID);
-        ProjectMetadata pMeta = mm.getProjectMetadata(mm.getProjectIDForFileID(fileID));
-        String projRootPath = mm.getProjectLocation(pMeta.getProjectID());
+        FileMetadata fileMeta = mm.getFileMetadata(fileID);
+        ProjectMetadata projMeta = mm.getProjectMetadata(mm.getProjectIDForFileID(fileID));
+        String projRootPath = mm.getProjectLocation(projMeta.getProjectID());
 
-        Request req = getFileChangeRequest(fMeta, changes, response -> {
-            fMeta.setVersion(((FileChangeResponse) response.getData()).getFileVersion());
-            this.dataManager.getMetadataManager().writeProjectMetadataToFile(pMeta, projRootPath,
-                    CoreStringConstants.CONFIG_FILE_NAME);
-        }, null, 1);
-
-        try {
-            this.wsManager.sendRequest(req);
-        } catch (ConnectException e) {
-            System.out.println("Failed to send change request.");
-            e.printStackTrace();
-        }
-
-    }
-
-    private Request getFileChangeRequest(FileMetadata fileMeta, String[] changes, IResponseHandler respHandler,
-                                         IRequestSendErrorHandler sendErrHandler, int retryCount) {
-
-        return new FileChangeRequest(fileMeta.getFileID(), changes, fileMeta.getVersion()).getRequest(response -> {
-
-            // If we failed the first time around, update the fileVersion and
-            // retry.
-            if (response.getStatus() == 409 && retryCount > 0) {
-                Request req = getFileChangeRequest(fileMeta, changes, respHandler, sendErrHandler, retryCount - 1);
-                try {
-                    this.wsManager.sendRequest(req);
-                } catch (ConnectException e) {
-                    System.out.println("Failed to send change request.");
-                    e.printStackTrace();
-                }
-                return;
-            }
-
-            respHandler.handleResponse(response);
-        }, sendErrHandler);
+        DataManager.getInstance().getPatchManager().sendPatch(fileMeta.getFileID(), fileMeta.getVersion(),
+                patches, response -> {
+                    synchronized (fileMeta) {
+                        fileMeta.setVersion(((FileChangeResponse) response.getData()).getFileVersion());
+                    }
+                    mm.writeProjectMetadataToFile(projMeta,
+                            projRootPath, CoreStringConstants.CONFIG_FILE_NAME);
+                }, null);
     }
 
     public void setRequestSendErrorHandler(IRequestSendErrorHandler handler) {

@@ -16,6 +16,8 @@ import websocket.models.requests.FileChangeRequest;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -76,6 +78,7 @@ public class TestPatchManager {
         PatchManager patchMgr = new PatchManager();
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
+        final Semaphore sem = new Semaphore(0);
 
         String[] patches = new String[]{
                 "v0:\n0:+5:test0",
@@ -101,11 +104,13 @@ public class TestPatchManager {
 
             Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
             Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);
+
+            sem.release();
         });
         patchMgr.handleNotification(notif);
 
         try {
-            Thread.sleep(1000);
+            sem.tryAcquire(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

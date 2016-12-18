@@ -34,7 +34,6 @@ public class PatchManager implements INotificationHandler {
     }
 
     public void sendPatch(long fileID, long baseFileVersion, Patch[] patches, IResponseHandler respHandler, IRequestSendErrorHandler sendErrHandler) {
-
         if (!batchingByFile.containsKey(fileID)) {
             BatchingControl batchingControl = new BatchingControl();
             batchingByFile.put(fileID, batchingControl);

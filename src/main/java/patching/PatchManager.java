@@ -125,10 +125,12 @@ public class PatchManager implements INotificationHandler {
                     if (response.getStatus() == 200) {
                         synchronized (batchingCtrl.patchBatchingQueue) {
                             logger.debug(String.format("PatchManager: Removing patches %s; patch queue is currently %s", batchingCtrl.patchBatchingQueue.subList(0, patches.length), batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
+                            logger.debug(String.format("PatchManager: Removing patches %s; patch done queue is currently %s", batchingCtrl.patchBatchingQueue.subList(0, patches.length), batchingCtrl.patchDoneQueue).replace("\n", "\\n") + "\n");
                             // Remove the sent patches
                             for (int i = 0; i < patches.length; i++) {
-                                batchingCtrl.patchBatchingQueue.remove(0);
+                                batchingCtrl.patchDoneQueue.add(batchingCtrl.patchBatchingQueue.remove(0));
                             }
+
                         }
                         if (((FileChangeResponse) response.getData()).getMissingPatches() != null) {
                             batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
@@ -173,6 +175,21 @@ public class PatchManager implements INotificationHandler {
 
             for (int i = 0; i < changes.length; i++) {
                 Patch patch = new Patch(changes[i]);
+
+                logger.debug(String.format("PatchManager-Notification: Transforming %s against doneQueue %s", patch, batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
+                logger.debug(String.format("PatchManager-Notification: Transforming %s against batchingQueue %s", patch, batchingCtrl.patchDoneQueue).replace("\n", "\\n") + "\n");
+
+                // In event that the
+                Iterator<Patch> itr = batchingCtrl.patchDoneQueue.iterator();
+                while(itr.hasNext()){
+                    Patch donePatch = itr.next();
+                    if(donePatch.getBaseVersion() >= patch.getBaseVersion()){
+                        patch = patch.transform(donePatch);
+                    } else {
+                        // remove ones we don't care about anymore.
+                        itr.remove();
+                    }
+                }
 
                 patch = patch.transform(batchingCtrl.patchBatchingQueue);
 
@@ -238,6 +255,7 @@ public class PatchManager implements INotificationHandler {
     private class BatchingControl {
         final Semaphore batchingSem = new Semaphore(1);
         private final ArrayList<Patch> patchBatchingQueue = new ArrayList<>();
+        private final ArrayList<Patch> patchDoneQueue = new ArrayList<>();
         String[] lastResponsePatches = new String[0];
         long maxVersionSeen = -1;
     }

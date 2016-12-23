@@ -389,7 +389,7 @@ public abstract class RequestManager {
             int status = response.getStatus();
             if (status == 200) {
                 MetadataManager mm = dataManager.getMetadataManager();
-                mm.fileMoved(fileID, newFullPath);
+                mm.fileMoved(fileID, newFullPath, newRelativePath);
                 FileMetadata fMeta = mm.getFileMetadata(fileID);
                 finishMoveFile(fMeta);
             } else {

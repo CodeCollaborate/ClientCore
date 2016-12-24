@@ -327,6 +327,7 @@ public abstract class RequestManager {
     /**
      * Creates the given file on the server.
      * Also creates the metadata for this file.
+     * Converts the bytes of the file to LF if they are CRLF when passed in.
      *
      * @param name
      * @param fullPath
@@ -335,6 +336,10 @@ public abstract class RequestManager {
      * @param fileBytes
      */
     public void createFile(String name, String fullPath, String relativePath, long projectID, byte[] fileBytes) {
+    	String contents = new String(fileBytes);
+    	if (contents.contains("\r\n")) {
+    		contents = contents.replace("\r\n", "\n");
+    	}
         Request createFileReq = new FileCreateRequest(name, relativePath, projectID, fileBytes).getRequest(response -> {
             int status = response.getStatus();
             if (status == 200) {
@@ -389,7 +394,7 @@ public abstract class RequestManager {
             int status = response.getStatus();
             if (status == 200) {
                 MetadataManager mm = dataManager.getMetadataManager();
-                mm.fileMoved(fileID, newFullPath);
+                mm.fileMoved(fileID, newFullPath, newRelativePath);
                 FileMetadata fMeta = mm.getFileMetadata(fileID);
                 finishMoveFile(fMeta);
             } else {

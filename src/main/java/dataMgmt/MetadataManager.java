@@ -145,7 +145,10 @@ public class MetadataManager {
             for (FileMetadata f : metadata.getFiles()) {
                 // Only add it if filepath is valid (non-null)
                 if (f.getFilePath() != null) {
-                    String filePath = Paths.get(projectRoot, f.getFilePath()).normalize().toAbsolutePath().toString().replace('\\', '/');
+                    String filePath = Paths.get(metadata.getName(), f.getFilePath()).normalize().toString().replace('\\', '/');
+                    if (!filePath.startsWith("/")) {
+                    	filePath = "/" + filePath;
+                    }
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
             }
@@ -180,20 +183,15 @@ public class MetadataManager {
             projectMetadataMap.remove(rootPath);
         }
         projectIDtoRootPath.remove(projectID);
+        deleteMetadataFile(rootPath);
     }
 
-    public void fileMoved(long fileID, String newFilePath) {
-        Path p = Paths.get(newFilePath.replace("\\", "/"));
-        String projLocation = getProjectLocation(fileIDtoProjectID.get(fileID));
-        String filePath = p.toString().replace(projLocation + "/", "").replace("\\", "/");
-        String fileName = p.getFileName().toString().replace("\\", "/");
-
-        getFileMetadata(fileID).setRelativePath(filePath);
-        getFileMetadata(fileID).setFilename(fileName);
+    public void fileMoved(long fileID, String newFilePath, String newRelativePath) {
+        long projectID = getProjectIDForFileID(fileID);
         String oldPath = fileIDtoFilePath.get(fileID);
-        fileIDtoFilePath.put(fileID, newFilePath);
-        FileMetadata fm = fileMetadataMap.remove(oldPath);
-        fileMetadataMap.put(newFilePath, fm);
+        FileMetadata fMeta = fileMetadataMap.remove(oldPath);
+        fMeta.setRelativePath(newRelativePath);       
+        putFileMetadata(newFilePath, projectID, fMeta);
     }
 
     public void fileDeleted(Long fileID) {
@@ -252,5 +250,15 @@ public class MetadataManager {
         } catch (IOException e) {
             logger.error("IO Error on metadata write to file: " + projectRoot + " - " + e.getMessage());
         }
+    }
+    
+    public void deleteMetadataFile(String projectLocation) {
+    	File file = new File(projectLocation, CONFIG_FILE_NAME);
+    	
+    	if (file.exists()) {
+    		file.delete();
+    	} else {
+    		logger.debug("Metadata file not deleted because it did not exist.");
+    	}
     }
 }

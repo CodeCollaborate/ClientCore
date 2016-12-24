@@ -130,7 +130,7 @@ public class Patch {
             }
 
             intermediateDiffs = newIntermediateDiffs;
-            maxVersionSeen = patch.baseVersion;
+            maxVersionSeen = Math.max(patch.baseVersion, maxVersionSeen);
         }
 
         return new Patch(maxVersionSeen+1, intermediateDiffs);

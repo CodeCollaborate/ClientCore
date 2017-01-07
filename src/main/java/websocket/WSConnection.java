@@ -390,6 +390,9 @@ public class WSConnection {
 
         @Override
         public void run() {
+            if (!this.session.isOpen()){
+                return; // Looks like we have a closed connection...
+            }
             try {
                 this.session.getRemote().sendPing(null);
             } catch (IOException e) {

@@ -76,7 +76,7 @@ public class PatchManager implements INotificationHandler {
         // Create releaser to make sure it only is ever done once
         Runnable releaser = new Runnable() {
             final Object synchronizationObj = new Object();
-            volatile boolean released = false;
+            boolean released = false;
 
             @Override
             public void run() {
@@ -157,7 +157,7 @@ public class PatchManager implements INotificationHandler {
                             logger.debug(String.format("PatchManager: Removing patches %s; patch done queue is currently %s", batchingCtrl.patchBatchingQueue.subList(0, patches.length), batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
                             // Remove the sent patches
                             for (int i = 0; i < patches.length; i++) {
-                                Patch p = batchingCtrl.patchBatchingQueue.remove(0);
+                                batchingCtrl.patchBatchingQueue.remove(0);
                             }
                             for (String change : ((FileChangeResponse) response.getData()).getChanges()) {
                                 batchingCtrl.patchDoneQueue.add(new Patch(change));
@@ -195,9 +195,9 @@ public class PatchManager implements INotificationHandler {
         }, PATCH_TIMEOUT_MILLIS);
     }
 
-    // This has to be in a separate thread, so that we can have a queue, to make sure
-    // notifications are applied in the order they are received. Otherwise the waiting for
-    // no active change requests could come out in the wrong order.
+    // This has to be in a separate thread so that we can have a queue to make sure
+    // notifications are applied in the order they are received. Otherwise the threads waiting for the current
+    // change requests could wake in the wrong order.
     private void runNotificationHandlerThread() {
         new Thread(() -> {
             Thread.currentThread().setName("PatchManagerNotificationHandler");
@@ -208,6 +208,7 @@ public class PatchManager implements INotificationHandler {
                     notification = notificationHandlerQueue.take();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    continue;
                 }
 
                 FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
@@ -221,6 +222,9 @@ public class PatchManager implements INotificationHandler {
                                 batchingCtrl.wait();
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
+                                // If we can't get control, and we are interrupted, something is majorly broken
+                                // The best we can do to try and recover is apply the patch anyways.
+                                break;
                             }
                         }
                     }

@@ -1,6 +1,7 @@
 package dataMgmt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import constants.CoreStringConstants;
 import dataMgmt.models.FileMetadata;
 import dataMgmt.models.ProjectMetadata;
 import org.slf4j.Logger;
@@ -8,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,8 +22,6 @@ import java.util.Map;
  */
 public class MetadataManager {
 
-    // The default name of the configuration file located at a project's root
-    private static final String CONFIG_FILE_NAME = "CodeCollaborateConfig.json";
     // Json Object Mapper
     private static final ObjectMapper mapper = new ObjectMapper();
     // Logger
@@ -147,7 +145,7 @@ public class MetadataManager {
                 if (f.getFilePath() != null) {
                     String filePath = Paths.get(metadata.getName(), f.getFilePath()).normalize().toString().replace('\\', '/');
                     if (!filePath.startsWith("/")) {
-                    	filePath = "/" + filePath;
+                        filePath = "/" + filePath;
                     }
                     putFileMetadata(filePath, metadata.getProjectID(), f);
                 }
@@ -253,12 +251,12 @@ public class MetadataManager {
     }
     
     public void deleteMetadataFile(String projectLocation) {
-    	File file = new File(projectLocation, CONFIG_FILE_NAME);
-    	
-    	if (file.exists()) {
-    		file.delete();
-    	} else {
-    		logger.debug("Metadata file not deleted because it did not exist.");
-    	}
+        File file = new File(projectLocation, CoreStringConstants.CONFIG_FILE_NAME);
+
+        if (file.exists()) {
+            file.delete();
+        } else {
+            logger.debug("Metadata file not deleted because it did not exist.");
+        }
     }
 }

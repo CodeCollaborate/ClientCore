@@ -11,5 +11,5 @@ public class CoreStringConstants {
     public static final String PREFERENCES_AUTOCONNECT = "Automatically connect on IDE startup";
 
     // The default name of the configuration file located at a project's root
-    public static final String CONFIG_FILE_NAME = "CodeCollaborateConfig.json";
+    public static final String CONFIG_FILE_NAME = ".ccconfig";
 }

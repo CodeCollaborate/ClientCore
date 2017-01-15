@@ -113,11 +113,11 @@ public class Patch {
         return true;
     }
 
-    public Patch transform(List<Patch> patches) {
-        return transform(patches.toArray(new Patch[patches.size()]));
+    public Patch transform(boolean othersHavePrecedence, List<Patch> patches) {
+        return transform(othersHavePrecedence, patches.toArray(new Patch[patches.size()]));
     }
 
-    public Patch transform(Patch... patches) {
+    public Patch transform(boolean othersHavePrecedence, Patch... patches) {
         List<Diff> intermediateDiffs = diffs;
         long maxVersionSeen = baseVersion-1;
 
@@ -126,7 +126,7 @@ public class Patch {
             List<Diff> newIntermediateDiffs = new ArrayList<>();
 
             for (Diff diff : intermediateDiffs) {
-                newIntermediateDiffs.addAll(diff.transform(patch.diffs));
+                newIntermediateDiffs.addAll(diff.transform(othersHavePrecedence, patch.diffs));
             }
 
             intermediateDiffs = newIntermediateDiffs;

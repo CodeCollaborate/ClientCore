@@ -165,11 +165,11 @@ public class Diff {
         return new Diff(!this.insertion, this.startIndex, this.changes);
     }
 
-    public List<Diff> transform(List<Diff> other) {
-        return transform(other.toArray(new Diff[other.size()]));
+    public List<Diff> transform(boolean othersHavePrecedence, List<Diff> other) {
+        return transform(othersHavePrecedence, other.toArray(new Diff[other.size()]));
     }
 
-    public List<Diff> transform(Diff... others) {
+    public List<Diff> transform(boolean othersHavePrecedence, Diff... others) {
         List<Diff> intermediateDiffs = new ArrayList<>();
         intermediateDiffs.add(this);
 
@@ -199,8 +199,16 @@ public class Diff {
                 }
                 // CASE 2: IndexA = IndexB
                 else if (other.startIndex == current.startIndex) {
-                    // CASE 2a, 2b: Ins - Ins, Ins - Rmv
-                    if ((other.insertion && current.insertion) || (other.insertion && !current.insertion)) {
+                    // CASE 2a: Ins - Ins,
+                    if (other.insertion && current.insertion) {
+                        if (othersHavePrecedence) {
+                            transformType2(newIntermediateDiffs, current, other);
+                        } else {
+                            transformType1(newIntermediateDiffs, current, other);
+                        }
+                    }
+                    // CASE 2b: Ins - Rmv
+                    else if (other.insertion && !current.insertion) {
                         transformType2(newIntermediateDiffs, current, other);
                     }
                     // CASE 2c: Rmv - Ins

@@ -44,7 +44,7 @@ public class TestPatchManager {
 
         Patch patch1 = new Patch("v1:\n4:-6:quick+,\n44:+1:.");
         Patch patch2 = new Patch("v1:\n27:-5:over+");
-        Patch patch3 = patch2.transform(patch1);
+        Patch patch3 = patch2.transform(true, patch1);
 
         PatchManager mgr = new PatchManager();
 
@@ -102,7 +102,7 @@ public class TestPatchManager {
         patchMgr.setNotifHandler(notification -> {
             //Expect transform against 3 and 1.
             Patch transformedPatch = new Patch(patches[3]);
-            transformedPatch = transformedPatch.transform(new Patch(patches[0]), new Patch(patches[1]), new Patch(patches[2]));
+            transformedPatch = transformedPatch.transform(true, new Patch(patches[0]), new Patch(patches[1]), new Patch(patches[2]));
 
             Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
             Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);

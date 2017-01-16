@@ -20,12 +20,11 @@ import java.util.concurrent.TimeUnit;
 public class PatchManager implements INotificationHandler {
     static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
-    static Logger logger = LoggerFactory.getLogger("patching");
-    final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger("patching");
+    private final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     private WSManager wsMgr;
     private IFileChangeNotificationHandler notifHandler;
     private LinkedBlockingQueue<Notification> notificationHandlerQueue = new LinkedBlockingQueue<>();
-    private final HashMap<Long, Object> lockByFile = new HashMap<>();
 
     public PatchManager() {
         runNotificationHandlerThread();
@@ -33,17 +32,6 @@ public class PatchManager implements INotificationHandler {
 
     public void setWsMgr(WSManager wsMgr) {
         this.wsMgr = wsMgr;
-    }
-
-    public Object getLockForFile(long fileID) {
-        if (!lockByFile.containsKey(fileID)) {
-            synchronized (lockByFile) {
-                if (!lockByFile.containsKey(fileID)) {
-                    lockByFile.put(fileID, new Object());
-                }
-            }
-        }
-        return lockByFile.get(fileID);
     }
 
     public void setNotifHandler(IFileChangeNotificationHandler notifHandler) {
@@ -60,7 +48,6 @@ public class PatchManager implements INotificationHandler {
                 }
             }
         }
-        logger.info("Unlocking file with ID " + fileID);
         return batchingByFile.get(fileID);
     }
 
@@ -68,17 +55,21 @@ public class PatchManager implements INotificationHandler {
 
         BatchingControl batchingCtrl = getBatchingControl(fileID);
 
-        synchronized (batchingCtrl.patchBatchingQueue) {
-            logger.debug(String.format("PatchManager: Adding %s to batching queue; batching queue currently %s", Arrays.toString(patches), batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
-            Collections.addAll(batchingCtrl.patchBatchingQueue, patches);
+        synchronized (batchingCtrl.patchBatchingPreQueue) {
+            logger.debug(String.format("PatchManager: Adding %s to batching pre-queue; batching queue currently %s, batching pre-queue currently %s", Arrays.toString(patches), batchingCtrl.patchBatchingQueue, batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n") + "\n");
+            Collections.addAll(batchingCtrl.patchBatchingPreQueue, patches);
         }
 
-        transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
+        new Thread(() -> {
+            Thread.currentThread().setName("TransformAndSendPatch");
+            transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
+        }).start();
     }
 
     private void transformAndSendPatch(BatchingControl batchingCtrl, long fileID, IResponseHandler respHandler, IRequestSendErrorHandler sendErrHandler) {
         // If could not acquire a permit, exit; there is already a thread running this.
         if (!batchingCtrl.batchingSem.tryAcquire()) {
+            logger.debug("Request already in flight; returning");
             return;
         }
 
@@ -107,13 +98,19 @@ public class PatchManager implements INotificationHandler {
                 }
 
                 // Immediately send a request if queue non-empty
-                boolean isEmpty;
-                synchronized (batchingCtrl.patchBatchingQueue) {
-                    isEmpty = batchingCtrl.patchBatchingQueue.isEmpty();
+                boolean hasNext;
+                synchronized (batchingCtrl.patchBatchingPreQueue) {
+                    hasNext = !batchingCtrl.patchBatchingPreQueue.isEmpty();
                 }
-                if (!isEmpty) {
-                    logger.debug(String.format("PatchManager: Starting next patch-batch; current batching queue is:  %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
+                synchronized (batchingCtrl.patchBatchingQueue) {
+                    hasNext = hasNext || !batchingCtrl.patchBatchingQueue.isEmpty();
+                }
+
+                if (hasNext) {
+                    logger.debug(String.format("PatchManager-Releaser: Starting next patch-batch; current batching queue is: %s, batching pre-queue currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n") + "\n");
                     transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
+                } else {
+                    logger.debug("PatchManager-Releaser: No next patch-batch; batching and pre-batching queues empty");
                 }
 
             }
@@ -124,20 +121,24 @@ public class PatchManager implements INotificationHandler {
 
         // Send request
         synchronized (batchingCtrl.patchBatchingQueue) {
+            synchronized (batchingCtrl.patchBatchingPreQueue) {
+                batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
+                batchingCtrl.patchBatchingPreQueue.clear();
+            }
             patches = batchingCtrl.patchBatchingQueue.toArray(new Patch[batchingCtrl.patchBatchingQueue.size()]);
             patchStrings = new String[batchingCtrl.patchBatchingQueue.size()];
             logger.debug(String.format("PatchManager: Sending patches %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
-
         }
 
         if (patches.length == 0) {
+            batchingCtrl.batchingSem.release();
             return;
         }
 
         // Transform patches against missing patches before sending
         String[] missingPatches = batchingCtrl.lastResponsePatches.clone();
         for (int i = 0; i < patches.length; i++) {
-            long maxMissingPatchBaseVersion = patches[i].getBaseVersion()-1;
+            long maxMissingPatchBaseVersion = patches[i].getBaseVersion() - 1;
             for (int j = 0; j < missingPatches.length; j++) {
                 Patch missingPatch = new Patch(missingPatches[j]);
 
@@ -160,28 +161,13 @@ public class PatchManager implements INotificationHandler {
                     missingPatches[j] = missingPatch.toString();
                 }
             }
-            patches[i].setBaseVersion(Math.max(patches[i].getBaseVersion(), maxMissingPatchBaseVersion+1));
+            patches[i].setBaseVersion(Math.max(patches[i].getBaseVersion(), maxMissingPatchBaseVersion + 1));
 
             // If the patch's base version is greater than the maxVersionSeen, we leave it's version as is; it has been built on a newer version than we can handle here.
             if (patches[i].getBaseVersion() < batchingCtrl.maxVersionSeen) {
                 patches[i].setBaseVersion(batchingCtrl.maxVersionSeen); // Set this to the latest version we have.
             }
             patchStrings[i] = patches[i].toString();
-
-//            // transform ToTransformAgainst against new change.
-//            for (int j = 0; j < missingPatches.length; j++) {
-//                Patch pastPatch = new Patch(missingPatches[j]);
-//
-//                // If the new patch's base version is earlier or equal, we need to update it.
-//                // If the base versions are the same, the CLIENT patch wins.
-//                if (patches[i].getBaseVersion() <= pastPatch.getBaseVersion()) {
-//                    long baseVersion = pastPatch.getBaseVersion();
-//                    pastPatch = pastPatch.transform(true, patches[i]);
-//                    pastPatch.setBaseVersion(baseVersion);
-//
-//                    missingPatches[j] = pastPatch.toString();
-//                }
-//            }
         }
 
         // Save response data, and fire off the actual responseHandler
@@ -247,119 +233,133 @@ public class PatchManager implements INotificationHandler {
                     continue;
                 }
 
-//                synchronized (getLockForFile(notification.getResourceID())) {
-                    FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
-                    long fileID = notification.getResourceID();
+                FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
+                long fileID = notification.getResourceID();
 
-                    BatchingControl batchingCtrl = getBatchingControl(fileID);
-                    if (batchingCtrl.activeChangeRequest) {
-                        synchronized (batchingCtrl) {
-                            while (batchingCtrl.activeChangeRequest) {
-                                try {
-                                    batchingCtrl.wait();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                    // If we can't get control, and we are interrupted, something is majorly broken
-                                    // The best we can do to try and recover is apply the patch anyways.
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    while(true) {
-                        synchronized (batchingCtrl.patchBatchingQueue) {
-                            String[] changes = fileChangeNotif.changes;
-
-                            long maxBaseVersionSeen = 0;
-                            ArrayList<Patch> transformedPatchDoneQueue = (ArrayList<Patch>) batchingCtrl.patchDoneQueue.clone();
-                            ArrayList<Patch> transformedPatchBatchingQueue = (ArrayList<Patch>) batchingCtrl.patchBatchingQueue.clone();
-
-                            for (int i = 0; i < changes.length; i++) {
-                                Patch patch = new Patch(changes[i]);
-
-                                logger.debug(String.format("PatchManager-Notification: Transforming %s against doneQueue %s", patch, batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
-
-                                long maxDonePatchBaseVersion = 0;
-
-                                for (int j = 0; j < transformedPatchDoneQueue.size(); j++) {
-                                    Patch donePatch = transformedPatchDoneQueue.get(j);
-                                    if (donePatch.getBaseVersion() >= patch.getBaseVersion()) {
-                                        // Save patchBaseVersion, reset after transform. This prevents the bug where if the doneQueue has
-                                        // more than one patch based on the same version, the transformation on the first one changes the
-                                        // base version of the incoming patch, and thus the subsequent donePatches are never transformed against
-                                        long patchBaseVersion = patch.getBaseVersion();
-                                        patch = patch.transform(true, donePatch);
-                                        patch.setBaseVersion(patchBaseVersion);
-
-                                        // Transform donePatch against new patch, so blocks stay together
-                                        // New patch has precedence, since it inserts in it's actual place
-                                        long donePatchBaseVersion = donePatch.getBaseVersion();
-                                        donePatch = donePatch.transform(false, patch);
-                                        donePatch.setBaseVersion(donePatchBaseVersion);
-                                        transformedPatchDoneQueue.set(j, donePatch);
-
-                                        maxDonePatchBaseVersion = Math.max(maxDonePatchBaseVersion, donePatch.getBaseVersion());
-                                    }
-                                }
-                                maxBaseVersionSeen = Math.max(maxBaseVersionSeen, patch.getBaseVersion());
-
-                                logger.debug(String.format("PatchManager-Notification: Transforming %s against batchingQueue %s", patch, batchingCtrl.patchBatchingQueue).replace("\n", "\\n"));
-
-                                // All patches in batching queue here are guaranteed to be coming after the patch, since we wait for the current request to complete.
-                                patch = patch.transform(true, batchingCtrl.patchBatchingQueue);
-
-                                // Transform all patches in batching queue against this one; also saves work on the sending end.
-                                for (int j = 0; j < transformedPatchBatchingQueue.size(); j++) {
-                                    Patch queuedPatch = transformedPatchBatchingQueue.get(j);
-
-                                    // Transform queuedPatch against new patch, so blocks stay together
-                                    // New patch has precedence, since it inserts in it's actual place
-                                    queuedPatch = queuedPatch.transform(false, patch);
-                                    transformedPatchBatchingQueue.set(j, queuedPatch);
-                                }
-
-                                patch.setBaseVersion(maxDonePatchBaseVersion + 1);
-
-                                logger.debug(String.format("PatchManager-Notification: Transformed %s against done and batching queues; result: %s", changes[i], patch).replace("\n", "\\n"));
-
-                                // Changes the ones in the notification as well.
-                                changes[i] = patch.toString();
-                            }
-
-                            Long result;
-                            synchronized (batchingCtrl) {
-                                result = notifHandler.handleNotification(notification, batchingCtrl.expectedModificationStamp);
-                            }
-                            // Only if we succeeded should we break out and continue to next patch.
-                            // Otherwise, release lock, and try again after new changes are added.
-                            if (result != null) {
-                                batchingCtrl.expectedModificationStamp = result;
-
-                                // Update all the patches in the done and batching queues
-                                for(int i = 0; i < transformedPatchDoneQueue.size(); i++){
-                                    batchingCtrl.patchDoneQueue.set(i, transformedPatchDoneQueue.get(i));
-                                }
-                                for(int i = 0; i < transformedPatchBatchingQueue.size(); i++){
-                                    batchingCtrl.patchBatchingQueue.set(i, transformedPatchBatchingQueue.get(i));
-                                }
-
-                                // Remove all patches in doneQueue that we no longer need.
-                                Iterator<Patch> itr = batchingCtrl.patchDoneQueue.iterator();
-                                while (itr.hasNext()) {
-                                    Patch donePatch = itr.next();
-                                    if (donePatch.getBaseVersion() < maxBaseVersionSeen) {
-                                        itr.remove();
-                                    }
-                                }
+                BatchingControl batchingCtrl = getBatchingControl(fileID);
+                if (batchingCtrl.activeChangeRequest) {
+                    synchronized (batchingCtrl) {
+                        while (batchingCtrl.activeChangeRequest) {
+                            try {
+                                batchingCtrl.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                // If we can't get control, and we are interrupted, something is majorly broken
+                                // The best we can do to try and recover is apply the patch anyways.
                                 break;
-                            } else {
-                                logger.info("PatchManager - Document changed between notification arrival and attempt to append. Retrying");
-                                continue;
                             }
                         }
                     }
-//                }
+                }
+
+                while (true) {
+                    long expectedModificationStamp;
+
+                    synchronized (batchingCtrl.patchBatchingQueue) {
+                        synchronized (batchingCtrl.patchBatchingPreQueue) {
+                            batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
+                            batchingCtrl.patchBatchingPreQueue.clear();
+
+                            synchronized (batchingCtrl) {
+                                expectedModificationStamp = batchingCtrl.expectedModificationStamp;
+                            }
+                        }
+
+                        String[] oldchanges = fileChangeNotif.changes.clone();
+                        String[] changes = fileChangeNotif.changes;
+
+                        long maxBaseVersionSeen = 0;
+                        ArrayList<Patch> transformedPatchDoneQueue = (ArrayList<Patch>) batchingCtrl.patchDoneQueue.clone();
+                        ArrayList<Patch> transformedPatchBatchingQueue = (ArrayList<Patch>) batchingCtrl.patchBatchingQueue.clone();
+
+                        for (int i = 0; i < changes.length; i++) {
+                            Patch patch = new Patch(changes[i]);
+
+                            logger.debug(String.format("PatchManager-Notification: Transforming %s against doneQueue %s", patch, transformedPatchDoneQueue).replace("\n", "\\n"));
+                            logger.debug(String.format("PatchManager-Notification: Transforming doneQueue %s against %s", transformedPatchDoneQueue, patch).replace("\n", "\\n"));
+
+                            long patchMaxVersion = patch.getBaseVersion();
+
+                            for (int j = 0; j < transformedPatchDoneQueue.size(); j++) {
+                                Patch donePatch = transformedPatchDoneQueue.get(j);
+                                if (donePatch.getBaseVersion() >= patch.getBaseVersion()) {
+                                    // Save patchBaseVersion, reset after transform. This prevents the bug where if the doneQueue has
+                                    // more than one patch based on the same version, the transformation on the first one changes the
+                                    // base version of the incoming patch, and thus the subsequent donePatches are never transformed against
+                                    long patchBaseVersion = patch.getBaseVersion();
+                                    patch = patch.transform(true, donePatch);
+                                    patchMaxVersion = Math.max(patchMaxVersion, patch.getBaseVersion());
+                                    patch.setBaseVersion(patchBaseVersion);
+
+                                    // Transform donePatch against new patch, so blocks stay together
+                                    // New patch has precedence, since it inserts in it's actual place
+                                    long donePatchBaseVersion = donePatch.getBaseVersion();
+                                    donePatch = donePatch.transform(false, patch);
+                                    donePatch.setBaseVersion(donePatchBaseVersion);
+                                    transformedPatchDoneQueue.set(j, donePatch);
+                                }
+                            }
+                            maxBaseVersionSeen = Math.max(maxBaseVersionSeen, patch.getBaseVersion());
+
+                            logger.debug(String.format("PatchManager-Notification: Transforming %s against batchingQueue %s", patch, transformedPatchBatchingQueue).replace("\n", "\\n"));
+
+                            // All patches in batching queue here are guaranteed to be coming after the patch, since we wait for the current request to complete.
+                            long patchBaseVersion = patch.getBaseVersion();
+                            patch = patch.transform(true, transformedPatchBatchingQueue);
+                            patchMaxVersion = Math.max(patchMaxVersion, patch.getBaseVersion());
+                            patch.setBaseVersion(patchBaseVersion);
+
+                            logger.debug(String.format("PatchManager-Notification: Transforming batchingQueue %s against %s", transformedPatchBatchingQueue, patch).replace("\n", "\\n"));
+
+                            // Transform all patches in batching queue against this one; also saves work on the sending end.
+                            for (int j = 0; j < transformedPatchBatchingQueue.size(); j++) {
+                                Patch queuedPatch = transformedPatchBatchingQueue.get(j);
+
+                                // Transform queuedPatch against new patch, so blocks stay together
+                                // New patch has precedence, since it inserts in it's actual place
+                                queuedPatch = queuedPatch.transform(false, patch);
+                                transformedPatchBatchingQueue.set(j, queuedPatch);
+                            }
+
+                            patch.setBaseVersion(patchMaxVersion);
+
+                            logger.debug(String.format("PatchManager-Notification: Transformed %s against done and batching queues; result: %s", changes[i], patch).replace("\n", "\\n"));
+
+                            // Changes the ones in the notification as well.
+                            changes[i] = patch.toString();
+                        }
+
+                        Long result = notifHandler.handleNotification(notification, expectedModificationStamp);
+
+                        // Only if we succeeded should we break out and continue to next patch.
+                        // Otherwise, release lock, and try again after new changes are added.
+                        if (result != null) {
+                            batchingCtrl.expectedModificationStamp = result;
+
+                            // Update all the patches in the done and batching queues
+                            for (int i = 0; i < transformedPatchDoneQueue.size(); i++) {
+                                batchingCtrl.patchDoneQueue.set(i, transformedPatchDoneQueue.get(i));
+                            }
+                            for (int i = 0; i < transformedPatchBatchingQueue.size(); i++) {
+                                batchingCtrl.patchBatchingQueue.set(i, transformedPatchBatchingQueue.get(i));
+                            }
+
+                            // Remove all patches in doneQueue that we no longer need.
+                            Iterator<Patch> itr = batchingCtrl.patchDoneQueue.iterator();
+                            while (itr.hasNext()) {
+                                Patch donePatch = itr.next();
+                                if (donePatch.getBaseVersion() < maxBaseVersionSeen) {
+                                    itr.remove();
+                                }
+                            }
+                            break;
+                        } else {
+                            System.arraycopy(oldchanges, 0, changes, 0, changes.length);
+                            logger.debug(String.format("PatchManager - Document changed between notification arrival and attempt to append. Retrying changes: %s", Arrays.asList(changes)).replace("\n", "\\n"));
+                            continue;
+                        }
+                    }
+                }
             }
         }).start();
     }
@@ -424,7 +424,7 @@ public class PatchManager implements INotificationHandler {
         return content;
     }
 
-    public void setModificationStamp(long fileID, long modificationStamp){
+    public void setModificationStamp(long fileID, long modificationStamp) {
         BatchingControl batchingCtrl = getBatchingControl(fileID);
         synchronized (batchingCtrl) {
             batchingCtrl.expectedModificationStamp = modificationStamp;
@@ -434,6 +434,7 @@ public class PatchManager implements INotificationHandler {
     private class BatchingControl {
         final Semaphore batchingSem = new Semaphore(1);
         private final ArrayList<Patch> patchBatchingQueue = new ArrayList<>();
+        private final ArrayList<Patch> patchBatchingPreQueue = new ArrayList<>();
         private final ArrayList<Patch> patchDoneQueue = new ArrayList<>();
         String[] lastResponsePatches = new String[0];
         long maxVersionSeen = -1;

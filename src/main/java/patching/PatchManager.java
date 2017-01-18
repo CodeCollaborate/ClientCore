@@ -274,15 +274,16 @@ public class PatchManager implements INotificationHandler {
                         }
 
                         notification = notificationHandlerQueue.take();
-                        if (!hasWriteLock) {
-                            // Wait until all requests in flight have returned before processing notifications.
-                            handlingNotificationsLock.writeLock().lock();
-                            hasWriteLock = true;
-                        }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         continue;
                     }
+                }
+
+                if (!hasWriteLock) {
+                    // Wait until all requests in flight have returned before processing notifications.
+                    handlingNotificationsLock.writeLock().lock();
+                    hasWriteLock = true;
                 }
 
                 FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();

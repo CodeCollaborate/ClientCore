@@ -348,7 +348,7 @@ public abstract class RequestManager {
                 fMeta.setFileID(fileID);
                 fMeta.setFilename(name);
                 fMeta.setRelativePath(relativePath);
-                fMeta.setVersion(0);
+                fMeta.setVersion(1);
                 this.dataManager.getMetadataManager().putFileMetadata(fullPath, projectID, fMeta);
             } else {
                 this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to create file \"" + name +

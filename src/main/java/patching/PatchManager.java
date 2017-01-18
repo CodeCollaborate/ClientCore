@@ -89,7 +89,7 @@ public class PatchManager implements INotificationHandler {
             Collections.addAll(batchingCtrl.patchBatchingPreQueue, patches);
         }
 
-        // Run the transformAndSendPatch on a new thread, to make sure the UI thread doesn't get blocked.
+        // Run the transformAndSendPatch on a new thread to make sure the UI thread doesn't get blocked.
         new Thread(() -> {
             Thread.currentThread().setName("TransformAndSendPatch");
             transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);

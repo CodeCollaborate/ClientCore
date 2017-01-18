@@ -452,7 +452,7 @@ public abstract class RequestManager {
         ProjectMetadata projMeta = mm.getProjectMetadata(mm.getProjectIDForFileID(fileID));
         String projRootPath = mm.getProjectLocation(projMeta.getProjectID());
 
-        DataManager.getInstance().getPatchManager().sendPatch(fileMeta.getFileID(), fileMeta.getVersion(),
+        DataManager.getInstance().getPatchManager().sendPatch(fileMeta.getFileID(),
                 patches, response -> {
                     synchronized (fileMeta) {
                         fileMeta.setVersion(((FileChangeResponse) response.getData()).getFileVersion());

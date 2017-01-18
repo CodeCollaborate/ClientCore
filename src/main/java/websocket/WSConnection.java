@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * CAUTION: Has no max retry count set up. Messages that fail to send can potentially cause infinite loops.
  */
 
-@WebSocket(maxTextMessageSize = 64 * 1024)
+@WebSocket(maxTextMessageSize = 512 * 1024 * 1024)
 public class WSConnection {
     private static final Logger logger = LoggerFactory.getLogger("websocket");
     private static final int IDLE_TIMEOUT = 5;
@@ -390,6 +390,9 @@ public class WSConnection {
 
         @Override
         public void run() {
+            if (!this.session.isOpen()){
+                return; // Looks like we have a closed connection...
+            }
             try {
                 this.session.getRemote().sendPing(null);
             } catch (IOException e) {

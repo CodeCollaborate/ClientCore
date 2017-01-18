@@ -6,7 +6,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import websocket.INotificationHandler;
 import websocket.WSManager;
 import websocket.models.Notification;
 import websocket.models.Request;
@@ -292,7 +291,7 @@ public class TestPatchManager {
         }
     }
 
-    private ArgumentMatcher<Request> createArgChecker(Request[] req, String str){
+    private ArgumentMatcher<Request> createArgChecker(Request[] req, String str) {
         return new ArgumentMatcher<Request>() {
             @Override
             public boolean matches(Object argument) {

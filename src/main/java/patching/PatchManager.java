@@ -13,18 +13,21 @@ import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by fahslaj on 5/5/2016.
  */
 public class PatchManager implements INotificationHandler {
-    static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
-
     private static final Logger logger = LoggerFactory.getLogger("patching");
+    static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
     private final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     private WSManager wsMgr;
     private IFileChangeNotificationHandler notifHandler;
-    private LinkedBlockingQueue<Notification> notificationHandlerQueue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<Notification> notificationHandlerQueue = new LinkedBlockingQueue<>();
+    private final ReadWriteLock handlingNotificationsLock = new ReentrantReadWriteLock(true);
 
     public PatchManager() {
         runNotificationHandlerThread();
@@ -56,7 +59,7 @@ public class PatchManager implements INotificationHandler {
         BatchingControl batchingCtrl = getBatchingControl(fileID);
 
         synchronized (batchingCtrl.patchBatchingPreQueue) {
-            logger.debug(String.format("PatchManager: Adding %s to batching pre-queue; batching queue currently %s, batching pre-queue currently %s", Arrays.toString(patches), batchingCtrl.patchBatchingQueue, batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n") + "\n");
+//            logger.debug(String.format("PatchManager: Adding %s to batching pre-queue; batching queue currently %s, batching pre-queue currently %s", Arrays.toString(patches), batchingCtrl.patchBatchingQueue, batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n") + "\n");
             Collections.addAll(batchingCtrl.patchBatchingPreQueue, patches);
         }
 
@@ -73,48 +76,75 @@ public class PatchManager implements INotificationHandler {
             return;
         }
 
-        Timer timer = new Timer();
+//        Timer timer = new Timer();
         // Create releaser to make sure it only is ever done once
-        Runnable releaser = new Runnable() {
-            final Object synchronizationObj = new Object();
-            boolean released = false;
+//        Runnable releaser = new Runnable() {
+//            final Object synchronizationObj = new Object();
+//            boolean released = false;
+//
+//            @Override
+//            public void run() {
+//                synchronized (synchronizationObj) {
+//                    if (released) {
+//                        return;
+//                    }
+//
+//                    batchingCtrl.batchingSem.drainPermits();
+//                    batchingCtrl.batchingSem.release();
+//
+//                    handlingNotificationsLock.readLock().unlock();
+////                    synchronized (batchingCtrl) {
+////                        batchingCtrl.activeChangeRequest = false;
+////                        batchingCtrl.notifyAll();
+////                    }
+//
+//                    released = true;
+//                }
+//
+//                // Immediately send a request if queue non-empty
+//                boolean hasNext;
+//                synchronized (batchingCtrl.patchBatchingPreQueue) {
+//                    hasNext = !batchingCtrl.patchBatchingPreQueue.isEmpty();
+//                }
+//                synchronized (batchingCtrl.patchBatchingQueue) {
+//                    hasNext = hasNext || !batchingCtrl.patchBatchingQueue.isEmpty();
+//                }
+//
+//                if (hasNext) {
+////                    synchronized(batchingCtrl.patchBatchingQueue){
+////                        synchronized(batchingCtrl.patchBatchingPreQueue){
+////                            logger.debug(String.format("PatchManager-Releaser: Starting next patch-batch; current batching queue is: %s, batching pre-queue currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n") + "\n");
+////                        }
+////                    }
+//                    logger.debug("PatchManager-Releaser: Starting next patch-batch");
+//
+//                    transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
+//                } else {
+//                    logger.debug("PatchManager-Releaser: No next patch-batch; batching and pre-batching queues empty");
+//                }
+//
+//            }
+//        };
 
-            @Override
-            public void run() {
-                synchronized (synchronizationObj) {
-                    if (released) {
-                        return;
-                    }
+        handlingNotificationsLock.readLock().lock();
+//
+//        synchronized (handlingNotificationsLock) {
+//            synchronized (batchingCtrl) {
+//                while (handlingNotifications) {
+//                    try {
+//                        handlingNotificationsLock.wait();
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                        // If we can't get control, and we are interrupted, something is majorly broken
+//                        // The best we can do to try and recover is apply the patch anyways.
+//                        break;
+//                    }
+//                }
+//                // Block notifications from being processed on this file.
+//                batchingCtrl.activeChangeRequest = true;
+//            }
+//        }
 
-                    batchingCtrl.batchingSem.drainPermits();
-                    batchingCtrl.batchingSem.release();
-
-                    synchronized (batchingCtrl) {
-                        batchingCtrl.activeChangeRequest = false;
-                        batchingCtrl.notifyAll();
-                    }
-
-                    released = true;
-                }
-
-                // Immediately send a request if queue non-empty
-                boolean hasNext;
-                synchronized (batchingCtrl.patchBatchingPreQueue) {
-                    hasNext = !batchingCtrl.patchBatchingPreQueue.isEmpty();
-                }
-                synchronized (batchingCtrl.patchBatchingQueue) {
-                    hasNext = hasNext || !batchingCtrl.patchBatchingQueue.isEmpty();
-                }
-
-                if (hasNext) {
-                    logger.debug(String.format("PatchManager-Releaser: Starting next patch-batch; current batching queue is: %s, batching pre-queue currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n") + "\n");
-                    transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
-                } else {
-                    logger.debug("PatchManager-Releaser: No next patch-batch; batching and pre-batching queues empty");
-                }
-
-            }
-        };
 
         Patch[] patches;
         String[] patchStrings;
@@ -170,6 +200,7 @@ public class PatchManager implements INotificationHandler {
             patchStrings[i] = patches[i].toString();
         }
 
+        Semaphore resultSem = new Semaphore(0);
         // Save response data, and fire off the actual responseHandler
         Request req = new FileChangeRequest(fileID, patchStrings).getRequest(
                 response -> {
@@ -196,25 +227,52 @@ public class PatchManager implements INotificationHandler {
                     }
 
                     logger.debug(String.format("PatchManager: File Change Success; running releaser. Changes sent: %s", Arrays.toString(patches)).replace("\n", "\\n") + "\n");
-                    releaser.run();
-                    timer.purge();
-                    timer.cancel();
+                    resultSem.release();
+//                    releaser.run();
+//                    timer.purge();
+//                    timer.cancel();
                 }, sendErrHandler
         );
 
-
-        synchronized (batchingCtrl) {
-            batchingCtrl.activeChangeRequest = true;
+        wsMgr.sendAuthenticatedRequest(req);
+//        timer.schedule(new TimerTask() {
+//            @Override
+//            public void run() {
+//                logger.debug("PatchManager: Request timed out, running releaser.");
+//                releaser.run();
+//            }
+//        }, PATCH_TIMEOUT_MILLIS);
+        try {
+            if (!resultSem.tryAcquire(PATCH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)){
+                logger.debug("PatchManager: Request timed out, running releaser.");
+            }
+        } catch (InterruptedException e) {
+            // If interrupted, just simply continue.
         }
 
-        wsMgr.sendAuthenticatedRequest(req);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                logger.debug("PatchManager: Request timed out, running releaser.");
-                releaser.run();
-            }
-        }, PATCH_TIMEOUT_MILLIS);
+        // release semaphore to allow another request to run
+        batchingCtrl.batchingSem.drainPermits();
+        batchingCtrl.batchingSem.release();
+        logger.debug("PatchManager-Releaser: ReleasedBatchingSem.");
+
+        // Unlock notification handler
+        handlingNotificationsLock.readLock().unlock();
+
+        // Immediately send a request if queue non-empty
+        boolean hasNext;
+        synchronized (batchingCtrl.patchBatchingPreQueue) {
+            hasNext = !batchingCtrl.patchBatchingPreQueue.isEmpty();
+        }
+        synchronized (batchingCtrl.patchBatchingQueue) {
+            hasNext = hasNext || !batchingCtrl.patchBatchingQueue.isEmpty();
+        }
+
+        if (hasNext) {
+            logger.debug("PatchManager-Releaser: Starting next patch-batch");
+            transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
+        } else {
+            logger.debug("PatchManager-Releaser: No next patch-batch; batching and pre-batching queues empty");
+        }
     }
 
     // This has to be in a separate thread so that we can have a queue to make sure
@@ -223,34 +281,59 @@ public class PatchManager implements INotificationHandler {
     private void runNotificationHandlerThread() {
         new Thread(() -> {
             Thread.currentThread().setName("PatchManagerNotificationHandler");
+            boolean hasWriteLock = false;
 
             while (true) {
                 Notification notification = null;
-                try {
-                    notification = notificationHandlerQueue.take();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    continue;
+
+                synchronized(notificationHandlerQueue) {
+                    try {
+                        // Only turn off when all notifications are handled.
+                        if (notificationHandlerQueue.isEmpty()) {
+                            if (hasWriteLock) {
+                                handlingNotificationsLock.writeLock().unlock();
+                                hasWriteLock = false;
+                            }
+                            notificationHandlerQueue.wait();
+//                    synchronized (handlingNotificationsLock) {
+//                        handlingNotifications = false;
+//                        handlingNotificationsLock.notifyAll();
+//                    }
+                        }
+
+                        notification = notificationHandlerQueue.take();
+                        if (!hasWriteLock) {
+                            // Wait until the current request has returned before processing notifications.
+                            handlingNotificationsLock.writeLock().lock();
+                            hasWriteLock = true;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        continue;
+                    }
                 }
 
                 FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
                 long fileID = notification.getResourceID();
-
                 BatchingControl batchingCtrl = getBatchingControl(fileID);
-                if (batchingCtrl.activeChangeRequest) {
-                    synchronized (batchingCtrl) {
-                        while (batchingCtrl.activeChangeRequest) {
-                            try {
-                                batchingCtrl.wait();
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                                // If we can't get control, and we are interrupted, something is majorly broken
-                                // The best we can do to try and recover is apply the patch anyways.
-                                break;
-                            }
-                        }
-                    }
-                }
+
+
+//                synchronized (handlingNotificationsLock) {
+//                    synchronized (batchingCtrl) {
+//                        while (batchingCtrl.activeChangeRequest) {
+//                            try {
+//                                batchingCtrl.wait();
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                                // If we can't get control, and we are interrupted, something is majorly broken
+//                                // The best we can do to try and recover is apply the patch anyways.
+//                                break;
+//                            }
+//                        }
+//                        // Block sending of requests until all notifications have been handled.
+//                        handlingNotifications = true;
+//                    }
+//                }
 
                 while (true) {
                     long expectedModificationStamp;
@@ -260,9 +343,7 @@ public class PatchManager implements INotificationHandler {
                             batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
                             batchingCtrl.patchBatchingPreQueue.clear();
 
-                            synchronized (batchingCtrl) {
-                                expectedModificationStamp = batchingCtrl.expectedModificationStamp;
-                            }
+                            expectedModificationStamp = batchingCtrl.expectedModificationStamp.get();
                         }
 
                         String[] oldchanges = fileChangeNotif.changes.clone();
@@ -334,7 +415,7 @@ public class PatchManager implements INotificationHandler {
                         // Only if we succeeded should we break out and continue to next patch.
                         // Otherwise, release lock, and try again after new changes are added.
                         if (result != null) {
-                            batchingCtrl.expectedModificationStamp = result;
+                            batchingCtrl.expectedModificationStamp.set(result);
 
                             // Update all the patches in the done and batching queues
                             for (int i = 0; i < transformedPatchDoneQueue.size(); i++) {
@@ -367,7 +448,10 @@ public class PatchManager implements INotificationHandler {
     @Override
     public void handleNotification(Notification notification) {
         try {
-            notificationHandlerQueue.put(notification);
+            synchronized(notificationHandlerQueue) {
+                notificationHandlerQueue.put(notification);
+                notificationHandlerQueue.notifyAll();
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -425,10 +509,7 @@ public class PatchManager implements INotificationHandler {
     }
 
     public void setModificationStamp(long fileID, long modificationStamp) {
-        BatchingControl batchingCtrl = getBatchingControl(fileID);
-        synchronized (batchingCtrl) {
-            batchingCtrl.expectedModificationStamp = modificationStamp;
-        }
+        getBatchingControl(fileID).expectedModificationStamp.set(modificationStamp);
     }
 
     private class BatchingControl {
@@ -438,7 +519,7 @@ public class PatchManager implements INotificationHandler {
         private final ArrayList<Patch> patchDoneQueue = new ArrayList<>();
         String[] lastResponsePatches = new String[0];
         long maxVersionSeen = -1;
-        private boolean activeChangeRequest = false;
-        private long expectedModificationStamp = -1;
+        //        private boolean activeChangeRequest = false;
+        private AtomicLong expectedModificationStamp = new AtomicLong(-1);
     }
 }

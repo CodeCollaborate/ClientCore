@@ -142,7 +142,7 @@ public class PatchManager implements INotificationHandler {
         String[] missingPatches = batchingCtrl.lastResponsePatches.clone(); // clone to make sure that we don't overwrite if this request fails.
         for (int i = 0; i < patches.length; i++) {
             // Keep track of highest missing patch base version, in order to set it at the end.
-            long maxMissingPatchBaseVersion = 0;
+            long maxMissingPatchBaseVersion = -1;
 
             for (int j = 0; j < missingPatches.length; j++) {
                 Patch missingPatch = new Patch(missingPatches[j]);

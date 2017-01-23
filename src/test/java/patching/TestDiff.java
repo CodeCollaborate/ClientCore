@@ -144,13 +144,13 @@ public class TestDiff {
 
         diff1 = new Diff(true, 2, "str1");
         diff2 = new Diff(true, 4, "str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("8:+4:str2", result.get(0).toString());
 
         diff1 = new Diff(true, 0, "str1");
         diff2 = new Diff(true, 1, "str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("5:+4:str2", result.get(0).toString());
     }
@@ -163,13 +163,13 @@ public class TestDiff {
 
         diff1 = new Diff("2:+4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("8:-4:str2", result.get(0).toString());
 
         diff1 = new Diff("0:+4:str1");
         diff2 = new Diff("1:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("5:-4:str2", result.get(0).toString());
     }
@@ -183,26 +183,26 @@ public class TestDiff {
         // Test case 1
         diff1 = new Diff("2:-4:str1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("2:+4:str2", result.get(0).toString());
 
         diff1 = new Diff("2:-10:longerstr1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("2:+4:str2", result.get(0).toString());
 
         // Test else case
         diff1 = new Diff("2:-4:str1");
         diff2 = new Diff("6:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("2:+4:str2", result.get(0).toString());
 
         diff1 = new Diff("2:-4:str1");
         diff2 = new Diff("8:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:+4:str2", result.get(0).toString());
     }
@@ -215,26 +215,26 @@ public class TestDiff {
         // Test case 1: if IndexA + LenA < IndexB (No overlap), shift B down by LenA
         diff1 = new Diff("2:-4:str1");
         diff2 = new Diff("8:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:-4:str2", result.get(0).toString());
 
         diff1 = new Diff("2:-4:str1");
         diff2 = new Diff("6:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("2:-4:str2", result.get(0).toString());
 
         // Test case 2: if IndexA + LenA >= IndexB + LenB, ignore B
         diff1 = new Diff("2:-10:longerstr1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(0, result.size());
 
         // Test else cases: if overlapping, shorten B by overlap, shift down by LenA - overlap
         diff1 = new Diff("2:-4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("2:-2:r2", result.get(0).toString());
     }
@@ -246,14 +246,25 @@ public class TestDiff {
 
         diff1 = new Diff("4:+4:str1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("8:+4:str2", result.get(0).toString());
 
         diff1 = new Diff("0:+15:longTestString1");
         diff2 = new Diff("0:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals("15:+4:str2", result.get(0).toString());
+
+        diff1 = new Diff("4:+4:str1");
+        diff2 = new Diff("4:+4:str2");
+        result = diff2.transform(false, Collections.singletonList(diff1));
+        Assert.assertEquals(1, result.size());
+        Assert.assertEquals("4:+4:str2", result.get(0).toString());
+
+        diff1 = new Diff("0:+15:longTestString1");
+        diff2 = new Diff("0:+4:str2");
+        result = diff2.transform(false, Collections.singletonList(diff1));
+        Assert.assertEquals("0:+4:str2", result.get(0).toString());
 
     }
 
@@ -264,13 +275,13 @@ public class TestDiff {
 
         diff1 = new Diff("4:+4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("8:-4:str2", result.get(0).toString());
 
         diff1 = new Diff("0:+15:longTestString1");
         diff2 = new Diff("0:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("15:-4:str2", result.get(0).toString());
 
@@ -283,7 +294,7 @@ public class TestDiff {
 
         diff1 = new Diff("4:-4:str1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals(true, result.get(0).isInsertion());
         Assert.assertEquals(4, result.get(0).getStartIndex());
@@ -291,7 +302,7 @@ public class TestDiff {
 
         diff1 = new Diff("0:-15:longTestString1");
         diff2 = new Diff("0:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals(true, result.get(0).isInsertion());
         Assert.assertEquals(0, result.get(0).getStartIndex());
@@ -307,19 +318,19 @@ public class TestDiff {
         // Test case 1: If LenB > LenA, remove LenA characters from B
         diff1 = new Diff("4:-4:str1");
         diff2 = new Diff("4:-15:longTestString2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:-11:TestString2", result.get(0).toString());
 
         // Test else case - if LenB <= LenA
         diff1 = new Diff("0:-15:longTestString1");
         diff2 = new Diff("0:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(0, result.size());
 
         diff1 = new Diff("4:-4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(0, result.size());
 
     }
@@ -331,13 +342,13 @@ public class TestDiff {
 
         diff1 = new Diff("5:+4:str1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:+4:str2", result.get(0).toString());
 
         diff1 = new Diff("4:+4:str1");
         diff2 = new Diff("0:+15:longTestString2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("0:+15:longTestString2", result.get(0).toString());
     }
@@ -350,7 +361,7 @@ public class TestDiff {
         // Test case 1: If IndexB + LenB > IndexA, split B into two diffs
         diff1 = new Diff("5:+4:str1");
         diff2 = new Diff("4:-8:longStr2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(2, result.size());
         Assert.assertEquals("4:-1:l", result.get(0).toString());
         Assert.assertEquals("8:-7:ongStr2", result.get(1).toString());
@@ -358,7 +369,7 @@ public class TestDiff {
         // Test else case: no change
         diff1 = new Diff("8:+4:str1");
         diff2 = new Diff("0:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("0:-4:str2", result.get(0).toString());
     }
@@ -370,13 +381,13 @@ public class TestDiff {
 
         diff1 = new Diff("9:-4:str1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:+4:str2", result.get(0).toString());
 
         diff1 = new Diff("5:-15:longTestString1");
         diff2 = new Diff("4:+4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:+4:str2", result.get(0).toString());
     }
@@ -389,20 +400,20 @@ public class TestDiff {
         // Test case 1: If IndexB + LenB > IndexA, shorten B by overlap (from end)
         diff1 = new Diff("6:-4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:-2:st", result.get(0).toString());
 
         // Test else case: No change if no overlap
         diff1 = new Diff("8:-4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:-4:str2", result.get(0).toString());
 
         diff1 = new Diff("10:-4:str1");
         diff2 = new Diff("4:-4:str2");
-        result = diff2.transform(Collections.singletonList(diff1));
+        result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:-4:str2", result.get(0).toString());
     }

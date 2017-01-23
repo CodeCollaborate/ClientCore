@@ -1,12 +1,14 @@
 package integration;
 
 import com.google.common.collect.BiMap;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.util.Loader;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.ConnectionConfig;
@@ -61,7 +63,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class IntegrationTest extends UserBasedIntegrationTest {
-    private static final Logger logger = LoggerFactory.getLogger("integrationTest");
+    private static final Logger logger = LogManager.getLogger("integrationTest");
 
     private static final String user1ID = "_testUser1";
     private static final String user1Pass = "_testPass1";

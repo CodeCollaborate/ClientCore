@@ -3,32 +3,26 @@ package websocket;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import patching.Patch;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import websocket.models.ConnectionConfig;
 import websocket.models.Notification;
 import websocket.models.Request;
 import websocket.models.Response;
 import websocket.models.ServerMessageWrapper;
-import websocket.models.requests.FileChangeRequest;
-import websocket.models.responses.FileChangeResponse;
-
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by fahslaj on 4/14/2016.
  */
 public class WSManager implements IMessageHandler {
-    static Logger logger = LoggerFactory.getLogger("websocket");
+    public static Logger logger = LogManager.getLogger("websocket");
+    private OutputStream loggerOutputStream;
     // HashMap for keeping track of sent requests (Tag -> Request)
     HashMap<Long, Request> requestHashMap;
     // HashMap for registered notification handlers (Resource.Method -> Handler)
@@ -52,6 +46,7 @@ public class WSManager implements IMessageHandler {
         this.requestHashMap = new HashMap<>();
         this.queuedAuthenticatedRequests = new ArrayList<>();
         this.socket = socket;
+        
         socket.registerIncomingMessageHandler(this);
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -273,6 +268,10 @@ public class WSManager implements IMessageHandler {
 
     public WSConnection.State getConnectionState() {
         return socket.getState();
+    }
+    
+    public OutputStream getLoggingOutputStream() {
+    	return loggerOutputStream;
     }
 
     private class BatchingControl {

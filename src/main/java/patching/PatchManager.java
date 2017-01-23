@@ -1,7 +1,7 @@
 package patching;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import websocket.INotificationHandler;
 import websocket.IRequestSendErrorHandler;
 import websocket.IResponseHandler;
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * Created by fahslaj on 5/5/2016.
  */
 public class PatchManager implements INotificationHandler {
-    static Logger logger = LoggerFactory.getLogger("patching");
+    public static Logger logger = LogManager.getLogger("patching");
     final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     private WSManager wsMgr;
     private INotificationHandler notifHandler;

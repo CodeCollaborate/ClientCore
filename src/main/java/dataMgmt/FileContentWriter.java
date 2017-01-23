@@ -1,9 +1,10 @@
 package dataMgmt;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import patching.Patch;
 import patching.PatchManager;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -17,7 +18,7 @@ import java.util.Map;
  * Created by fahslaj on 5/5/2016.
  */
 public class FileContentWriter {
-    static Logger logger = LoggerFactory.getLogger("datamgmt");
+    public static Logger logger = LogManager.getLogger("datamgmt");
 
     // The number of patches to flush to disc at a time
     static final int WRITE_THRESHOLD = 5;

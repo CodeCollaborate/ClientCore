@@ -8,8 +8,8 @@ import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import websocket.models.ConnectionConfig;
 
 import java.io.IOException;
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @WebSocket(maxTextMessageSize = 512 * 1024 * 1024)
 public class WSConnection {
-    private static final Logger logger = LoggerFactory.getLogger("websocket");
+    public static final Logger logger = LogManager.getLogger("websocket");
     private static final int IDLE_TIMEOUT = 5;
     private static final long PING_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
@@ -225,7 +225,8 @@ public class WSConnection {
         Future<Void> fut = session.getRemote().sendStringByFuture(msg.getMessage());
         try {
             fut.get(5, TimeUnit.SECONDS);
-            logger.debug(String.format("Sent message: %s", msg.getMessage()));
+            String printableMsg = msg.getMessage().replaceAll("\"Password\":\"(.*?)\"", "\"Password\":\"***\"");
+            logger.debug(String.format("Sent message: %s", printableMsg));
         } catch (CancellationException | ExecutionException | InterruptedException | TimeoutException e) {
             logger.warn(String.format("Error sending message \"%s\" - Exception: %s", msg.getMessage(), e.getCause().getMessage()));
 
@@ -255,7 +256,8 @@ public class WSConnection {
         synchronized (messageQueue) {
             this.messageQueue.offer(new WSMessage(msg, priority));
             this.messageQueue.notifyAll();
-            logger.debug(String.format("Enqueued message: %s", msg));
+            String printableMsg = msg.replaceAll("\"Password\":\"(.*?)\"", "\"Password\":\"***\"");
+            logger.debug(String.format("Enqueued message: %s", printableMsg));
         }
 
     }

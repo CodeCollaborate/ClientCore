@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class PatchManager implements INotificationHandler {
-    public static Logger logger = LogManager.getLogger("patching");
+    public static final Logger logger = LogManager.getLogger("patching");
     static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
     // Threading controls

@@ -1,17 +1,18 @@
 package dataMgmt;
 
-import patching.Patch;
-import patching.PatchManager;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import patching.Patch;
+import patching.PatchManager;
+
 
 /**
  * FileContentWriter allows for the enqueueing of patches to be applied to a closed file on disk.

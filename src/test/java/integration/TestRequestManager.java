@@ -89,12 +89,12 @@ public class TestRequestManager extends UserBasedIntegrationTest {
             }
 
 			@Override
-			public void finishRenameFile(FileMetadata fMeta) {
+			public void finishRenameFile(FileMetadata fMeta, String oldFilename) {
 				
 			}
 
 			@Override
-			public void finishMoveFile(FileMetadata fMeta) {
+			public void finishMoveFile(FileMetadata fMeta, String oldRelativePath) {
 				
 			}
         };

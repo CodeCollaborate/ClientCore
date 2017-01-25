@@ -188,7 +188,15 @@ public class MetadataManager {
         long projectID = getProjectIDForFileID(fileID);
         String oldPath = fileIDtoFilePath.get(fileID);
         FileMetadata fMeta = fileMetadataMap.remove(oldPath);
-        fMeta.setRelativePath(newRelativePath);       
+        fMeta.setRelativePath(newRelativePath);
+        putFileMetadata(newFilePath, projectID, fMeta);
+    }
+
+    public void fileRenamed(long fileID, String newFilePath, String newName) {
+        long projectID = getProjectIDForFileID(fileID);
+        String oldPath = fileIDtoFilePath.get(fileID);
+        FileMetadata fMeta = fileMetadataMap.remove(oldPath);
+        fMeta.setFilename(newName);
         putFileMetadata(newFilePath, projectID, fMeta);
     }
 

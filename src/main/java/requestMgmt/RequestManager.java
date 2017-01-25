@@ -364,12 +364,12 @@ public abstract class RequestManager {
      * @param fileID
      * @param newName
      */
-    public void renameFile(long fileID, String newName) {
+    public void renameFile(long fileID, String newFullPath, String newName) {
         Request renameFileReq = new FileRenameRequest(fileID, newName).getRequest(response -> {
             int status = response.getStatus();
             if (status == 200) {
                 FileMetadata fileMD = dataManager.getMetadataManager().getFileMetadata(fileID);
-                fileMD.setFilename(newName);
+                dataManager.getMetadataManager().fileRenamed(fileID, newFullPath, newName);
                 finishRenameFile(fileMD);
             } else {
                 this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to rename file to \"" + newName +

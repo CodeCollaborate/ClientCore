@@ -369,8 +369,9 @@ public abstract class RequestManager {
             int status = response.getStatus();
             if (status == 200) {
                 FileMetadata fileMD = dataManager.getMetadataManager().getFileMetadata(fileID);
+                String oldFilename = fileMD.getFilename();
                 fileMD.setFilename(newName);
-                finishRenameFile(fileMD);
+                finishRenameFile(fileMD, oldFilename);
             } else {
                 this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to rename file to \"" + newName +
                         "\" on server.");
@@ -379,7 +380,7 @@ public abstract class RequestManager {
         this.wsManager.sendAuthenticatedRequest(renameFileReq);
     }
 
-    public abstract void finishRenameFile(FileMetadata fMeta);
+    public abstract void finishRenameFile(FileMetadata fMeta, String oldFilename);
 
     /**
      * Moves the given file to the specified relative path on the server.
@@ -394,9 +395,10 @@ public abstract class RequestManager {
             int status = response.getStatus();
             if (status == 200) {
                 MetadataManager mm = dataManager.getMetadataManager();
+                String oldRelativePath = mm.getFileMetadata(fileID).getRelativePath();
                 mm.fileMoved(fileID, newFullPath, newRelativePath);
                 FileMetadata fMeta = mm.getFileMetadata(fileID);
-                finishMoveFile(fMeta);
+                finishMoveFile(fMeta, oldRelativePath);
             } else {
                 this.incorrectResponseStatusHandler.handleInvalidResponse(status, "Failed to move file on server: " + fileID);
             }
@@ -404,7 +406,7 @@ public abstract class RequestManager {
         this.wsManager.sendAuthenticatedRequest(moveFileReq);
     }
 
-    public abstract void finishMoveFile(FileMetadata fMeta);
+    public abstract void finishMoveFile(FileMetadata fMeta, String oldRelativePath);
 
     /**
      * Deletes the given file on the server and within the metadata.

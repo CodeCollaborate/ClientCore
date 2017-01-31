@@ -5,12 +5,12 @@ import dataMgmt.DataManager;
 import dataMgmt.SessionStorage;
 import dataMgmt.models.FileMetadata;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import requestMgmt.RequestManager;
 import websocket.ConnectException;
 import websocket.IRequestSendErrorHandler;
@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
  */
 public class TestRequestManager extends UserBasedIntegrationTest {
 
-    private static final Logger logger = LoggerFactory.getLogger("requestManagerIntegrationTest");
+    private static final Logger logger = LogManager.getLogger("requestManagerIntegrationTest");
 
     private static final String user1ID = "_testUser1";
     private static final String user1Pass = "_testPass1";

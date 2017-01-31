@@ -1,7 +1,11 @@
 package patching;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import websocket.INotificationHandler;
+import websocket.IRequestSendErrorHandler;
+import websocket.IResponseHandler;
+import websocket.WSManager;
 import websocket.*;
 import websocket.models.Notification;
 import websocket.models.Request;
@@ -18,7 +22,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class PatchManager implements INotificationHandler {
-    private static final Logger logger = LoggerFactory.getLogger("patching");
+    public static final Logger logger = LogManager.getLogger("patching");
     static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
     // Threading controls

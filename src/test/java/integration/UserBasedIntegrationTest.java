@@ -1,6 +1,5 @@
 package integration;
 
-import org.slf4j.Logger;
 import websocket.IRequestSendErrorHandler;
 import websocket.WSManager;
 import websocket.models.ConnectionConfig;
@@ -9,6 +8,8 @@ import websocket.models.requests.UserLoginRequest;
 import websocket.models.responses.UserLoginResponse;
 
 import java.util.concurrent.Semaphore;
+
+import org.apache.logging.log4j.Logger;
 
 /**
  * Created by fahslaj on 12/11/2016.

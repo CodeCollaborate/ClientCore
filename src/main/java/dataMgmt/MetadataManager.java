@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.CoreStringConstants;
 import dataMgmt.models.FileMetadata;
 import dataMgmt.models.ProjectMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,8 +26,7 @@ public class MetadataManager {
     // Json Object Mapper
     private static final ObjectMapper mapper = new ObjectMapper();
     // Logger
-    protected static Logger logger = LoggerFactory.getLogger("metadata");
-
+    public static Logger logger = LogManager.getLogger("metadata");
 
     // stores all project metadata, based on project root path
     private Map<String, ProjectMetadata> projectMetadataMap = new HashMap<>();

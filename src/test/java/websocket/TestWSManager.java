@@ -1,12 +1,13 @@
 package websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import org.slf4j.Logger;
 import websocket.ExampleEchoServer.ServerRunner;
 import websocket.models.ConnectionConfig;
 import websocket.models.Request;

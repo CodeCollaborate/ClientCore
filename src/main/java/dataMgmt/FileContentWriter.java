@@ -1,10 +1,5 @@
 package dataMgmt;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import patching.Patch;
-import patching.PatchManager;
-
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -12,12 +7,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import patching.Patch;
+import patching.PatchManager;
+
+
 /**
  * FileContentWriter allows for the enqueueing of patches to be applied to a closed file on disk.
  * Created by fahslaj on 5/5/2016.
  */
 public class FileContentWriter {
-    static Logger logger = LoggerFactory.getLogger("datamgmt");
+    public static Logger logger = LogManager.getLogger("datamgmt");
 
     // The number of patches to flush to disc at a time
     static final int WRITE_THRESHOLD = 5;

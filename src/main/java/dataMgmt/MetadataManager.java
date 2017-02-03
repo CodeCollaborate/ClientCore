@@ -176,6 +176,14 @@ public class MetadataManager {
     }
 
     public void projectDeleted(long projectID) {
+        ProjectMetadata pMeta = getProjectMetadata(projectID);
+        for(FileMetadata fMeta : pMeta.getFiles()){
+            String filePath = fileIDtoFilePath.remove(fMeta.getFileID());
+            fileIDtoFilePath.remove(fMeta.getFileID());
+            fileIDtoProjectID.remove(fMeta.getFileID());
+            fileMetadataMap.remove(filePath);
+        }
+
         String rootPath = getProjectLocation(projectID);
         if (rootPath != null){
             projectMetadataMap.remove(rootPath);

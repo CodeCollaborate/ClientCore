@@ -2,6 +2,8 @@ group 'io.codecollaborate'
 version '0.00'
 
 apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
@@ -56,4 +58,23 @@ artifacts {
     shadowJar
     archives sourcesJar
     archives javadocJar
+}
+
+group = 'org.code.toboggan'
+version = '1.0.0.alpha'
+
+publishing {
+    repositories {
+        maven{
+            url "./repo"
+        }
+    }
+    publications {
+        maven(MavenPublication) {
+            groupId 'org.code.toboggan'
+            artifactId 'org.code.toboggan.clientcore'
+            version '1.0.0.alpha'
+            from components.java
+        }
+    }
 }

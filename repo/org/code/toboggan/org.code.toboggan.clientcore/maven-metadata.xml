@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>org.code.toboggan</groupId>
+  <artifactId>org.code.toboggan.clientcore</artifactId>
+  <versioning>
+    <release>1.0.0.alpha</release>
+    <versions>
+      <version>1.0.0.alpha</version>
+    </versions>
+    <lastUpdated>20170207210207</lastUpdated>
+  </versioning>
+</metadata>

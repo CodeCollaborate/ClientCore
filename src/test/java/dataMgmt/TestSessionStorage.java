@@ -65,8 +65,9 @@ public class TestSessionStorage {
         Project project = new Project(0, "hi", null);
         storage.setProject(project);
         Assert.assertEquals(1, access[0]);
-        Assert.assertEquals(project, storage.getProjectById(0));
+        Assert.assertEquals(project, storage.getProject(0));
         storage.setProjects(new ArrayList<>());
         Assert.assertEquals(2, access[0]);
     }
+    
 }

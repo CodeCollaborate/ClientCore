@@ -152,7 +152,7 @@ public class SessionStorage {
 	/**
 	 * Get a specific project by its id.
 	 * 
-	 * @param projectId
+	 * @param projectID
 	 *            the id with which to look up a project
 	 * @return the project with the specified projectId, or null if there is
 	 *         none
@@ -171,7 +171,9 @@ public class SessionStorage {
 	 * exists in the collection of projects.
 	 * 
 	 * @param absolutePath
-	 * @return
+	 *            The absolute path to the root of the project
+	 * @return The project this path is mapped to, or null if this path is not
+	 *         mapped to a project.
 	 */
 	public Project getProject(Path absolutePath) {
 		Project p = null;
@@ -225,7 +227,7 @@ public class SessionStorage {
 	/**
 	 * Puts the absolute project path in a map to the project ID.
 	 * 
-	 * @param projectRoot
+	 * @param absPath
 	 * @param projectID
 	 */
 	public void putAbsoluteProjectPath(Path absPath, long projectID) {
@@ -270,9 +272,11 @@ public class SessionStorage {
 	 * given project ID. Also sets the project ID of the file to the given
 	 * project.
 	 * 
-	 * @param absolutePath
 	 * @param projectID
+	 *            The ID of the project to add the file model to
 	 * @param f
+	 *            The file model to add to the project that matches the project
+	 *            ID
 	 */
 	public void setFile(long projectID, File f) {
 		synchronized (FILE_LIST) {
@@ -286,7 +290,11 @@ public class SessionStorage {
 	 * Puts the absolute file path in a map to the file ID.
 	 * 
 	 * @param absPath
+	 *            The absolute path of the file
+	 * @param projectID
+	 *            The ID of the project the file belongs to
 	 * @param fileID
+	 *            The ID of the file to map the path to
 	 */
 	public void putAbsoluteFilePath(Path absPath, long projectID, long fileID) {
 		synchronized (FILE_LIST) {
@@ -299,7 +307,7 @@ public class SessionStorage {
 	 * Looks through all projects for the file that matches the given file ID
 	 * and returns it if found. If not found, null is returned.
 	 * 
-	 * @return
+	 * @return The removed file
 	 */
 	public File getFile(long fileID) {
 		for (Project p : projects.values()) {
@@ -317,7 +325,9 @@ public class SessionStorage {
 	 * the file does not exist or there is no path mapped to the file.
 	 * 
 	 * @param absolutePath
-	 * @return
+	 *            The absolute path of the file
+	 * @return The file that the path is mapped to, or null if the path is not
+	 *         mapped to a file
 	 */
 	public File getFile(Path absolutePath) {
 		for (Project p : projects.values()) {
@@ -335,7 +345,9 @@ public class SessionStorage {
 	 * method returns null.
 	 * 
 	 * @param fileID
-	 * @return
+	 *            The ID of the file to remove
+	 * @return The file that is removed or null if there is no file with this ID
+	 *         in the store
 	 */
 	public File removeFile(long fileID) {
 		synchronized (FILE_LIST) {

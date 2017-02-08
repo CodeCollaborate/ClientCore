@@ -23,6 +23,7 @@ public class ProjectController {
 	 * Stores the given project in the storage used to construct this object.
 	 * 
 	 * @param p
+	 *            The project model to add
 	 */
 	public void createProject(Project p) {
 		ss.setProject(p);
@@ -32,6 +33,7 @@ public class ProjectController {
 	 * Deletes the project that matches the given project ID.
 	 * 
 	 * @param projectID
+	 *            The ID of the project to delete
 	 */
 	public void deleteProject(long projectID) {
 		ss.removeProject(projectID);
@@ -42,7 +44,9 @@ public class ProjectController {
 	 * path to the given project by its ID.
 	 * 
 	 * @param rootPath
+	 *            The absolute path to the root of the project
 	 * @param projectID
+	 *            The ID of the project to map the path to
 	 */
 	public void putProjectLocation(Path rootPath, long projectID) {
 		if (ss.getProject(projectID) != null) {
@@ -54,7 +58,9 @@ public class ProjectController {
 	 * Re-maps the project to the provided path.
 	 * 
 	 * @param projectID
+	 *            The ID of the project to move
 	 * @param newRootPath
+	 *            The new absolute path to the root of the project
 	 */
 	public void moveProject(long projectID, Path newRootPath) {
 		ss.changeProjectPath(projectID, newRootPath);
@@ -65,8 +71,11 @@ public class ProjectController {
 	 * name to the new name.
 	 * 
 	 * @param projectID
+	 *            The ID of the project to rename
 	 * @param newName
+	 *            The new name of the project
 	 * @param newRootPath
+	 *            The new absolute path to the root of the project
 	 */
 	public void renameProject(long projectID, String newName, Path newRootPath) {
 		ss.getProject(projectID).setName(newName);
@@ -78,8 +87,11 @@ public class ProjectController {
 	 * project that matches the given project ID.
 	 * 
 	 * @param projectID
+	 *            The ID of the project to add the permission to
 	 * @param name
+	 *            The name of the user to add a permission for
 	 * @param p
+	 *            The permission that the user is provisioned for this project
 	 */
 	public void addPermission(long projectID, String name, Permission p) {
 		ss.getProject(projectID).getPermissions().put(name, p);
@@ -90,7 +102,10 @@ public class ProjectController {
 	 * matches the given project ID.
 	 * 
 	 * @param projectID
+	 *            The ID of the project to remove the permission for
 	 * @param name
+	 *            The name of the user to remove from the permission map for
+	 *            this project
 	 */
 	public void removePermission(long projectID, String name) {
 		ss.getProject(projectID).getPermissions().remove(name);

@@ -523,7 +523,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
                 // Disabled until mysql os-filepath fix implemented in server
 //                Assert.assertEquals("Incorrect file path returned for file at index 0", filePath, ((ProjectGetFilesResponse) response.getData()).files[0].getPermissions());
                 Assert.assertEquals("Incorrect file version returned for Proj, file at index 0", file.getFileVersion(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileVersion());
-                Assert.assertEquals("Incorrect file location returned for Proj, file at index 0", file.getRelativePath(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().replace('\\', '/'));
+                Assert.assertEquals("Incorrect file location returned for Proj, file at index 0", file.getRelativePath(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().toString().replace('\\', '/'));
             } else {
                 Assert.assertEquals("Incorrect number of files returned for Proj", 0, ((ProjectGetFilesResponse) response.getData()).files.length);
             }
@@ -739,7 +739,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         Semaphore responsewaiter = new Semaphore(0);
         Semaphore notificationwaiter = new Semaphore(0);
 
-        req = new FileCreateRequest(file.getFilename(), file.getRelativePath(), proj.getProjectID(), data.getBytes()).getRequest(response -> {
+        req = new FileCreateRequest(file.getFilename(), file.getRelativePath().toString(), proj.getProjectID(), data.getBytes()).getRequest(response -> {
             Assert.assertEquals("Failed to create file", 200, response.getStatus());
 
             file.setFileID(((FileCreateResponse) response.getData()).getFileID());
@@ -786,7 +786,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         /*
          * Check authentication
          */
-        req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
+        req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath().toString(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
             waiter.release();
@@ -797,7 +797,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.fail("Acquire timed out");
         }
 
-        req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
+        req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath().toString(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
             waiter.release();
@@ -852,7 +852,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         /*
          * Check duplicate file
          */
-       req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
+       req = new FileCreateRequest(file1.getFilename(), file1.getRelativePath().toString(), proj1.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
            Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
 
            waiter.release();
@@ -863,7 +863,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
            Assert.fail("Acquire timed out");
        }
 
-       req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
+       req = new FileCreateRequest(file2.getFilename(), file2.getRelativePath().toString(), proj2.getProjectID(), "dummyData".getBytes()).getRequest(response -> {
            Assert.assertNotEquals("Failed to throw error on duplicate file", 200, response.getStatus());
 
            waiter.release();
@@ -1059,7 +1059,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     }
 
     private void testFileMove(WSManager wsMgr, File file, String newPath, WSManager[] expectNotification) throws InterruptedException, ConnectException {
-        String newFilePath = Paths.get(file.getRelativePath(), newPath).toString().replace('\\', '/');
+        String newFilePath = Paths.get(file.getRelativePath().toString(), newPath).toString().replace('\\', '/');
 
         Semaphore waiter = new Semaphore(0);
 
@@ -1083,7 +1083,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         if (!waiter.tryAcquire(1 + expectNotification.length, 5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
-        file.setRelativePath(newFilePath);
+        file.setRelativePath(Paths.get(newFilePath));
     }
 
     private void testFileMoveInvalid() throws InterruptedException, ConnectException {

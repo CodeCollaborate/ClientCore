@@ -113,7 +113,7 @@ public class SessionStorage {
 	 */
 	public List<Project> getProjects() {
 		synchronized (PROJECT_LIST) {
-			return Collections.unmodifiableList((List<Project>) this.projects.values());
+			return Collections.unmodifiableList(new ArrayList<>(this.projects.values()));
 		}
 	}
 

@@ -2,6 +2,9 @@ package dataMgmt;
 
 import java.nio.file.Path;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import websocket.models.Permission;
 import websocket.models.Project;
 
@@ -15,6 +18,8 @@ import websocket.models.Project;
 public class ProjectController {
 	private SessionStorage ss;
 
+	public static final Logger logger = LogManager.getLogger("ProjectController");
+	
 	public ProjectController(SessionStorage ss) {
 		this.ss = ss;
 	}
@@ -94,7 +99,12 @@ public class ProjectController {
 	 *            The permission that the user is provisioned for this project
 	 */
 	public void addPermission(long projectID, String name, Permission p) {
-		ss.getProject(projectID).getPermissions().put(name, p);
+		Project proj = ss.getProject(projectID);
+		if (proj != null) {
+			proj.getPermissions().put(name, p);
+		} else {
+			logger.warn("Tried to add permission to a nonexistent project");
+		}
 	}
 
 	/**
@@ -108,7 +118,12 @@ public class ProjectController {
 	 *            this project
 	 */
 	public void removePermission(long projectID, String name) {
-		ss.getProject(projectID).getPermissions().remove(name);
+		Project proj = ss.getProject(projectID);
+		if (proj != null) {
+			proj.getPermissions().remove(name);
+		} else {
+			logger.warn("Tried to remove permission from a nonexistent project");
+		}
 	}
 
 }

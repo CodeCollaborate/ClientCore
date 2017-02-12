@@ -56,23 +56,14 @@ public class SessionStorage {
 	private final List<PropertyChangeListener> listeners = new ArrayList<>();
 
 	/**
-	 * Create a new SessionStorage with an empty user status map.
-	 */
-	protected SessionStorage() {
-		projectUserStatus = new HashMap<>();
-	}
-
-	/**
 	 * Get the current user's username.
 	 * 
 	 * @return username
 	 */
 	public String getUsername() {
-		String name;
 		synchronized (USERNAME) {
-			name = username;
+			return username;
 		}
-		return name;
 	}
 
 	/**
@@ -95,11 +86,9 @@ public class SessionStorage {
 	 * @return authentication token
 	 */
 	public String getAuthenticationToken() {
-		String authToken;
 		synchronized (AUTH_TOKEN) {
-			authToken = authenticationToken;
+			return authenticationToken;
 		}
-		return authToken;
 	}
 
 	/**
@@ -123,11 +112,9 @@ public class SessionStorage {
 	 * @return projects list
 	 */
 	public List<Project> getProjects() {
-		Collection<Project> collection;
 		synchronized (PROJECT_LIST) {
-			collection = this.projects.values();
+			return Collections.unmodifiableList((List<Project>) this.projects.values());
 		}
-		return new ArrayList<>(collection);
 	}
 
 	/**
@@ -158,11 +145,9 @@ public class SessionStorage {
 	 *         none
 	 */
 	public Project getProject(long projectID) {
-		Project project;
 		synchronized (PROJECT_LIST) {
-			project = this.projects.get(projectID);
+			return this.projects.get(projectID);
 		}
-		return project;
 	}
 
 	/**
@@ -176,14 +161,10 @@ public class SessionStorage {
 	 *         mapped to a project.
 	 */
 	public Project getProject(Path absolutePath) {
-		Project p = null;
 		synchronized (PROJECT_LIST) {
 			Long projectID = projectPathToID.get(absolutePath);
-			if (projectID != null) {
-				p = projects.get(projectID);
-			}
+			return projects.get(projectID);
 		}
-		return p;
 	}
 
 	/**
@@ -263,7 +244,6 @@ public class SessionStorage {
 			old = this.projects.remove(id);
 		}
 		notifyListeners(PROJECT_LIST, old, null);
-
 		return old;
 	}
 
@@ -405,11 +385,9 @@ public class SessionStorage {
 	 * @return set of subscribed ids
 	 */
 	public Set<Long> getSubscribedIds() {
-		Set<Long> ids;
 		synchronized (SUBSCRIBED_PROJECTS) {
-			ids = this.subscribedIds;
+			return Collections.unmodifiableSet(this.subscribedIds);
 		}
-		return ids;
 	}
 
 	/**

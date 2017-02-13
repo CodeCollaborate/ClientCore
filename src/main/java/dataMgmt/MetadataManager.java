@@ -4,18 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.CoreStringConstants;
 import dataMgmt.models.FileMetadata;
 import dataMgmt.models.ProjectMetadata;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Manages the metadata of projects and files.
@@ -39,10 +34,11 @@ public class MetadataManager {
     // stores conversions between fileID and projectID
     private Map<Long, Long> fileIDtoProjectID = new HashMap<>();
 
-    public Collection<FileMetadata> getAllFiles(){
+    public Collection<FileMetadata> getAllFiles() {
         return fileMetadataMap.values();
     }
-    public Collection<ProjectMetadata> getAllProjects(){
+
+    public Collection<ProjectMetadata> getAllProjects() {
         return projectMetadataMap.values();
     }
 
@@ -83,10 +79,11 @@ public class MetadataManager {
 
     /**
      * Gets projectID that the file for the provided FileID belongs to
+     *
      * @param fileID the fileID to lookup the project for
      * @return the ProjectID that the file belongs to, or null if no such entry exists.
      */
-    public Long getProjectIDForFileID(long fileID){
+    public Long getProjectIDForFileID(long fileID) {
         return fileIDtoProjectID.get(fileID);
     }
 
@@ -130,7 +127,7 @@ public class MetadataManager {
             throw new IllegalStateException("Failed to parse ProjectMetadata from file: " + Paths.get(projectRoot, configFileName).toString().replace('\\', '/') + " - " + e.getMessage());
         }
 
-        if (metadata != null){
+        if (metadata != null) {
             putProjectMetadata(projectRoot, metadata);
         }
     }
@@ -177,7 +174,12 @@ public class MetadataManager {
 
     public void projectDeleted(long projectID) {
         ProjectMetadata pMeta = getProjectMetadata(projectID);
-        for(FileMetadata fMeta : pMeta.getFiles()){
+
+        if (pMeta == null) {
+            return;
+        }
+
+        for (FileMetadata fMeta : pMeta.getFiles()) {
             String filePath = fileIDtoFilePath.remove(fMeta.getFileID());
             fileIDtoFilePath.remove(fMeta.getFileID());
             fileIDtoProjectID.remove(fMeta.getFileID());
@@ -185,7 +187,7 @@ public class MetadataManager {
         }
 
         String rootPath = getProjectLocation(projectID);
-        if (rootPath != null){
+        if (rootPath != null) {
             projectMetadataMap.remove(rootPath);
         }
         projectIDtoRootPath.remove(projectID);
@@ -212,7 +214,7 @@ public class MetadataManager {
 
     public void fileDeleted(Long fileID) {
         String filePath = fileIDtoFilePath.get(fileID);
-        if (filePath != null){
+        if (filePath != null) {
             fileIDtoFilePath.remove(fileID);
             fileMetadataMap.remove(filePath);
         }
@@ -240,8 +242,8 @@ public class MetadataManager {
     /**
      * Writes the metadata object for the project at the given path.
      *
-     * @param metadata    the ProjectMetadata object to write
-     * @param projectRoot the root path of the project
+     * @param metadata       the ProjectMetadata object to write
+     * @param projectRoot    the root path of the project
      * @param configFileName the name of the config file
      */
     public void writeProjectMetadataToFile(ProjectMetadata metadata, String projectRoot, String configFileName) {
@@ -267,7 +269,7 @@ public class MetadataManager {
             logger.error("IO Error on metadata write to file: " + projectRoot + " - " + e.getMessage());
         }
     }
-    
+
     public void deleteMetadataFile(String projectLocation) {
         File file = new File(projectLocation, CoreStringConstants.CONFIG_FILE_NAME);
 

@@ -32,7 +32,7 @@ dependencies {
     compile 'com.google.guava:guava:19.0'
 }
 test {
-    exclude 'integration/**'
+//    exclude 'integration/**'
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {

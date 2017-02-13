@@ -1398,17 +1398,6 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.fail("Acquire timed out");
         }
 
-        req = new ProjectDeleteRequest(proj1.getProjectID()).getRequest(response -> {
-            Assert.assertNotEquals("Failed to throw permissions error on lack of write permissions", 200, response.getStatus());
-
-            waiter.release();
-        }, errHandler);
-
-        ws2.sendRequest(req);
-        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
-            Assert.fail("Acquire timed out");
-        }
-
         // Test invalid fileID
         req = new ProjectDeleteRequest(-1).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw error on invalid project ID", 200, response.getStatus());

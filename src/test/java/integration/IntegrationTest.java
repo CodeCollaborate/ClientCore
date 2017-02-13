@@ -59,27 +59,28 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class IntegrationTest extends UserBasedIntegrationTest {
     private static final Logger logger = LogManager.getLogger("integrationTest");
 
-    private static final String user1ID = "_testUser1";
+    private static final String[] user1ID = new String[]{"_testUser1"};
     private static final String user1Pass = "_testPass1";
     private static final String user1FirstName = "_testFirstName1";
     private static final String user1LastName = "_testLastName1";
-    private static final String user1Email = "_testEmail1@testDomain.com";
-    private static final String user2ID = "_testUser2";
+    private static final String[] user1Email = new String[]{"_testEmail1@testDomain.com"};
+    private static final String[] user2ID = new String[]{"_testUser2"};
     private static final String user2Pass = "_testPass2";
     private static final String user2FirstName = "_testFirstName2";
     private static final String user2LastName = "_testLastName2";
-    private static final String user2Email = "_testEmail2@testDomain.com";
-    private static final String user3ID = "_testUser3";
+    private static final String[] user2Email = new String[]{"_testEmail2@testDomain.com"};
+    private static final String[] user3ID = new String[]{"_testUser3"};
     private static final String user3Pass = "_testPass3";
     private static final String user3FirstName = "_testFirstName3";
     private static final String user3LastName = "_testLastName3";
-    private static final String user3Email = "_testEmail3@testDomain.com";
+    private static final String[] user3Email = new String[]{"_testEmail3@testDomain.com"};
     private static final String fileData1 = "FileData1: _test data1\ntest data 2";
     private static final String fileData2 = "FileData2: _test data1\ntest data 2";
     private static final IRequestSendErrorHandler errHandler = () -> Assert.fail("Failed to send message");
@@ -102,9 +103,9 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     public void cleanup() throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        cleanupUser(logger, user1ID, user1Pass, waiter, errHandler);
-        cleanupUser(logger, user2ID, user2Pass, waiter, errHandler);
-        cleanupUser(logger, user3ID, user3Pass, waiter, errHandler);
+        cleanupUser(logger, user1ID[0], user1Pass, waiter, errHandler);
+        cleanupUser(logger, user2ID[0], user2Pass, waiter, errHandler);
+        cleanupUser(logger, user3ID[0], user3Pass, waiter, errHandler);
 
         // Wait for cleanup to finish
         waiter.tryAcquire(3, 10, TimeUnit.SECONDS);
@@ -139,7 +140,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         testProjectSubscribe(ws1, proj1);
         testProjectSubscribe(ws2, proj2);
         testProjectSubscribeInvalid();
-        testProjectGrantPermission(ws1, proj1, user2ID, "read", new WSManager[]{ws2});
+        testProjectGrantPermission(ws1, proj1, user2ID[0], "read", new WSManager[]{ws2});
         testProjectCrossSubscribeInvalid();
         testProjectSubscribe(ws2, proj1);
         testProjectCrossSubscribeInvalid(); // Check to make sure User1 cannot subscribe to Proj2
@@ -159,7 +160,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         testFileChange(ws2, file2, new WSManager[]{}); // Test User2 changing File1
         testFilePull(); // Should have 1 changes on both files
         testFileChangeInvalid();
-        testProjectGrantPermission(ws1, proj1, user2ID, "write", new WSManager[]{ws2});
+        testProjectGrantPermission(ws1, proj1, user2ID[0], "write", new WSManager[]{ws2});
         testFileChange(ws2, file1, new WSManager[]{ws1}); // Test User2 changing File1
         testFilePull(); // Should have 2 changes on File1, 1 change on File2
 
@@ -189,16 +190,16 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         testFileChange(ws2, file2, new WSManager[]{}); // Test User2 changing File2
         testFilePull(); // Should have 4 changes on File1, 3 change on File2
 
-        testProjectGrantPermission(ws1, proj1, user2ID, "admin", new WSManager[]{ws2});
-        testProjectGrantPermission(ws2, proj1, user3ID, "read", new WSManager[]{ws1});
+        testProjectGrantPermission(ws1, proj1, user2ID[0], "admin", new WSManager[]{ws2});
+        testProjectGrantPermission(ws2, proj1, user3ID[0], "read", new WSManager[]{ws1});
 
         testProjectDeleteInvalid(); // Test this here to make sure even admins don't have deletion rights.
 
         testProjectRevokePermissionInvalid();
-        testProjectRevokePermission(ws2, proj1, user3ID, new WSManager[]{ws1});
-        testProjectRevokePermission(ws2, proj1, user2ID, new WSManager[]{ws1});
+        testProjectRevokePermission(ws2, proj1, user3ID[0], new WSManager[]{ws1});
+        testProjectRevokePermission(ws2, proj1, user2ID[0], new WSManager[]{ws1});
         testFileChange(ws1, file1, new WSManager[]{}); // Test User1 changing File1; Should have 5 changes on File1, 3 change on File2
-        testProjectGrantPermission(ws1, proj1, user2ID, "write", new WSManager[]{ws2});
+        testProjectGrantPermission(ws1, proj1, user2ID[0], "write", new WSManager[]{ws2});
         testProjectSubscribe(ws2, proj1);
 
         testProjectUnsubscribe(ws2, proj1);
@@ -210,19 +211,19 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         testFileDelete(ws2, file2, new WSManager[]{});
         testProjectGetFiles(); // should have 0 files each
 
-        testProjectLookup(ws1, user1ID, proj1);
-        testProjectLookup(ws2, user2ID, proj2);
+        testProjectLookup(ws1, user1ID[0], proj1);
+        testProjectLookup(ws2, user2ID[0], proj2);
 
         testProjectDelete(ws1, proj1, new WSManager[]{ws2});
         testProjectDelete(ws2, proj2, new WSManager[]{});
 
         testUserProjects();
 
-        testUserDelete(ws1, user1ID, user1Pass);
-        testUserDelete(ws2, user2ID, user2Pass);
+        testUserDelete(ws1, user1ID[0], user1Pass);
+        testUserDelete(ws2, user2ID[0], user2Pass);
 
-        testUserLogin(ws3, user3ID, user3Pass);
-        testUserDelete(ws3, user3ID, user3Pass);
+        testUserLogin(ws3, user3ID[0], user3Pass);
+        testUserDelete(ws3, user3ID[0], user3Pass);
 
         Thread.sleep(1000);
     }
@@ -233,28 +234,40 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         testUserRegister(ws3, user3ID, user3FirstName, user3LastName, user3Email, user3Pass);
     }
 
-    private void testUserRegister(WSManager wsMgr, String userID, String userFirstName, String userLastName, String userEmail, String userPass) throws InterruptedException, ConnectException {
+    private void testUserRegister(WSManager wsMgr, String[] userID, String userFirstName, String userLastName, String[] userEmail, String userPass) throws InterruptedException, ConnectException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass).getRequest(response -> {
-            // If registration fails, probably is already there.
-            Assert.assertNotEquals(String.format("user %s already registered, rerun test", userID), 404, response.getStatus());
-            Assert.assertEquals(String.format("Failed to register user: %s", userID), 200, response.getStatus());
+        final boolean[] conflicted = {true};
 
-            waiter.release();
-        }, errHandler);
+        while (conflicted[0]) {
+            String randomSuffix = Integer.toString(new Random().nextInt(1000));
 
-        wsMgr.sendRequest(req);
-        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
-            Assert.fail("testUserRegister timed out");
+            req = new UserRegisterRequest(userID[0]+randomSuffix, userFirstName, userLastName, userEmail[0]+randomSuffix, userPass).getRequest(response -> {
+                if (response.getStatus() == 404){
+                    return;
+                }
+
+                Assert.assertEquals(String.format("Failed to register user: %s", userID[0]), 200, response.getStatus());
+                userID[0] = userID[0] + randomSuffix;
+                userEmail[0] = userEmail[0] + randomSuffix;
+
+                conflicted[0] = false;
+
+                waiter.release();
+            }, errHandler);
+
+            wsMgr.sendRequest(req);
+            if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+                Assert.fail("testUserRegister timed out");
+            }
         }
     }
 
     private void testUserRegisterDuplicate() throws InterruptedException, ConnectException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserRegisterRequest(user1ID, "dummy", "dummy", "dummyEmail@domain.tld", "dummyPassword").getRequest(response -> {
-            Assert.assertNotEquals(String.format("Failed to throw error when registering user with duplicate username: %s", user1ID), 200, response.getStatus());
+        req = new UserRegisterRequest(user1ID[0], "dummy", "dummy", "dummyEmail@domain.tld", "dummyPassword").getRequest(response -> {
+            Assert.assertNotEquals(String.format("Failed to throw error when registering user with duplicate username: %s", user1ID[0]), 200, response.getStatus());
 
             waiter.release();
         }, errHandler);
@@ -264,8 +277,8 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.fail("testUserRegisterDuplicateUsername timed out");
         }
 
-        req = new UserRegisterRequest("dummyUsername", "dummy", "dummy", user1Email, "dummyPassword").getRequest(response -> {
-            Assert.assertNotEquals(String.format("Failed to throw error when registering user with duplicate email: %s", user1Email), 200, response.getStatus());
+        req = new UserRegisterRequest("dummyUsername", "dummy", "dummy", user1Email[0], "dummyPassword").getRequest(response -> {
+            Assert.assertNotEquals(String.format("Failed to throw error when registering user with duplicate email: %s", user1Email[0]), 200, response.getStatus());
 
             waiter.release();
         }, errHandler);
@@ -277,8 +290,8 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     }
 
     private void testUserLogin() throws ConnectException, InterruptedException {
-        testUserLogin(ws1, user1ID, user1Pass);
-        testUserLogin(ws2, user2ID, user2Pass);
+        testUserLogin(ws1, user1ID[0], user1Pass);
+        testUserLogin(ws2, user2ID[0], user2Pass);
     }
 
     private void testUserLogin(WSManager wsMgr, String userID, String userPass) throws InterruptedException, ConnectException {
@@ -302,7 +315,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private void testUserLoginInvalidCredentials() throws InterruptedException, ConnectException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserLoginRequest(user1ID, "dummy").getRequest(response -> {
+        req = new UserLoginRequest(user1ID[0], "dummy").getRequest(response -> {
             Assert.assertNotEquals("Error not thrown for incorrect password", 200, response.getStatus());
 
             waiter.release();
@@ -363,10 +376,10 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     }
 
     private void testUserLookup() throws InterruptedException, ConnectException {
-        testUserLookup(ws1, user1ID, user1FirstName, user1LastName, user1Email);
-        testUserLookup(ws2, user1ID, user1FirstName, user1LastName, user1Email);
-        testUserLookup(ws1, user2ID, user2FirstName, user2LastName, user2Email);
-        testUserLookup(ws2, user2ID, user2FirstName, user2LastName, user2Email);
+        testUserLookup(ws1, user1ID[0], user1FirstName, user1LastName, user1Email[0]);
+        testUserLookup(ws2, user1ID[0], user1FirstName, user1LastName, user1Email[0]);
+        testUserLookup(ws1, user2ID[0], user2FirstName, user2LastName, user2Email[0]);
+        testUserLookup(ws2, user2ID[0], user2FirstName, user2LastName, user2Email[0]);
     }
 
     private void testUserLookup(WSManager wsMgr, String userID, String userFirstName, String userLastName, String userEmail) throws ConnectException, InterruptedException {
@@ -393,7 +406,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private void testUserLookupInvalid() throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserLookupRequest(new String[]{user2ID}).getRequest(response -> {
+        req = new UserLookupRequest(new String[]{user2ID[0]}).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
             waiter.release();
@@ -1186,7 +1199,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         Semaphore waiter = new Semaphore(0);
 
         // Test Authentication
-        req = new ProjectRevokePermissionsRequest(proj1.getProjectID(), user2ID).getRequest(response -> {
+        req = new ProjectRevokePermissionsRequest(proj1.getProjectID(), user2ID[0]).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 
             waiter.release();
@@ -1198,7 +1211,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         }
 
         // Test Permissions
-        req = new ProjectRevokePermissionsRequest(proj2.getProjectID(), user1ID).getRequest(response -> {
+        req = new ProjectRevokePermissionsRequest(proj2.getProjectID(), user1ID[0]).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw permissions error on lack of write permissions", 200, response.getStatus());
 
             waiter.release();
@@ -1209,7 +1222,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.fail("Acquire timed out");
         }
 
-        req = new ProjectRevokePermissionsRequest(proj1.getProjectID(), user1ID).getRequest(response -> {
+        req = new ProjectRevokePermissionsRequest(proj1.getProjectID(), user1ID[0]).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw permissions error on attempting to revoke owner", 200, response.getStatus());
 
             waiter.release();
@@ -1220,7 +1233,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.fail("Acquire timed out");
         }
 
-        req = new ProjectRevokePermissionsRequest(proj2.getProjectID(), user2ID).getRequest(response -> {
+        req = new ProjectRevokePermissionsRequest(proj2.getProjectID(), user2ID[0]).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw permissions error on attempting to revoke owner", 200, response.getStatus());
 
             waiter.release();
@@ -1232,7 +1245,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         }
 
         // Test invalid projectID
-        req = new ProjectRevokePermissionsRequest(-1, user2ID).getRequest(response -> {
+        req = new ProjectRevokePermissionsRequest(-1, user2ID[0]).getRequest(response -> {
             Assert.assertNotEquals("Failed to throw error on invalid project ID", 200, response.getStatus());
 
             waiter.release();
@@ -1412,8 +1425,8 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     }
 
     private void testProjectLookup() throws ConnectException, InterruptedException {
-        testProjectLookup(ws1, user1ID, proj1);
-        testProjectLookup(ws2, user2ID, proj2);
+        testProjectLookup(ws1, user1ID[0], proj1);
+        testProjectLookup(ws2, user2ID[0], proj2);
     }
 
     private void testProjectLookup(WSManager wsMgr, String ownerID, Project proj) throws ConnectException, InterruptedException {

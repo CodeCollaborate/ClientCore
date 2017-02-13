@@ -22,10 +22,7 @@ import websocket.models.Request;
 import websocket.models.requests.UserRegisterRequest;
 
 import java.beans.PropertyChangeListener;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,17 +35,17 @@ public class TestRequestManager extends UserBasedIntegrationTest {
 
     private static final Logger logger = LogManager.getLogger("requestManagerIntegrationTest");
 
-    private static final String user1ID = "_testUser1";
+    private static final String[] user1ID = new String[]{"_testUser1"};
     private static final String user1Pass = "_testPass1";
     private static final String user1FirstName = "_testFirstName1";
     private static final String user1LastName = "_testLastName1";
-    private static final String user1Email = "_testEmail1@testDomain.com";
+    private static final String[] user1Email = new String[]{"_testEmail1@testDomain.com"};
 
-    private static final String user2ID = "_testUser2";
+    private static final String[] user2ID = new String[]{"_testUser2"};
     private static final String user2Pass = "_testPass2";
     private static final String user2FirstName = "_testFirstName2";
     private static final String user2LastName = "_testLastName2";
-    private static final String user2Email = "_testEmail2@testDomain.com";
+    private static final String[] user2Email = new String[]{"_testEmail2@testDomain.com"};
 
     private static Project proj1 = new Project(-1, "_testProject1", new HashMap<>());
     private static Project proj2 = new Project(-1, "_testProject2", new HashMap<>());
@@ -103,8 +100,8 @@ public class TestRequestManager extends UserBasedIntegrationTest {
     @After
     public void cleanup() throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
-        cleanupUser(logger, user1ID, user1Pass, waiter, errHandler);
-        cleanupUser(logger, user2ID, user2Pass, waiter, errHandler);
+        cleanupUser(logger, user1ID[0], user1Pass, waiter, errHandler);
+        cleanupUser(logger, user2ID[0], user2Pass, waiter, errHandler);
         waiter.tryAcquire(2, 10, TimeUnit.SECONDS);
     }
 
@@ -112,13 +109,13 @@ public class TestRequestManager extends UserBasedIntegrationTest {
     public void testRequestManager() throws java.net.ConnectException, InterruptedException {
         // register, login, get permission constants
         registerUser(user1ID, user1FirstName, user1LastName, user1Email, user1Pass);
-        testLogin(user1ID, user1Pass);
+        testLogin(user1ID[0], user1Pass);
         testFetchPermissionConstants();
         // create a project, register user 2, add them to the project, and remove them from the project
         proj1 = testCreateProject(proj1.getName());
         registerUser(user2ID, user2FirstName, user2LastName, user2Email, user2Pass);
-        testAddUserToProject(proj1.getProjectID(), proj1.getName(), user2ID, "admin", apiConstants);
-        testRemoveUserFromProject(proj1.getProjectID(), proj1.getName(), user2ID);
+        testAddUserToProject(proj1.getProjectID(), proj1.getName(), user2ID[0], "admin", apiConstants);
+        testRemoveUserFromProject(proj1.getProjectID(), proj1.getName(), user2ID[0]);
         // create project 2, fetch and subscribe to both projects, unsubscribe from project 1
         proj2 = testCreateProject(proj2.getName());
         List<Long> projectIDs = Arrays.asList(proj1.getProjectID(), proj2.getProjectID());
@@ -127,15 +124,15 @@ public class TestRequestManager extends UserBasedIntegrationTest {
         // fetch projects, subscribe to project 1, add user2 to project2, delete project 1, logout user 1
         testFetchProjects();
         testSubscribeToProject(proj1.getProjectID());
-        testAddUserToProject(proj2.getProjectID(), proj2.getName(), user2ID, "write", apiConstants);
+        testAddUserToProject(proj2.getProjectID(), proj2.getName(), user2ID[0], "write", apiConstants);
         testDeleteProject(proj1.getProjectID());
         testLogout();
         // login as user 2, remove self from project 2, logout as user 2
-        testLogin(user2ID, user2Pass);
+        testLogin(user2ID[0], user2Pass);
         testRemoveSelfFromProject(proj2.getProjectID());
         testLogout();
         // login as user 1, delete project 2
-        testLogin(user1ID, user1Pass);
+        testLogin(user1ID[0], user1Pass);
         deleteProject(proj2.getProjectID());
     }
 
@@ -156,18 +153,33 @@ public class TestRequestManager extends UserBasedIntegrationTest {
         dataMgr.getSessionStorage().removePropertyChangeListener(listener);
     }
 
-    private void registerUser(String userID, String userFirstName,
-                              String userLastName, String userEmail, String userPass) throws InterruptedException, java.net.ConnectException {
+    private void registerUser(String[] userID, String userFirstName,
+                              String userLastName, String[] userEmail, String userPass) throws InterruptedException, java.net.ConnectException {
         logger.info(String.format("Registering user: %s", userID));
         Semaphore waiter = new Semaphore(0);
 
-        req = new UserRegisterRequest(userID, userFirstName, userLastName, userEmail, userPass).getRequest(response -> {
-            // If registration fails, probably is already there.
-            waiter.release();
-        }, errHandler);
-        ws1.sendRequest(req);
-        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
-            Assert.fail("Acquire timed out");
+        final boolean[] conflicted = {true};
+
+        while (conflicted[0]) {
+            String randomSuffix = Integer.toString(new Random().nextInt(1000));
+
+            req = new UserRegisterRequest(userID[0]+randomSuffix, userFirstName, userLastName, userEmail[0]+randomSuffix, userPass).getRequest(response -> {
+                if (response.getStatus() == 404){
+                    return;
+                }
+
+                userID[0] = userID[0] + randomSuffix;
+                userEmail[0] = userEmail[0] + randomSuffix;
+
+                conflicted[0] = false;
+
+                waiter.release();
+            }, errHandler);
+
+            ws1.sendRequest(req);
+            if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
+                Assert.fail("testUserRegister timed out");
+            }
         }
     }
 

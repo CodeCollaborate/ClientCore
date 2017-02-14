@@ -1,11 +1,11 @@
 package integration;
 
-import websocket.IRequestSendErrorHandler;
-import websocket.WSManager;
-import websocket.models.ConnectionConfig;
-import websocket.models.requests.UserDeleteRequest;
-import websocket.models.requests.UserLoginRequest;
-import websocket.models.responses.UserLoginResponse;
+import clientcore.websocket.IRequestSendErrorHandler;
+import clientcore.websocket.WSManager;
+import clientcore.websocket.models.ConnectionConfig;
+import clientcore.websocket.models.requests.UserDeleteRequest;
+import clientcore.websocket.models.requests.UserLoginRequest;
+import clientcore.websocket.models.responses.UserLoginResponse;
 
 import java.util.concurrent.Semaphore;
 

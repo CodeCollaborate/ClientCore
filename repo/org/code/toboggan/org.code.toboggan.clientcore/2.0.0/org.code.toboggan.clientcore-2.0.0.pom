@@ -7,8 +7,8 @@
   <version>2.0.0</version>
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.jetty.clientcore.websocket</groupId>
-      <artifactId>clientcore.websocket-client</artifactId>
+      <groupId>org.eclipse.jetty.websocket</groupId>
+      <artifactId>websocket-client</artifactId>
       <version>9.3.8.v20160314</version>
       <scope>runtime</scope>
     </dependency>

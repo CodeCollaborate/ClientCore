@@ -1,3 +1,4 @@
+
 package integration;
 
 import com.google.common.collect.BiMap;
@@ -87,12 +88,12 @@ public class TestRequestManager extends UserBasedIntegrationTest {
 
 			@Override
 			public void finishRenameFile(FileMetadata fMeta) {
-				
+
 			}
 
 			@Override
 			public void finishMoveFile(FileMetadata fMeta) {
-				
+
 			}
         };
     }
@@ -424,4 +425,3 @@ public class TestRequestManager extends UserBasedIntegrationTest {
         sesSto.removePropertyChangeListener(listener);
     }
 }
-

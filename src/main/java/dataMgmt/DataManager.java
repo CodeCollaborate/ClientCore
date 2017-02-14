@@ -3,9 +3,10 @@ package dataMgmt;
 import patching.PatchManager;
 
 /**
- * The facade that contains the active PatchManager, FileContentWriter, MetadataManager, and SessionStorage.
+ * The facade that contains the active PatchManager, FileContentWriter, and SessionStorage.
  * Created by Benedict on 5/9/2016.
  */
+@Deprecated
 public class DataManager {
 
     private static DataManager instance;
@@ -28,7 +29,6 @@ public class DataManager {
 
     private PatchManager patchManager;
     private FileContentWriter fileContentWriter;
-    private MetadataManager metadataManager;
     private SessionStorage sessionStorage;
 
     /**
@@ -40,17 +40,6 @@ public class DataManager {
             this.fileContentWriter = new FileContentWriter(getPatchManager());
         }
         return fileContentWriter;
-    }
-
-    /**
-     * Get the active MetadataManager
-     * @return the active MetadataManager
-     */
-    public MetadataManager getMetadataManager() {
-        if(metadataManager == null){
-            this.metadataManager = new MetadataManager();
-        }
-        return metadataManager;
     }
 
     /**
@@ -81,14 +70,6 @@ public class DataManager {
      */
     public void setFileContentWriter(FileContentWriter fileContentWriter) {
         this.fileContentWriter = fileContentWriter;
-    }
-
-    /**
-     * Set the active MetadataManager
-     * @param metadataManager the new active MetadataManager
-     */
-    public void setMetadataManager(MetadataManager metadataManager) {
-        this.metadataManager = metadataManager;
     }
 
     /**

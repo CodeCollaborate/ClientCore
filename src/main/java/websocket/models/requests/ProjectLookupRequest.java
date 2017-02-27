@@ -31,4 +31,8 @@ public class ProjectLookupRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Lookup", this, responseHandler, requestSendErrorHandler);
     }
+
+    public List<Long> getProjectIDs() {
+        return projectIDs;
+    }
 }

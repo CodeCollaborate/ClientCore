@@ -31,4 +31,8 @@ public class UserLookupRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("User", "Lookup", this, responseHandler, requestSendErrorHandler);
     }
+
+    public List<String> getUsernames() {
+        return usernames;
+    }
 }

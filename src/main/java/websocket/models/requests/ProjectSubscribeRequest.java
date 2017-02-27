@@ -24,4 +24,8 @@ public class ProjectSubscribeRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Subscribe", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getProjectID() {
+        return projectID;
+    }
 }

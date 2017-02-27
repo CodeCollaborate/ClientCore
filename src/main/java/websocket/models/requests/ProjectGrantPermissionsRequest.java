@@ -32,4 +32,16 @@ public class ProjectGrantPermissionsRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "GrantPermissions", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public String getGrantUsername() {
+        return grantUsername;
+    }
+
+    public int getPermissionLevel() {
+        return permissionLevel;
+    }
 }

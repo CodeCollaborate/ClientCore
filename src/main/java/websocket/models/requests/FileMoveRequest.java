@@ -28,4 +28,12 @@ public class FileMoveRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Move", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getFileID() {
+        return fileID;
+    }
+
+    public String getNewPath() {
+        return newPath;
+    }
 }

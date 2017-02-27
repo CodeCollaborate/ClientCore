@@ -24,4 +24,8 @@ public class ProjectUnsubscribeRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Unsubscribe", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getProjectID() {
+        return projectID;
+    }
 }

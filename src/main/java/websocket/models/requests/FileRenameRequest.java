@@ -28,4 +28,12 @@ public class FileRenameRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Rename", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getFileID() {
+        return fileID;
+    }
+
+    public String getNewName() {
+        return newName;
+    }
 }

@@ -24,4 +24,8 @@ public class ProjectDeleteRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Delete", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getProjectID() {
+        return projectID;
+    }
 }

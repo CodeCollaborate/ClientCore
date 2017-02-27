@@ -28,4 +28,12 @@ public class ProjectRenameRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Rename", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public String getNewName() {
+        return newName;
+    }
 }

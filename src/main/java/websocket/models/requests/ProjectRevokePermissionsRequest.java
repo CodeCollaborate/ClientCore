@@ -28,4 +28,12 @@ public class ProjectRevokePermissionsRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "RevokePermissions", this, responseHandler, requestSendErrorHandler);
     }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public String getRevokeUsername() {
+        return revokeUsername;
+    }
 }

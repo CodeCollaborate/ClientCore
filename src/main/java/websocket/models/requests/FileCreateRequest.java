@@ -36,4 +36,20 @@ public class FileCreateRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Create", this, responseHandler, requestSendErrorHandler);
     }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getRelativePath() {
+        return relativePath;
+    }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public byte[] getFileBytes() {
+        return fileBytes;
+    }
 }

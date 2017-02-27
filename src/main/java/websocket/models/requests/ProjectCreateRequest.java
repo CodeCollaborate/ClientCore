@@ -24,4 +24,8 @@ public class ProjectCreateRequest implements IRequestData {
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Create", this, responseHandler, requestSendErrorHandler);
     }
+
+    public String getName() {
+        return name;
+    }
 }

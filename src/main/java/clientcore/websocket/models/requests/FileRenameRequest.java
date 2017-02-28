@@ -13,10 +13,10 @@ import clientcore.websocket.models.Request;
 public class FileRenameRequest implements IRequestData {
 
     @JsonProperty("FileID")
-    protected long fileID;
+    private long fileID;
 
     @JsonProperty("NewName")
-    protected String newName;
+    private String newName;
 
     public FileRenameRequest(long fileID, String newName) {
         this.fileID = fileID;
@@ -27,5 +27,13 @@ public class FileRenameRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Rename", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getFileID() {
+        return fileID;
+    }
+
+    public String getNewName() {
+        return newName;
     }
 }

@@ -9,9 +9,9 @@ import clientcore.websocket.models.Project;
  */
 public class UserProjectsResponse implements IResponseData {
     @JsonProperty("Projects")
-    protected Project[] projects;
+    public final Project[] projects;
 
-    public Project[] getProjects() {
-        return projects;
+    public UserProjectsResponse(@JsonProperty("Projects")Project[] projects) {
+        this.projects = projects;
     }
 }

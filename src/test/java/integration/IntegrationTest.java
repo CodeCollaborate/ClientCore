@@ -94,7 +94,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private static Map<Project, HashSet<WSManager>> projToWS = new HashMap<>();
 
     //    private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
-    private static BiMap<String, Byte> apiConstants;
+    private static Map<String, Byte> apiConstants;
 
     private Request req;
 
@@ -299,7 +299,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         req = new UserLoginRequest(userID, userPass).getRequest(response -> {
             Assert.assertEquals("Failed to log in user " + userID, 200, response.getStatus());
 
-            String senderToken = ((UserLoginResponse) response.getData()).getToken();
+            String senderToken = ((UserLoginResponse) response.getData()).token;
             wsMgr.setAuthInfo(userID, senderToken);
 
             waiter.release();
@@ -342,7 +342,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
 
         req = new ProjectGetPermissionConstantsRequest().getRequest(response -> {
             Assert.assertEquals("Failed to get permission clientcore.constants", 200, response.getStatus());
-            apiConstants = ((ProjectGetPermissionConstantsResponse) response.getData()).getConstants();
+            apiConstants = ((ProjectGetPermissionConstantsResponse) response.getData()).constants;
 
             waiter.release();
         }, errHandler);
@@ -387,11 +387,11 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         req = new UserLookupRequest(new String[]{userID}).getRequest(response -> {
             Assert.assertEquals("Failed to lookup user 2", 200, response.getStatus());
 
-            Assert.assertEquals("Incorrect number of users returned when looking up user 2", 1, ((UserLookupResponse) response.getData()).getUsers().length);
-            Assert.assertEquals("Incorrect first name returned when looking up user 2", userFirstName, ((UserLookupResponse) response.getData()).getUsers()[0].getFirstName());
-            Assert.assertEquals("Incorrect last name returned when looking up user 2", userLastName, ((UserLookupResponse) response.getData()).getUsers()[0].getLastName());
-            Assert.assertEquals("Incorrect email returned when looking up user 2", userEmail, ((UserLookupResponse) response.getData()).getUsers()[0].getEmail());
-            Assert.assertEquals("Incorrect username returned when looking up user 2", userID, ((UserLookupResponse) response.getData()).getUsers()[0].getUsername());
+            Assert.assertEquals("Incorrect number of users returned when looking up user 2", 1, ((UserLookupResponse) response.getData()).users.length);
+            Assert.assertEquals("Incorrect first name returned when looking up user 2", userFirstName, ((UserLookupResponse) response.getData()).users[0].getFirstName());
+            Assert.assertEquals("Incorrect last name returned when looking up user 2", userLastName, ((UserLookupResponse) response.getData()).users[0].getLastName());
+            Assert.assertEquals("Incorrect email returned when looking up user 2", userEmail, ((UserLookupResponse) response.getData()).users[0].getEmail());
+            Assert.assertEquals("Incorrect username returned when looking up user 2", userID, ((UserLookupResponse) response.getData()).users[0].getUsername());
 
             waiter.release();
         }, errHandler);
@@ -440,11 +440,11 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.assertEquals("Failed to lookup projects", 200, response.getStatus());
 
             if (proj.getProjectID() != -1) {
-                Assert.assertEquals("Incorrect number of projects returned when looking up projects", 1, ((UserProjectsResponse) response.getData()).getProjects().length);
-                Assert.assertEquals("Incorrect ProjectID returned when looking up projects", proj.getProjectID(), ((UserProjectsResponse) response.getData()).getProjects()[0].getProjectID());
-                Assert.assertEquals("Incorrect project name returned when looking up projects", proj.getName(), ((UserProjectsResponse) response.getData()).getProjects()[0].getName());
+                Assert.assertEquals("Incorrect number of projects returned when looking up projects", 1, ((UserProjectsResponse) response.getData()).projects.length);
+                Assert.assertEquals("Incorrect ProjectID returned when looking up projects", proj.getProjectID(), ((UserProjectsResponse) response.getData()).projects[0].getProjectID());
+                Assert.assertEquals("Incorrect project name returned when looking up projects", proj.getName(), ((UserProjectsResponse) response.getData()).projects[0].getName());
             } else {
-                Assert.assertEquals("Incorrect number of projects returned when looking up projects", 0, ((UserProjectsResponse) response.getData()).getProjects().length);
+                Assert.assertEquals("Incorrect number of projects returned when looking up projects", 0, ((UserProjectsResponse) response.getData()).projects.length);
             }
 
             waiter.release();
@@ -481,7 +481,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         req = new ProjectCreateRequest(proj.getName()).getRequest(response -> {
             Assert.assertEquals("Failed to create project", 200, response.getStatus());
 
-            proj.setProjectID(((ProjectCreateResponse) response.getData()).getProjectID());
+            proj.setProjectID(((ProjectCreateResponse) response.getData()).projectID);
 
             waiter.release();
         }, errHandler);
@@ -754,7 +754,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         req = new FileCreateRequest(file.getFilename(), file.getRelativePath().toString(), proj.getProjectID(), data.getBytes()).getRequest(response -> {
             Assert.assertEquals("Failed to create file", 200, response.getStatus());
 
-            file.setFileID(((FileCreateResponse) response.getData()).getFileID());
+            file.setFileID(((FileCreateResponse) response.getData()).fileID);
 
             responsewaiter.release(1 + expectNotification.length);
         }, errHandler);
@@ -896,8 +896,8 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         }
         req = new FilePullRequest(file1.getFileID()).getRequest(response -> {
             Assert.assertEquals("Failed to pull file", 200, response.getStatus());
-            Assert.assertArrayEquals("FilePullResponse gave wrong base file text for File1", fileData1.getBytes(), ((FilePullResponse) response.getData()).getFileBytes());
-            Assert.assertArrayEquals("FilePullResponse gave wrong changes for File1", changes1, ((FilePullResponse) response.getData()).getChanges());
+            Assert.assertArrayEquals("FilePullResponse gave wrong base file text for File1", fileData1.getBytes(), ((FilePullResponse) response.getData()).fileBytes);
+            Assert.assertArrayEquals("FilePullResponse gave wrong changes for File1", changes1, ((FilePullResponse) response.getData()).changes);
 
             waiter.release();
         }, errHandler);
@@ -913,8 +913,8 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         }
         req = new FilePullRequest(file2.getFileID()).getRequest(response -> {
             Assert.assertEquals("Failed to pull file", 200, response.getStatus());
-            Assert.assertArrayEquals("FilePullResponse gave wrong base file text for File2", fileData2.getBytes(), ((FilePullResponse) response.getData()).getFileBytes());
-            Assert.assertArrayEquals("FilePullResponse gave wrong changes for File2", changes2, ((FilePullResponse) response.getData()).getChanges());
+            Assert.assertArrayEquals("FilePullResponse gave wrong base file text for File2", fileData2.getBytes(), ((FilePullResponse) response.getData()).fileBytes);
+            Assert.assertArrayEquals("FilePullResponse gave wrong changes for File2", changes2, ((FilePullResponse) response.getData()).changes);
 
             waiter.release();
         }, errHandler);
@@ -1002,7 +1002,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         String[] changes = new String[]{generateDummyPatch(file.getFileVersion())};
         req = new FileChangeRequest(file.getFileID(), changes).getRequest(response -> {
             Assert.assertEquals("Failed to change File1", 200, response.getStatus());
-            Assert.assertEquals("FileChangeResponse gave wrong version for File1", file.getFileVersion() + 1, ((FileChangeResponse) response.getData()).getFileVersion());
+            Assert.assertEquals("FileChangeResponse gave wrong version for File1", file.getFileVersion() + 1, ((FileChangeResponse) response.getData()).fileVersion);
 
             waiter.release();
         }, errHandler);
@@ -1436,12 +1436,12 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         req = new ProjectLookupRequest(new Long[]{proj.getProjectID()}).getRequest(response -> {
             Assert.assertEquals("Failed to lookup project", 200, response.getStatus());
 
-            Assert.assertEquals("Incorrect number of projects returned", 1, ((ProjectLookupResponse) response.getData()).getProjects().length);
-            Assert.assertEquals("Incorrect ProjectID returned", proj.getProjectID(), ((ProjectLookupResponse) response.getData()).getProjects()[0].getProjectID());
-            Assert.assertEquals("Incorrect project name returned", proj.getName(), ((ProjectLookupResponse) response.getData()).getProjects()[0].getName());
-            Assert.assertEquals("Incorrect project permissions name for owner returned", ownerID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(ownerID).getUsername());
-            Assert.assertEquals("Incorrect project permissions level for owner returned", (int) permByte, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(ownerID).getPermissionLevel());
-            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", ownerID, ((ProjectLookupResponse) response.getData()).getProjects()[0].getPermissions().get(ownerID).getGrantedBy());
+            Assert.assertEquals("Incorrect number of projects returned", 1, ((ProjectLookupResponse) response.getData()).projects.length);
+            Assert.assertEquals("Incorrect ProjectID returned", proj.getProjectID(), ((ProjectLookupResponse) response.getData()).projects[0].getProjectID());
+            Assert.assertEquals("Incorrect project name returned", proj.getName(), ((ProjectLookupResponse) response.getData()).projects[0].getName());
+            Assert.assertEquals("Incorrect project permissions name for owner returned", ownerID, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID).getUsername());
+            Assert.assertEquals("Incorrect project permissions level for owner returned", (int) permByte, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID).getPermissionLevel());
+            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", ownerID, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID).getGrantedBy());
 
             waiter.release();
         }, errHandler);

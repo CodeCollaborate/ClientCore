@@ -13,10 +13,10 @@ import clientcore.websocket.models.Request;
 public class ProjectRenameRequest implements IRequestData {
 
     @JsonProperty("ProjectID")
-    protected long projectID;
+    private long projectID;
 
     @JsonProperty("NewName")
-    protected String newName;
+    private String newName;
 
     public ProjectRenameRequest(long projectID, String newName) {
         this.projectID = projectID;
@@ -27,5 +27,13 @@ public class ProjectRenameRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Rename", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public String getNewName() {
+        return newName;
     }
 }

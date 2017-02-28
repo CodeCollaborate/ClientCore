@@ -13,16 +13,16 @@ import clientcore.websocket.models.Request;
 public class FileCreateRequest implements IRequestData {
 
     @JsonProperty("Name")
-    protected String name;
+    private String name;
 
     @JsonProperty("RelativePath")
-    protected String relativePath;
+    private String relativePath;
 
     @JsonProperty("ProjectID")
-    protected long projectID;
+    private long projectID;
 
     @JsonProperty("FileBytes")
-    protected byte[] fileBytes;
+    private byte[] fileBytes;
 
     public FileCreateRequest(String name, String relativePath, long projectID, byte[] fileBytes) {
         this.name = name;
@@ -35,5 +35,21 @@ public class FileCreateRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Create", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getRelativePath() {
+        return relativePath;
+    }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public byte[] getFileBytes() {
+        return fileBytes;
     }
 }

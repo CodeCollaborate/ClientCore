@@ -1,5 +1,6 @@
 package clientcore.websocket.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,11 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class AbstractServerMessage {
-    protected final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = new ObjectMapper();
 
-    @JsonProperty("Data")
     protected JsonNode jsonData;
 
+    AbstractServerMessage(JsonNode jsonData){
+        this.jsonData = jsonData;
+    }
+
+    @JsonIgnore
     public JsonNode getJsonData() {
         return jsonData;
     }

@@ -10,10 +10,10 @@ import clientcore.websocket.models.Request;
 public class UserLoginRequest implements IRequestData {
 
     @JsonProperty("Username")
-    protected String username;
+    private String username;
 
     @JsonProperty("Password")
-    protected String password;
+    private String password;
 
     public UserLoginRequest(String username, String password) {
         this.username = username;
@@ -24,5 +24,13 @@ public class UserLoginRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("User", "Login", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
     }
 }

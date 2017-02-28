@@ -13,7 +13,7 @@ import clientcore.websocket.models.Request;
 public class FileDeleteRequest implements IRequestData {
 
     @JsonProperty("FileID")
-    protected long fileID;
+    private long fileID;
 
     public FileDeleteRequest(long fileID) {
         this.fileID = fileID;
@@ -23,5 +23,9 @@ public class FileDeleteRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Delete", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getFileID() {
+        return fileID;
     }
 }

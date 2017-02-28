@@ -16,7 +16,7 @@ import java.util.List;
 public class UserLookupRequest implements IRequestData {
 
     @JsonProperty("Usernames")
-    protected List<String> usernames;
+    private List<String> usernames;
 
     public UserLookupRequest(List<String> usernames) {
         this.usernames = usernames;
@@ -30,5 +30,9 @@ public class UserLookupRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("User", "Lookup", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public List<String> getUsernames() {
+        return usernames;
     }
 }

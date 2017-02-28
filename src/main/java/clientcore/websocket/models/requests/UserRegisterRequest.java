@@ -11,19 +11,19 @@ import clientcore.websocket.models.Request;
 public class UserRegisterRequest implements IRequestData {
 
     @JsonProperty("Username")
-    protected String username;
+    private String username;
 
     @JsonProperty("FirstName")
-    protected String firstName;
+    private String firstName;
 
     @JsonProperty("LastName")
-    protected String lastName;
+    private String lastName;
 
     @JsonProperty("Email")
-    protected String email;
+    private String email;
 
     @JsonProperty("Password")
-    protected String password;
+    private String password;
 
     public UserRegisterRequest(String username, String firstName, String lastName, String email, String password) {
         this.username = username;
@@ -37,5 +37,25 @@ public class UserRegisterRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("User", "Register", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
     }
 }

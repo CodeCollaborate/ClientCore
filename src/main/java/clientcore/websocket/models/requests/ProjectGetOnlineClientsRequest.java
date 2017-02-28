@@ -13,7 +13,7 @@ import clientcore.websocket.models.Request;
 public class ProjectGetOnlineClientsRequest implements IRequestData {
 
     @JsonProperty("ProjectID")
-    protected long projectID;
+    private long projectID;
 
     public ProjectGetOnlineClientsRequest(long projectID) {
         this.projectID = projectID;
@@ -23,5 +23,9 @@ public class ProjectGetOnlineClientsRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "GetOnlineClients", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getProjectID() {
+        return projectID;
     }
 }

@@ -24,7 +24,7 @@ public class UserBasedIntegrationTest {
 
         wsMgr.sendRequest(new UserLoginRequest(userID, userPass).getRequest(response -> {
             if (response.getStatus() == 200) {
-                String senderToken = ((UserLoginResponse) response.getData()).getToken();
+                String senderToken = ((UserLoginResponse) response.getData()).token;
                 wsMgr.setAuthInfo(userID, senderToken);
 
                 wsMgr.sendRequest(new UserDeleteRequest().getRequest(null, null));

@@ -10,10 +10,10 @@ import clientcore.websocket.models.Request;
 public class FileChangeRequest implements IRequestData {
 
     @JsonProperty("FileID")
-    protected long fileID;
+    private long fileID;
 
     @JsonProperty("Changes")
-    protected String[] changes;
+    private String[] changes;
 
     public FileChangeRequest(long fileID, String[] changes) {
         this.fileID = fileID;

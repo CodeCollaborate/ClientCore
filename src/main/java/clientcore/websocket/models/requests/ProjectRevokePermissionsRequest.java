@@ -13,10 +13,10 @@ import clientcore.websocket.models.Request;
 public class ProjectRevokePermissionsRequest implements IRequestData {
 
     @JsonProperty("ProjectID")
-    protected long projectID;
+    private long projectID;
 
     @JsonProperty("RevokeUsername")
-    protected String revokeUsername;
+    private String revokeUsername;
 
     public ProjectRevokePermissionsRequest(long projectID, String revokeUsername) {
         this.projectID = projectID;
@@ -27,5 +27,13 @@ public class ProjectRevokePermissionsRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "RevokePermissions", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getProjectID() {
+        return projectID;
+    }
+
+    public String getRevokeUsername() {
+        return revokeUsername;
     }
 }

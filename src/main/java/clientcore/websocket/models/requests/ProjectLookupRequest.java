@@ -16,7 +16,7 @@ import java.util.List;
 public class ProjectLookupRequest implements IRequestData {
 
     @JsonProperty("ProjectIDs")
-    protected List<Long> projectIDs;
+    private List<Long> projectIDs;
 
     public ProjectLookupRequest(List<Long> projectIDs) {
         this.projectIDs = projectIDs;
@@ -30,5 +30,9 @@ public class ProjectLookupRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Lookup", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public List<Long> getProjectIDs() {
+        return projectIDs;
     }
 }

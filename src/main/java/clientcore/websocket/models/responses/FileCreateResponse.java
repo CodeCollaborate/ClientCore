@@ -8,9 +8,9 @@ import clientcore.websocket.models.IResponseData;
  */
 public class FileCreateResponse implements IResponseData{
     @JsonProperty("FileID")
-    protected int fileID;
+    public final int fileID;
 
-    public int getFileID() {
-        return fileID;
+    public FileCreateResponse(@JsonProperty("FileID") int fileID) {
+        this.fileID = fileID;
     }
 }

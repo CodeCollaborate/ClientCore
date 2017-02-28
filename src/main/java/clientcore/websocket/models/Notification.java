@@ -1,25 +1,50 @@
 package clientcore.websocket.models;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Created by fahslaj on 4/14/2016.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Notification extends AbstractServerMessage {
-
     @JsonProperty("Resource")
-    protected String resource;
+    private String resource;
 
     @JsonProperty("Method")
-    protected String method;
+    private String method;
 
     @JsonProperty("ResourceID")
-    protected long resourceID;
+    private long resourceID;
 
+    @JsonProperty("Data")
     protected INotificationData data;
+
+    @JsonCreator
+    public Notification(@JsonProperty("Resource") String resource,
+                        @JsonProperty("Method") String method,
+                        @JsonProperty("ResourceID") int resourceID,
+                        @JsonProperty("Data") JsonNode jsonData){
+        super(jsonData);
+        this.resource = resource;
+        this.method = method;
+        this.resourceID = resourceID;
+    }
+
+    public Notification(String resource,
+                        String method,
+                        int resourceID,
+                        INotificationData data){
+        super(null);
+        this.resource = resource;
+        this.method = method;
+        this.resourceID = resourceID;
+        this.data = data;
+    }
+
 
     public void parseData() throws JsonProcessingException, ClassNotFoundException {
         Class<? extends INotificationData> type;

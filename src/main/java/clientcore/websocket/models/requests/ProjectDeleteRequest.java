@@ -13,7 +13,7 @@ import clientcore.websocket.models.Request;
 public class ProjectDeleteRequest implements IRequestData {
 
     @JsonProperty("ProjectID")
-    protected long projectID;
+    private long projectID;
 
     public ProjectDeleteRequest(long projectID) {
         this.projectID = projectID;
@@ -23,5 +23,9 @@ public class ProjectDeleteRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Delete", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getProjectID() {
+        return projectID;
     }
 }

@@ -13,7 +13,7 @@ import clientcore.websocket.models.Request;
 public class ProjectCreateRequest implements IRequestData {
 
     @JsonProperty("Name")
-    protected String name;
+    private String name;
 
     public ProjectCreateRequest(String name) {
         this.name = name;
@@ -23,5 +23,9 @@ public class ProjectCreateRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("Project", "Create", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public String getName() {
+        return name;
     }
 }

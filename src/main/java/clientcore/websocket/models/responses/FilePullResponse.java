@@ -8,16 +8,14 @@ import clientcore.websocket.models.IResponseData;
  */
 public class FilePullResponse implements IResponseData {
     @JsonProperty("FileBytes")
-    protected byte[] fileBytes;
+    public final byte[] fileBytes;
 
     @JsonProperty("Changes")
-    protected String[] changes;
+    public final String[] changes;
 
-    public byte[] getFileBytes() {
-        return fileBytes;
-    }
-
-    public String[] getChanges() {
-        return changes;
+    public FilePullResponse(@JsonProperty("FileBytes") byte[] fileBytes,
+                            @JsonProperty("Changes") String[] changes) {
+        this.fileBytes = fileBytes;
+        this.changes = changes;
     }
 }

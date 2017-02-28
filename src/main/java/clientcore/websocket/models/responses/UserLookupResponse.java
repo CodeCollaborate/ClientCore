@@ -9,9 +9,9 @@ import clientcore.websocket.models.User;
  */
 public class UserLookupResponse implements IResponseData {
     @JsonProperty("Users")
-    protected User[] users;
+    public final User[] users;
 
-    public User[] getUsers() {
-        return users;
+    public UserLookupResponse(@JsonProperty("Users") User[] users) {
+        this.users = users;
     }
 }

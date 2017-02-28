@@ -5,9 +5,9 @@ import clientcore.websocket.models.IResponseData;
 
 public class UserLoginResponse implements IResponseData {
     @JsonProperty("Token")
-    protected String token;
+    public final String token;
 
-    public String getToken() {
-        return token;
+    public UserLoginResponse(@JsonProperty("Token") String token) {
+        this.token = token;
     }
 }

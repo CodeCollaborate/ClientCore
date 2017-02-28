@@ -193,16 +193,16 @@ public class PatchManager implements INotificationHandler {
                             }
 
                             // Add server-acknowledged patches to doneQueue
-                            for (String change : ((FileChangeResponse) response.getData()).getChanges()) {
+                            for (String change : ((FileChangeResponse) response.getData()).changes) {
                                 batchingCtrl.patchDoneQueue.add(new Patch(change));
                             }
                             logger.debug(String.format("PatchManager: patch queue is currently %s, patch done queue is currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
                         }
 
                         // Save missing patches & maxVersionSeen
-                        if (((FileChangeResponse) response.getData()).getMissingPatches() != null) {
-                            batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).getMissingPatches();
-                            batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).getFileVersion();
+                        if (((FileChangeResponse) response.getData()).missingPatches != null) {
+                            batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).missingPatches;
+                            batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).fileVersion;
                         }
 
                         // Fire actual response handler

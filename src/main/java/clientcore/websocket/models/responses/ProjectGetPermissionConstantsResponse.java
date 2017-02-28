@@ -12,9 +12,9 @@ import java.util.Map;
  */
 public class ProjectGetPermissionConstantsResponse implements IResponseData {
     @JsonProperty("Constants")
-    protected Map<String, Byte> constants;
+    public final Map<String, Byte> constants;
 
-    public BiMap<String, Byte> getConstants() {
-        return HashBiMap.create(constants);
+    public ProjectGetPermissionConstantsResponse(@JsonProperty("Constants") Map<String, Byte> constants) {
+        this.constants = constants;
     }
 }

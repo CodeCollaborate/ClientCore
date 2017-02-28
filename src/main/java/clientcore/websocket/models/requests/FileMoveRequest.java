@@ -13,10 +13,10 @@ import clientcore.websocket.models.Request;
 public class FileMoveRequest implements IRequestData {
 
     @JsonProperty("FileID")
-    protected long fileID;
+    private long fileID;
 
     @JsonProperty("NewPath")
-    protected String newPath;
+    private String newPath;
 
     public FileMoveRequest(long fileID, String newPath) {
         this.fileID = fileID;
@@ -27,5 +27,13 @@ public class FileMoveRequest implements IRequestData {
     @Override
     public Request getRequest(IResponseHandler responseHandler, IRequestSendErrorHandler requestSendErrorHandler) {
         return new Request("File", "Move", this, responseHandler, requestSendErrorHandler);
+    }
+
+    public long getFileID() {
+        return fileID;
+    }
+
+    public String getNewPath() {
+        return newPath;
     }
 }

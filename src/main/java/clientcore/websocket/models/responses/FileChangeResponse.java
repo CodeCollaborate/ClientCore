@@ -8,23 +8,19 @@ import clientcore.websocket.models.IResponseData;
  */
 public class FileChangeResponse implements IResponseData {
     @JsonProperty("FileVersion")
-    protected int fileVersion;
+    public final int fileVersion;
 
     @JsonProperty("Changes")
-    protected String[] changes;
+    public final String[] changes;
 
     @JsonProperty("MissingPatches")
-    protected String[] missingPatches;
+    public final String[] missingPatches;
 
-    public int getFileVersion() {
-        return fileVersion;
-    }
-
-    public String[] getChanges() {
-        return changes;
-    }
-
-    public String[] getMissingPatches() {
-        return missingPatches;
+    public FileChangeResponse(@JsonProperty("FileVersion") int fileVersion,
+                              @JsonProperty("Changes") String[] changes,
+                              @JsonProperty("MissingPatches") String[] missingPatches) {
+        this.fileVersion = fileVersion;
+        this.changes = changes;
+        this.missingPatches = missingPatches;
     }
 }

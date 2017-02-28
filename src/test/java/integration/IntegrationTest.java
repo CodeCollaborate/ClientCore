@@ -535,7 +535,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
                 // Disabled until mysql os-filepath fix implemented in server
 //                Assert.assertEquals("Incorrect file path returned for file at index 0", filePath, ((ProjectGetFilesResponse) response.getData()).files[0].getPermissions());
                 Assert.assertEquals("Incorrect file version returned for Proj, file at index 0", file.getFileVersion(), ((ProjectGetFilesResponse) response.getData()).files[0].getFileVersion());
-                Assert.assertEquals("Incorrect file location returned for Proj, file at index 0", file.getRelativePath(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().toString().replace('\\', '/'));
+                Assert.assertEquals("Incorrect file location returned for Proj, file at index 0", file.getRelativePath().toString(), ((ProjectGetFilesResponse) response.getData()).files[0].getRelativePath().toString().replace('\\', '/'));
             } else {
                 Assert.assertEquals("Incorrect number of files returned for Proj", 0, ((ProjectGetFilesResponse) response.getData()).files.length);
             }

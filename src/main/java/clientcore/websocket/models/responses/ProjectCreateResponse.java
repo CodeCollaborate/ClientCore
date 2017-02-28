@@ -8,9 +8,9 @@ import clientcore.websocket.models.IResponseData;
  */
 public class ProjectCreateResponse implements IResponseData{
     @JsonProperty("ProjectID")
-    public final int projectID;
+    public final long projectID;
 
-    public ProjectCreateResponse(@JsonProperty("ProjectID") int projectID) {
+    public ProjectCreateResponse(@JsonProperty("ProjectID") long projectID) {
         this.projectID = projectID;
     }
 }

@@ -260,7 +260,7 @@ public class SessionStorage {
 	public void setFile(long projectID, File f) {
 		synchronized (FILE_LIST) {
 			f.setProjectID(projectID);
-			Project p = projects.get(projectPathToID);
+			Project p = projects.get(projectID);
 			p.addFile(f);
 		}
 	}

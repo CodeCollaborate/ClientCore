@@ -6,6 +6,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,8 +70,8 @@ public class Project {
 		this.permissions = permissions;
 	}
 
-	public List<File> getFiles() {
-		return (List<File>) files.values();
+	public Collection<File> getFiles() {
+		return files.values();
 	}
 
 	public void setFiles(List<File> files) {

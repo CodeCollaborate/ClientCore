@@ -285,14 +285,15 @@ public class SessionStorage {
 	/**
 	 * Looks through all projects for the file that matches the given file ID
 	 * and returns it if found. If not found, null is returned.
-	 * 
+	 *
+	 * TODO: Evaluate this for performance; do we want to maintain an index?
+	 *
 	 * @return The removed file
 	 */
 	public File getFile(long fileID) {
 		for (Project p : projects.values()) {
-			File f = p.getFile(fileID);
-			if (f != null) {
-				return f;
+			if (p.hasFile(fileID)) {
+				return p.getFile(fileID);
 			}
 		}
 		return null;

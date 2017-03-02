@@ -82,9 +82,9 @@ public class FileController {
 	 *            The new absolute path the file after renaming it
 	 */
 	public void renameFile(long fileID, long projectID, String newName, Path newAbsolutePath) {
-		File f = ss.getProject(projectID).getFile(fileID);
-		f.setFilename(newName);
-		ss.changeProjectPath(projectID, newAbsolutePath);
+		Project p = ss.getProject(projectID);
+		p.changeFilePath(fileID, newAbsolutePath);
+		p.getFile(fileID).setFilename(newName);
 	}
 
 }

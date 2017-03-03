@@ -288,7 +288,7 @@ public class SessionStorage {
 	 *
 	 * TODO: Evaluate this for performance; do we want to maintain an index?
 	 *
-	 * @return The removed file
+	 * @return The file with the given ID, if any. Null otherwise
 	 */
 	public File getFile(long fileID) {
 		for (Project p : projects.values()) {

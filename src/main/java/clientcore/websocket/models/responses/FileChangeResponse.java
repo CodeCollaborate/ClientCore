@@ -8,7 +8,7 @@ import clientcore.websocket.models.IResponseData;
  */
 public class FileChangeResponse implements IResponseData {
     @JsonProperty("FileVersion")
-    public final int fileVersion;
+    public final long fileVersion;
 
     @JsonProperty("Changes")
     public final String[] changes;

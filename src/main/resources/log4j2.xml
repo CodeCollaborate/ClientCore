@@ -6,7 +6,7 @@
 			<PatternLayout
 				pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
 		</Console>
-		<RollingFile name="RollingFile" fileName="${sys:logPath}/CC-LOG.log"
+		<!--<RollingFile name="RollingFile" fileName="${sys:logPath}/CC-LOG.log"
 			filePattern="${sys:logPath}/CC-LOG-%d{yyyy-MM-dd}-%i.log"
 			ImmediateFlush="true" AppendToFile="true">
 			<PatternLayout
@@ -15,12 +15,12 @@
 				<SizeBasedTriggeringPolicy size="1 MB" />
 			</Policies>
 			<DefaultRolloverStrategy max="4" />
-		</RollingFile>
+		</RollingFile>-->
 	</Appenders>
 	<Loggers>
 		<Root level="all">
 			<AppenderRef ref="STDOUT" />
-			<AppenderRef ref="RollingFile" />
+			<!-- <AppenderRef ref="RollingFile" /> -->
 		</Root>
 	</Loggers>
 </Configuration>

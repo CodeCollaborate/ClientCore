@@ -156,59 +156,6 @@ public class TestPatchManager {
         if (!sem.tryAcquire(10, TimeUnit.SECONDS)) {
             Assert.fail("Failed to acquire sem");
         }
-
-        // Send response to first file change request
-        verify(fakeWSMgr, atLeastOnce()).sendAuthenticatedRequest(argumentCaptor.capture());
-        Request req = argumentCaptor.getValue();
-        req.getResponseHandler().handleResponse(new Response(1, 200, new FileChangeResponse(1, Arrays.copyOfRange(patches, 2, 3), new String[]{})));
-
-        // Expect that patch 1 will be transformed against 2, since 2 is in the done queue, but of a higher version.
-        patchMgr.setNotifHandler((notification, expectedModificationStamp) -> {
-            Patch transformedPatch = new Patch(patches[2]);
-            Patch queuedPatch = new Patch(patches[2]);
-            transformedPatch = transformedPatch.transform(true, queuedPatch);
-
-            Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
-            Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);
-
-            sem.release();
-
-            return 1L;
-        });
-
-        // Generate and send notification
-        notif = mapper.readValue(
-                String.format(patchStrFormat, 0, 1, mapper.writeValueAsString(Arrays.copyOfRange(patches, 2, 3))),
-                Notification.class);
-        notif.parseData();
-        patchMgr.handleNotification(notif);
-
-        if (!sem.tryAcquire(10, TimeUnit.SECONDS)) {
-            Assert.fail("Failed to acquire sem");
-        }
-
-        // Expect that patch 3 will not be transformed against 2, since 2 is in the done queue, but of a lower version.
-        patchMgr.setNotifHandler((notification, expectedModificationStamp) -> {
-            Patch transformedPatch = new Patch(patches[3]);
-
-            Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
-            Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);
-
-            sem.release();
-
-            return 1L;
-        });
-
-        // Generate and send notification
-        notif = mapper.readValue(
-                String.format(patchStrFormat, 0, 1, mapper.writeValueAsString(Arrays.copyOfRange(patches, 3, 4))),
-                Notification.class);
-        notif.parseData();
-        patchMgr.handleNotification(notif);
-
-        if (!sem.tryAcquire(10, TimeUnit.SECONDS)) {
-            Assert.fail("Failed to acquire sem");
-        }
     }
 
 //    @Test
@@ -299,15 +246,12 @@ public class TestPatchManager {
                 "v1:\n2:+5:test2:\n20",
                 "v2:\n3:+5:test3:\n25",
                 "v2:\n4:+5:test4:\n30",
-                "v2:\n5:+5:test5:\n35",
-                "v2:\n10:+6:test10:\n40",
-                "v4:\n15:+6:test15:\n46",
-                "v4:\n20:+6:test16:\n52",
+                "v2:\n5:+6:test15:\n35",
         };
 
         Request[] req = new Request[1];
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
-        Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
+        Thread.sleep(500); // Wait for transformAndSendPatch thread to spool up
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v0:\\n0:+5:test0:\\n10\"]")));
 
         Response resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
@@ -319,7 +263,7 @@ public class TestPatchManager {
 
         // Send 2 patches in same request
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[1]), new Patch(patches[2])}, null, null);
-        Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
+        Thread.sleep(500); // Wait for transformAndSendPatch thread to spool up
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v1:\\n1:+10:ttest2est1:\\n15\"]")));
 
 
@@ -335,37 +279,10 @@ public class TestPatchManager {
         req[0].getResponseHandler().handleResponse(resp);
 
         Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v2:\\n3:+5:test3\",\"v2:\\n4:+5:test4\"]")));
-
-        resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
-                0, 200, 3, "[]", "[\"v2:\\n3:+5:test3\",\"v2:\\n4:+5:test4\"]"),
-                Response.class
-        );
-        resp.parseData(FileChangeRequest.class);
-        req[0].getResponseHandler().handleResponse(resp);
-
-        // Test sending a patch for a version that is "out of date"
-        // Use prevTag + 1; since the previous one was generated after the response came back
-        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[5])}, null, null);
-
-        Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v3:\\n5:+5:test5\"]")));
-
-        // Test sending two patches; one for a version that is out of date, the other with a version greater than the last response
-        resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
-                0, 200, 4, "[\"v2:\\n0:+5:test0\",\"v2:\\n1:+5:test1\"]", "[\"v3:\\n15:+5:test5\"]"),
-                Response.class
-        );
-        resp.parseData(FileChangeRequest.class);
-        req[0].getResponseHandler().handleResponse(resp);
-
-        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[6]), new Patch(patches[7])}, null, null);
-
-        Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v4:\\n20:+6:test10\",\"v4:\\n15:+6:test15\"]")));
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v2:\\n3:+10:ttest4est3:\\n25\"]")));
 
         // Test the auto-release after timeout
-        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[8])}, null, null);
+        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[5])}, null, null);
 
         try {
             Thread.sleep(PATCH_TIMEOUT_MILLIS + 500);
@@ -374,7 +291,7 @@ public class TestPatchManager {
         }
 
         Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v4:\\n20:+6:test10\",\"v4:\\n15:+6:test15\",\"v4:\\n20:+6:test16\"]")));
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v2:\\n3:+16:tttest15est4est3:\\n25\"]")));
 
         try {
             Thread.sleep(1000);
@@ -387,7 +304,7 @@ public class TestPatchManager {
         return new ArgumentMatcher<Request>() {
             @Override
             public boolean matches(Request argument) {
-                req[0] = (Request) argument;
+                req[0] = argument;
                 try {
                     System.out.println(mapper.writeValueAsString(argument));
                     return mapper.writeValueAsString(argument).contains(str);

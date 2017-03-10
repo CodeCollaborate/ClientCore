@@ -23,7 +23,7 @@ public class Consolidator {
             final int[] indexAArr = {-1};
             final int[] indexBArr = {-1};
             final ArrayList<Diff> resultDiffs = new ArrayList<>();
-            int currIndex = 0;
+            final int[] currIndex = {0};
 
             NextDiffResult ndResultA = getNextDiff(patchA, indexAArr[0], false);
             NextDiffResult ndResultB = getNextDiff(patchB, indexBArr[0], false);
@@ -35,24 +35,23 @@ public class Consolidator {
 
             Patch finalPatchA = patchA;
             NextDiffLambda getNextDiffA = () -> {
-                NextDiffResult ndResult = getNextDiff(finalPatchA, indexAArr[0], false);
+                NextDiffResult ndResult = getNextDiff(finalPatchA, indexAArr[0], isNoOp(diffAArr[0]));
 
                 diffAArr[0] = ndResult.diff;
                 indexAArr[0] = ndResult.index;
             };
             NextDiffLambda getNextDiffB = () -> {
-                NextDiffResult ndResult = getNextDiff(patchB, indexAArr[0], false);
+                NextDiffResult ndResult = getNextDiff(patchB, indexBArr[0], isNoOp(diffBArr[0]));
 
                 diffBArr[0] = ndResult.diff;
                 indexBArr[0] = ndResult.index;
             };
 
-            int finalCurrIndex = currIndex;
             Committer committer = (Diff diff, int numChars) -> {
                 if (numChars == -1) {
-                    resultDiffs.add(new Diff(diff.isInsertion(), finalCurrIndex, diff.getChanges()));
+                    resultDiffs.add(new Diff(diff.isInsertion(), currIndex[0], diff.getChanges()));
                 } else {
-                    resultDiffs.add(new Diff(diff.isInsertion(), finalCurrIndex, diff.getChanges().substring(0, numChars)));
+                    resultDiffs.add(new Diff(diff.isInsertion(), currIndex[0], diff.getChanges().substring(0, numChars)));
                 }
             };
 
@@ -73,7 +72,7 @@ public class Consolidator {
 
                 if (!diffAArr[0].isInsertion() && !isNoOp(diffAArr[0])) {
                     committer.commit(diffAArr[0], -1);
-                    currIndex += lenA;
+                    currIndex[0] += lenA;
                     getNextDiffA.next();
                 } else if (diffBArr[0].isInsertion() && !isNoOp(diffBArr[0])) {
                     committer.commit(diffBArr[0], -1);
@@ -91,19 +90,19 @@ public class Consolidator {
                     } else if (isNoOp(diffAArr[0]) && !isNoOp(diffBArr[0]) && !diffBArr[0].isInsertion()) {
                         if (lenA < lenB) {
                             committer.commit(diffBArr[0], lenA);
-                            currIndex += lenA;
+                            currIndex[0] += lenA;
                         } else if (lenA == lenB) {
                             committer.commit(diffBArr[0], -1);
-                            currIndex += lenA;
+                            currIndex[0] += lenA;
                         } else {
                             committer.commit(diffBArr[0], -1);
-                            currIndex += lenB;
+                            currIndex[0] += lenB;
                         }
                     } else if (isNoOp(diffAArr[0]) && isNoOp(diffBArr[0])) {
                         if (lenA < lenB || lenA == lenB) {
-                            currIndex += lenA;
+                            currIndex[0] += lenA;
                         } else {
-                            currIndex += lenB;
+                            currIndex[0] += lenB;
                         }
                     }
 
@@ -140,17 +139,17 @@ public class Consolidator {
         void commit(Diff diff, int numChars);
     }
 
-    private static class NextDiffResult{
-        private Diff diff;
-        private int index;
+    static class NextDiffResult{
+        Diff diff;
+        int index;
 
-        public NextDiffResult(Diff diff, int index) {
+        NextDiffResult(Diff diff, int index) {
             this.diff = diff;
             this.index = index;
         }
     }
 
-    private static NextDiffResult getNextDiff(Patch patch, int currIndex, boolean wasNoOp){
+    static NextDiffResult getNextDiff(Patch patch, int currIndex, boolean wasNoOp){
         if (currIndex == -1){
             if (!wasNoOp) {
                 return new NextDiffResult(new Diff(true, 0, ""), -1);
@@ -193,11 +192,11 @@ public class Consolidator {
         return new NextDiffResult(new Diff(true, currDiff.getStartIndex()+currDiff.getLength(), ""), currIndex);
     }
 
-    private static boolean isNoOp(Diff diff){
+    static boolean isNoOp(Diff diff){
         return diff.getLength() == 0;
     }
 
-    private static int noOpLength(Diff diff, Patch patch, int currIndex){
+    static int noOpLength(Diff diff, Patch patch, int currIndex){
         if (currIndex + 1 >= patch.getDiffs().size()){
             return patch.getDocLength() - diff.getStartIndex() + 1;
         }

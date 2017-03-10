@@ -9,10 +9,17 @@ import java.util.List;
  */
 
 public class Patch {
-
     private long baseVersion;
     private List<Diff> diffs;
     private final int docLength;
+
+    public static Patch[] getPatches(String[] patchStrs){
+        Patch[] patches = new Patch[patchStrs.length];
+        for(int i = 0; i < patchStrs.length; i++){
+            patches[i] = new Patch(patchStrs[i]);
+        }
+        return patches;
+    }
 
     public Patch(long baseVersion, List<Diff> diffs, int docLength) {
         this.baseVersion = baseVersion;

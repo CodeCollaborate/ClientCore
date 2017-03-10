@@ -1,17 +1,14 @@
 package clientcore.patching;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import clientcore.websocket.INotificationHandler;
-import clientcore.websocket.IRequestSendErrorHandler;
-import clientcore.websocket.IResponseHandler;
-import clientcore.websocket.WSManager;
 import clientcore.websocket.*;
+import clientcore.websocket.models.File;
 import clientcore.websocket.models.Notification;
 import clientcore.websocket.models.Request;
 import clientcore.websocket.models.notifications.FileChangeNotification;
 import clientcore.websocket.models.requests.FileChangeRequest;
 import clientcore.websocket.models.responses.FileChangeResponse;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -68,7 +65,7 @@ public class PatchManager implements INotificationHandler {
                 if (!batchingByFile.containsKey(fileID)) {
                     BatchingControl batchingControl = new BatchingControl();
                     batchingByFile.put(fileID, batchingControl);
-                    batchingControl.maxVersionSeen = -1;
+                    batchingControl.currDocumentVersion = -1;
                 }
             }
         }
@@ -95,7 +92,7 @@ public class PatchManager implements INotificationHandler {
 
         // Run the transformAndSendPatch on a new thread to make sure the UI thread doesn't get blocked.
         new Thread(() -> {
-            Thread.currentThread().setName("TransformAndSendPatch");
+            Thread.currentThread().setName("TransformAndSendPatch-" + System.currentTimeMillis());
             transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
         }).start();
     }
@@ -123,17 +120,13 @@ public class PatchManager implements INotificationHandler {
 
         // Get a snapshot of the current list of patches, allowing other threads to add without blocking
         Patch[] patches;
-        String[] patchStrings;
-        synchronized (batchingCtrl.patchBatchingQueue) {
-            // Add all in pre-queue before taking snapshot
-            synchronized (batchingCtrl.patchBatchingPreQueue) {
-                batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
-                batchingCtrl.patchBatchingPreQueue.clear();
-            }
-            patches = batchingCtrl.patchBatchingQueue.toArray(new Patch[batchingCtrl.patchBatchingQueue.size()]);
-            patchStrings = new String[batchingCtrl.patchBatchingQueue.size()];
-            logger.debug(String.format("PatchManager: Sending patches %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
+        // Add all in pre-queue before taking snapshot
+        synchronized (batchingCtrl.patchBatchingPreQueue) {
+            batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
+            batchingCtrl.patchBatchingPreQueue.clear();
         }
+        patches = batchingCtrl.patchBatchingQueue.toArray(new Patch[batchingCtrl.patchBatchingQueue.size()]);
+        logger.debug(String.format("PatchManager: Sending patches %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n") + "\n");
 
         // If no patches found, exit after unlocking semaphores and locks
         if (patches.length == 0) {
@@ -142,69 +135,125 @@ public class PatchManager implements INotificationHandler {
             return;
         }
 
-        // Transform patches against missing patches before sending
-        String[] missingPatches = batchingCtrl.lastResponsePatches.clone(); // clone to make sure that we don't overwrite if this request fails.
-        for (int i = 0; i < patches.length; i++) {
-            // Keep track of highest missing patch base version, in order to set it at the end.
-            long maxMissingPatchBaseVersion = -1;
-
-            for (int j = 0; j < missingPatches.length; j++) {
-                Patch missingPatch = new Patch(missingPatches[j]);
-
-                // If the new patch's base version is earlier or equal, we need to update it.
-                // If the base versions are the same, the new patch takes precedence, inserting BEFORE the server patch
-                // as needed.
-                if (patches[i].getBaseVersion() <= missingPatch.getBaseVersion()) {
-                    logger.debug(String.format("PatchManager: Transforming %s against missing patch %s", patches[i].toString(), missingPatch).replace("\n", "\\n") + "\n");
-
-                    // Transform outgoing patch against missing patches
-                    long patchBaseVersion = patches[i].getBaseVersion();
-                    patches[i] = patches[i].transform(false, missingPatch);
-                    patches[i].setBaseVersion(patchBaseVersion);
-
-                    maxMissingPatchBaseVersion = Math.max(maxMissingPatchBaseVersion, missingPatch.getBaseVersion());
-
-                    // Transform missingPatch against new patch, so blocks stay together
-                    // New patch has precedence, and inserts in it's designated place, shifting the server patch back.
-                    long missingPatchBaseVersion = missingPatch.getBaseVersion();
-                    missingPatch = missingPatch.transform(true, patches[i]);
-                    missingPatch.setBaseVersion(missingPatchBaseVersion);
-                    missingPatches[j] = missingPatch.toString();
-                }
+        // TODO: Remove this once debugging is done
+        long baseVersion = patches[0].getBaseVersion();
+        for(Patch patch : patches){
+            if (patch.getBaseVersion() != baseVersion){
+                logger.fatal(String.format("PatchManager-Sending: Patch base versions were not all the same: %s", Arrays.toString(patches)));
+                break;
             }
-            // Set baseVersion as the max of the original patch version, the highest response version, or the version generated by the latest missing patch
-            patches[i].setBaseVersion(Math.max(batchingCtrl.maxVersionSeen, Math.max(patches[i].getBaseVersion(), maxMissingPatchBaseVersion + 1)));
-
-            patchStrings[i] = patches[i].toString();
         }
 
-        // Save response data, and fire off the actual responseHandler
+        // Send patches
+        // > Consolidate patches
+        Patch consolidatedPatch = Consolidator.consolidatePatches(patches);
+
+        // > Send (No need to transform, since we assume it has been done by either the response handler, or the notification handler
         Semaphore requestInFlightSem = new Semaphore(0);
-        Request req = new FileChangeRequest(fileID, patchStrings).getRequest(
+        Request req = new FileChangeRequest(fileID, new String[]{consolidatedPatch.toString()}).getRequest(
                 response -> {
                     if (response.getStatus() == 200) {
                         synchronized (batchingCtrl.patchBatchingQueue) {
                             logger.debug(String.format("PatchManager: Removing patches %s; patch queue is currently %s", batchingCtrl.patchBatchingQueue.subList(0, patches.length), batchingCtrl.patchBatchingQueue).replace("\n", "\\n"));
-                            logger.debug(String.format("PatchManager: Removing patches %s; patch done queue is currently %s", batchingCtrl.patchBatchingQueue.subList(0, patches.length), batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
 
-                            // Remove the sent patches
-                            for (int i = 0; i < patches.length; i++) {
+                            if (((FileChangeResponse) response.getData()).changes.length > 1){
+                                logger.error(String.format("PatchManager: Patch had more than 1 change: %s", Arrays.toString(((FileChangeResponse) response.getData()).changes)));
+                            }
+
+                            // Remove the sent patches (Should only have 1, if consolidation works)
+                            for(int i = 0; i < patches.length; i++){
                                 batchingCtrl.patchBatchingQueue.remove(0);
                             }
 
-                            // Add server-acknowledged patches to doneQueue
-                            for (String change : ((FileChangeResponse) response.getData()).changes) {
-                                batchingCtrl.patchDoneQueue.add(new Patch(change));
+                            // TODO: Evaluate if this is still necessary - might be able to be deleted.
+//                            // Add server-acknowledged patches to doneQueue (Should only have 1, if consolidation works)
+//                            batchingCtrl.patchDoneQueue.add(new Patch(((FileChangeResponse) response.getData()).changes[0]));
+//                            logger.debug(String.format("PatchManager: patch queue is currently %s, patch done queue is currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
+                        }
+
+                        // BELOW HANDLES CASE WHERE WE GET THE RESPONSE OF A HIGHER VERSION BEFORE A NOTIFICATION OF A PRIOR VERSION:
+                        // N1 -> R3 -> N2, BY APPLYING N2 BEFORE UPDATING TO VERSION 3.
+                        //
+
+                        Patch[] missingPatches = Patch.getPatches(((FileChangeResponse) response.getData()).missingPatches);
+                        while(true) {
+                            // Apply missing patches to document
+                            // > Consolidate missing patches that are based on versions above current document version
+                            int firstNewPatchIndex = 0;
+                            for (; firstNewPatchIndex < missingPatches.length; firstNewPatchIndex++) {
+                                if (batchingCtrl.currDocumentVersion >= missingPatches[firstNewPatchIndex].getBaseVersion()) {
+                                    break;
+                                }
                             }
-                            logger.debug(String.format("PatchManager: patch queue is currently %s, patch done queue is currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
+                            Patch consolidatedMissingPatches = Consolidator.consolidatePatches(
+                                    Arrays.copyOfRange(missingPatches, firstNewPatchIndex, missingPatches.length)
+                            );
+
+                            // > If no patches, return.
+                            if(consolidatedMissingPatches == null){
+                                break;
+                            }
+
+                            // > Get modification stamp of document
+                            long expectedModificationStamp = batchingCtrl.expectedModificationStamp.get();
+
+                            // > Drain batching pre-queue into batching queue
+                            synchronized (batchingCtrl.patchBatchingPreQueue) {
+                                batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
+                                batchingCtrl.patchBatchingPreQueue.clear();
+                            }
+
+                            // > TODO: Validate that transforming against accepted patches instead of sent patches is correct
+                            // > Transform missing patches against doneQueue (Others have priority, since they were newer)
+                            Patch consolidatedDonePatches = Consolidator.consolidatePatches(
+                                    Patch.getPatches(((FileChangeResponse) response.getData()).changes)
+                            );
+                            consolidatedMissingPatches = consolidatedMissingPatches.transform(true, consolidatedDonePatches);
+                            // NOTE: There is no need to do reverse transformations here, since these done patches are never used again.
+
+                            // > Transform against batching queue (Others have priority, since they have not been sent to server)
+                            Patch consolidatedBatchedPatches = Consolidator.consolidatePatches(batchingCtrl.patchBatchingQueue);
+                            consolidatedMissingPatches = consolidatedMissingPatches.transform(true, consolidatedBatchedPatches);
+
+                            // > Reverse-transform batching queue against missing consolidated patch, save in temp
+                            consolidatedBatchedPatches = consolidatedBatchedPatches.transform(false, consolidatedMissingPatches);
+
+                            // > Apply missing consolidated patch to document, update document baseVersion to be this response's version
+                            //     by generating "notification" of a new file change
+                            Notification notification = new Notification("File", "Change", fileID,
+                                    new FileChangeNotification(new String[]{consolidatedMissingPatches.toString()},
+                                            ((FileChangeResponse) response.getData()).fileVersion,
+                                            batchingCtrl.currDocumentVersion
+                                    )
+                            );
+
+                            // > Attempt to optimistically change the file
+                            //     Pass the transformed patches to the actual handler that will take care of writing to document or file
+                            Long result = notifHandler.handleNotification(notification, expectedModificationStamp);
+
+                            // > If our optimistic write was successful
+                            if (result != null) {
+                                batchingCtrl.expectedModificationStamp.set(result);
+
+                                // >> Write reverse-transformed batching queue back.
+                                consolidatedBatchedPatches.setBaseVersion(((FileChangeResponse) response.getData()).fileVersion);
+                                batchingCtrl.patchBatchingQueue.clear();
+                                batchingCtrl.patchBatchingQueue.add(consolidatedBatchedPatches);
+
+                                break;
+                            }
+                            // Otherwise try again after new changes are added.
+                            else {
+                                logger.debug(String.format("PatchManager-ResponseHandler: Document changed between notification arrival and attempt to append. Retrying changes: %s", Arrays.asList(missingPatches)).replace("\n", "\\n"));
+                                continue;
+                            }
                         }
 
                         // Save missing patches & maxVersionSeen
-                        if (((FileChangeResponse) response.getData()).missingPatches != null) {
-                            batchingCtrl.lastResponsePatches = ((FileChangeResponse) response.getData()).missingPatches;
-                            batchingCtrl.maxVersionSeen = ((FileChangeResponse) response.getData()).fileVersion;
-                        }
+                        batchingCtrl.lastMissingPatches = missingPatches;
+                        batchingCtrl.currDocumentVersion = ((FileChangeResponse) response.getData()).fileVersion;
 
+                        // TODO: Does this actually do the right thing anymore?
                         // Fire actual response handler
                         if (respHandler != null) {
                             respHandler.handleResponse(response);
@@ -304,118 +353,63 @@ public class PatchManager implements INotificationHandler {
                             batchingCtrl.patchBatchingPreQueue.clear();
                         }
 
-                        expectedModificationStamp = batchingCtrl.expectedModificationStamp.get();
-
-                        // Take snapshot of current changes, so that if this fails, we don't start with a dirty set.
-                        // If the write to editor fails, we restore the original set of changes into the fileChangeNotification
-                        String[] oldChanges = fileChangeNotif.changes.clone();
-                        String[] changes = fileChangeNotif.changes;
-
-                        // Again, take clones to make sure we do not mess up the actual queues.
-                        ArrayList<Patch> transformedPatchDoneQueue = (ArrayList<Patch>) batchingCtrl.patchDoneQueue.clone();
-                        ArrayList<Patch> transformedPatchBatchingQueue = (ArrayList<Patch>) batchingCtrl.patchBatchingQueue.clone();
-
-                        // Keep track of the max base version, and remove items from doneQueue later based on it.
-                        long maxBaseVersionSeen = 0;
-
-                        for (int i = 0; i < changes.length; i++) {
-                            Patch patch = new Patch(changes[i]);
-
-                            logger.debug(String.format("PatchManager-Notification: Transforming %s against doneQueue %s", patch, transformedPatchDoneQueue).replace("\n", "\\n"));
-                            logger.debug(String.format("PatchManager-Notification: Transforming doneQueue %s against %s", transformedPatchDoneQueue, patch).replace("\n", "\\n"));
-
-                            long patchMaxVersion = patch.getBaseVersion();
-
-                            // Transform against the done queue
-                            for (int j = 0; j < transformedPatchDoneQueue.size(); j++) {
-                                Patch donePatch = transformedPatchDoneQueue.get(j);
-                                if (donePatch.getBaseVersion() >= patch.getBaseVersion()) {
-                                    // Save patchBaseVersion, reset after transform. This prevents the case where if the doneQueue has
-                                    // more than one patch based on the same version, the transformation on the first one changes the
-                                    // base version of the incoming patch, and thus the subsequent donePatches are never transformed against
-                                    //
-                                    // The donePatch is only transformed against if it has a higher (or equal) base version,
-                                    // and as such, the donePatches have precedence.
-                                    long patchBaseVersion = patch.getBaseVersion();
-                                    patch = patch.transform(true, donePatch);
-                                    patchMaxVersion = Math.max(patchMaxVersion, patch.getBaseVersion());
-                                    patch.setBaseVersion(patchBaseVersion);
-
-                                    // Transform donePatch against new patch, to update the donePatches against
-                                    // new document state
-                                    long donePatchBaseVersion = donePatch.getBaseVersion();
-                                    donePatch = donePatch.transform(false, patch);
-                                    donePatch.setBaseVersion(donePatchBaseVersion);
-                                    transformedPatchDoneQueue.set(j, donePatch);
+                        // TODO: Remove this once debugging is done
+                        // At this point, all patches in the batching queues should be the same version.
+                        if(!batchingCtrl.patchBatchingQueue.isEmpty()){
+                            long patchVersion = batchingCtrl.patchBatchingQueue.get(0).getBaseVersion();
+                            for(int i = 1; i < batchingCtrl.patchBatchingQueue.size(); i++){
+                                if(patchVersion != batchingCtrl.patchBatchingQueue.get(i).getBaseVersion()){
+                                    logger.fatal("Batching queue had patches of different versions: %s",
+                                            Arrays.asList(batchingCtrl.patchBatchingQueue));
                                 }
                             }
-                            maxBaseVersionSeen = Math.max(maxBaseVersionSeen, patch.getBaseVersion());
-
-                            logger.debug(String.format("PatchManager-Notification: Transforming %s against batchingQueue %s", patch, transformedPatchBatchingQueue).replace("\n", "\\n"));
-
-                            // All patches in batching queue here are guaranteed to be coming after the patch, since we wait for the current request to complete.
-                            // Thus, we apply all indiscriminately. Maintain base version, since they are already committed to the database
-                            //
-                            // Because all items in batchingQueue are guaranteed to come after the notification patch, they take precedence.
-                            long patchBaseVersion = patch.getBaseVersion();
-                            patch = patch.transform(true, transformedPatchBatchingQueue);
-                            patchMaxVersion = Math.max(patchMaxVersion, patch.getBaseVersion());
-                            patch.setBaseVersion(patchBaseVersion);
-
-                            logger.debug(String.format("PatchManager-Notification: Transforming batchingQueue %s against %s", transformedPatchBatchingQueue, patch).replace("\n", "\\n"));
-
-                            // Transform all patches in batching queue against this one. This maintains the correctness of the items in the batchingQueue
-                            // against the new document state.
-                            for (int j = 0; j < transformedPatchBatchingQueue.size(); j++) {
-                                Patch queuedPatch = transformedPatchBatchingQueue.get(j);
-
-                                // Transform queuedPatch against new patch. Since the batchingQueue is guaranteed to be
-                                // coming after the notification patches, they have precedence.
-                                //
-                                // Also, do not reset base versions, since we want to know we have transformed against
-                                // this file version.
-                                queuedPatch = queuedPatch.transform(false, patch);
-                                transformedPatchBatchingQueue.set(j, queuedPatch);
-                            }
-
-                            // Finally, set the base version. This cannot be set earlier, to make sure the batchingQueue gets the right baseVersion in the end.
-                            patch.setBaseVersion(patchMaxVersion);
-
-                            logger.debug(String.format("PatchManager-Notification: Transformed %s against done and batching queues; result: %s", changes[i], patch).replace("\n", "\\n"));
-
-                            // Write the changes back to the FileChangeNotification
-                            changes[i] = patch.toString();
                         }
 
-                        // Pass the transformed patches to the actual handler that will take care of writing to document or file
-                        Long result = notifHandler.handleNotification(notification, expectedModificationStamp);
+                        expectedModificationStamp = batchingCtrl.expectedModificationStamp.get();
 
-                        // Only if we succeeded should we break out and continue to next patch.
-                        // Otherwise, release lock, and try again after new changes are added.
+                        // If file is of a greater version than this notification, continue to next notification
+                        if(batchingCtrl.currDocumentVersion > fileChangeNotif.baseFileVersion){
+                            continue;
+                        }
+
+                        // Else, patch the document
+                        // > Consolidate fileChangeNotif, and batchingQueue
+                        Patch consolidatedFileChangeNotification = Consolidator.consolidatePatches(Patch.getPatches(fileChangeNotif.changes));
+                        Patch consolidatedBatchedPatches = Consolidator.consolidatePatches(batchingCtrl.patchBatchingQueue);
+
+                        if (consolidatedBatchedPatches != null) {
+                            // > Transform fileChangeNotif against batchingQueue
+                            //     Others have priority, since they are still unversioned
+                            consolidatedFileChangeNotification = consolidatedFileChangeNotification.transform(true, consolidatedBatchedPatches);
+
+                            // > Reverse-Transform batching queue against fileChangeNotif
+                            consolidatedBatchedPatches = consolidatedBatchedPatches.transform(false, consolidatedFileChangeNotification);
+                        }
+
+                        // Update the actual file
+                        // Pass the transformed patches to the actual handler that will take care of writing to document or file
+                        Long result = notifHandler.handleNotification(
+                                new Notification(notification.getResource(), notification.getMethod(), notification.getResourceID(),
+                                        new FileChangeNotification(consolidatedFileChangeNotification == null ? new String[]{} : new String[]{consolidatedFileChangeNotification.toString()},
+                                                fileChangeNotif.fileVersion, fileChangeNotif.baseFileVersion
+                                        )
+                                )
+                                , expectedModificationStamp);
+
+                        // > If our optimistic write was successful
                         if (result != null) {
                             batchingCtrl.expectedModificationStamp.set(result);
 
-                            // Update all the patches in the done and batching queues
-                            for (int i = 0; i < transformedPatchDoneQueue.size(); i++) {
-                                batchingCtrl.patchDoneQueue.set(i, transformedPatchDoneQueue.get(i));
-                            }
-                            for (int i = 0; i < transformedPatchBatchingQueue.size(); i++) {
-                                batchingCtrl.patchBatchingQueue.set(i, transformedPatchBatchingQueue.get(i));
-                            }
+                            // >> Write reverse-transformed batching queue back.
+                            consolidatedBatchedPatches.setBaseVersion(fileChangeNotif.fileVersion);
+                            batchingCtrl.patchBatchingQueue.clear();
+                            batchingCtrl.patchBatchingQueue.add(consolidatedBatchedPatches);
 
-                            // Remove all patches in doneQueue that we no longer need.
-                            Iterator<Patch> itr = batchingCtrl.patchDoneQueue.iterator();
-                            while (itr.hasNext()) {
-                                Patch donePatch = itr.next();
-                                if (donePatch.getBaseVersion() < maxBaseVersionSeen) {
-                                    itr.remove();
-                                }
-                            }
                             break;
-                        } else {
-                            // If we failed, copy the actual changes back, overwriting our transformed set.
-                            System.arraycopy(oldChanges, 0, changes, 0, changes.length);
-                            logger.debug(String.format("PatchManager - Document changed between notification arrival and attempt to append. Retrying changes: %s", Arrays.asList(changes)).replace("\n", "\\n"));
+                        }
+                        // > Otherwise try again after new changes are added.
+                        else {
+                            logger.debug(String.format("PatchManager-NotificationHandler: Document changed between notification arrival and attempt to append. Retrying changes: %s", Arrays.asList(fileChangeNotif.changes)).replace("\n", "\\n"));
                             continue;
                         }
                     }
@@ -495,9 +489,8 @@ public class PatchManager implements INotificationHandler {
         final Semaphore batchingSem = new Semaphore(1);
         private final ArrayList<Patch> patchBatchingQueue = new ArrayList<>();
         private final ArrayList<Patch> patchBatchingPreQueue = new ArrayList<>();
-        private final ArrayList<Patch> patchDoneQueue = new ArrayList<>();
-        String[] lastResponsePatches = new String[0];
-        long maxVersionSeen = -1;
+        Patch[] lastMissingPatches = {};
+        long currDocumentVersion = -1;
         //        private boolean activeChangeRequest = false;
         private AtomicLong expectedModificationStamp = new AtomicLong(-1);
     }

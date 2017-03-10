@@ -1,6 +1,7 @@
 package clientcore.patching;
 
 import java.util.ArrayList;
+import java.util.IllegalFormatException;
 import java.util.List;
 
 /**
@@ -10,25 +11,39 @@ import java.util.List;
 public class Patch {
 
     private long baseVersion;
-    private final List<Diff> diffs;
+    private List<Diff> diffs;
+    private final int docLength;
 
-    public Patch(long baseVersion, List<Diff> diffs) {
+    public Patch(long baseVersion, List<Diff> diffs, int docLength) {
         this.baseVersion = baseVersion;
         this.diffs = diffs;
+        this.docLength = docLength;
+
+        this.simplify();
     }
 
     public Patch(String str) {
         String[] parts = str.split(":\n");
+
+        if(parts.length < 3) {
+            throw new IllegalArgumentException("Invalid patch format: Not enough sections");
+        }
+
         this.baseVersion = Integer.parseInt(parts[0].substring(1));
 
         diffs = new ArrayList<>();
-        if(parts.length >= 2) {
-            String[] diffStrs = parts[1].split(",\n");
-
-            for (String diffStr : diffStrs) {
-                diffs.add(new Diff(diffStr));
-            }
+        String[] diffStrs = parts[1].split(",\n");
+        for (String diffStr : diffStrs) {
+            diffs.add(new Diff(diffStr));
         }
+
+        this.docLength = Integer.parseInt(parts[2]);
+
+        this.simplify();
+    }
+
+    public Patch clone(){
+        return new Patch(baseVersion, diffs, docLength);
     }
 
     public List<Diff> getDiffs() {
@@ -43,31 +58,52 @@ public class Patch {
         this.baseVersion = baseVersion;
     }
 
+    public int getDocLength() {
+        return docLength;
+    }
+
+    public Patch simplify() {
+        if (this.diffs.size() != 0) {
+            List<Diff> result = new ArrayList<>();
+            result.add(this.diffs.get(0).clone());
+
+            for (int i = 1, j = 0; i < this.diffs.size(); i++) {
+                if (this.diffs.get(i) == null) {
+                    break;
+                }
+                Diff curr = this.diffs.get(i);
+                Diff prev = result.get(j);
+
+                if (!curr.isInsertion() && !prev.isInsertion() && prev.getStartIndex() + prev.getLength() == curr.getStartIndex()) {
+                    prev.setChanges(prev.getChanges() + curr.getChanges());
+                } else if (curr.isInsertion() && prev.isInsertion() && prev.getStartIndex() == curr.getStartIndex()) {
+                    prev.setChanges(prev.getChanges() + curr.getChanges());
+                } else {
+                    j++;
+                    result.add(curr.clone());
+                }
+            }
+
+            this.diffs = result;
+        }
+
+        return this;
+    }
+
     public Patch convertToCRLF(String base) {
-        List<Diff> CRLFDiffs = new ArrayList<Diff>();
+        List<Diff> CRLFDiffs = new ArrayList<>();
         for (Diff diff : diffs) {
             CRLFDiffs.add(diff.convertToCRLF(base));
         }
-        return new Patch(baseVersion, CRLFDiffs);
+        return new Patch(baseVersion, CRLFDiffs, base.replace("\n", "\r\n").length());
     }
 
     public Patch convertToLF(String base) {
-        List<Diff> LFDiffs = new ArrayList<Diff>();
+        List<Diff> LFDiffs = new ArrayList<>();
         for (Diff diff : diffs) {
             LFDiffs.add(diff.convertToLF(base));
         }
-        return new Patch(baseVersion, LFDiffs);
-    }
-
-    public Patch getUndo() {
-        List<Diff> undoDiffs = new ArrayList<Diff>();
-
-        // This needs to be in reverse order, since all the diffs in a package will have been applied in order.
-        // The last diff will have been computed relative to the previous few.
-        for (int i = diffs.size() - 1; i >= 0; i--) {
-            undoDiffs.add(diffs.get(i).getUndo());
-        }
-        return new Patch(baseVersion, undoDiffs);
+        return new Patch(baseVersion, LFDiffs, base.replace("\r\n", "\n").length());
     }
 
     @Override
@@ -82,35 +118,31 @@ public class Patch {
             sb.append(",\n");
         }
 
-        return sb.substring(0, sb.length() - 2);
+        sb.delete(sb.length() - 2, sb.length());
+        sb.append(":\n");
+        sb.append(this.docLength);
+
+        return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Patch patch = (Patch) o;
+
+        if (baseVersion != patch.baseVersion) return false;
+        if (docLength != patch.docLength) return false;
+        return diffs != null ? diffs.equals(patch.diffs) : patch.diffs == null;
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        long result = 1;
-        result = prime * result + baseVersion;
-        result = prime * result + ((diffs == null) ? 0 : diffs.hashCode());
-        return (int)result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        Patch other = (Patch) obj;
-        if (baseVersion != other.baseVersion)
-            return false;
-        if (diffs == null) {
-            if (other.diffs != null)
-                return false;
-        } else if (!diffs.equals(other.diffs))
-            return false;
-        return true;
+        int result = (int) (baseVersion ^ (baseVersion >>> 32));
+        result = 31 * result + (diffs != null ? diffs.hashCode() : 0);
+        result = 31 * result + docLength;
+        return result;
     }
 
     public Patch transform(boolean othersHavePrecedence, List<Patch> patches) {
@@ -133,6 +165,17 @@ public class Patch {
             maxVersionSeen = Math.max(patch.baseVersion, maxVersionSeen);
         }
 
-        return new Patch(maxVersionSeen+1, intermediateDiffs);
+        int newDocLen = this.docLength;
+        for (Patch patch : patches){
+            for(Diff diff : patch.getDiffs()){
+                if (diff.isInsertion()){
+                    newDocLen += diff.getLength();
+                } else {
+                    newDocLen -= diff.getLength();
+                }
+            }
+        }
+
+        return new Patch(maxVersionSeen+1, intermediateDiffs, newDocLen);
     }
 }

@@ -123,21 +123,6 @@ public class TestDiff {
     }
 
     @Test
-    public void testUndo() {
-        Diff diff = new Diff("0:+4:str1");
-        Diff newDiff = diff.getUndo();
-        Assert.assertEquals("0:-4:str1", newDiff.toString());
-        Diff originalDiff = newDiff.getUndo();
-        Assert.assertEquals(diff.toString(), originalDiff.toString());
-
-        diff = new Diff("1:-4:str2");
-        newDiff = diff.getUndo();
-        Assert.assertEquals("1:+4:str2", newDiff.toString());
-        originalDiff = newDiff.getUndo();
-        Assert.assertEquals(diff.toString(), originalDiff.toString());
-    }
-
-    @Test
     public void testTransform1A() {
         Diff diff1, diff2;
         List<Diff> result;

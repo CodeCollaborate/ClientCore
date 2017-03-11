@@ -2,6 +2,7 @@ package clientcore.patching;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Created by wongb on 3/9/17.
@@ -16,13 +17,13 @@ public class Consolidator {
             return null;
         }
 
-        Patch patchA = patches[0];
+        Patch patchA = patches[0].clone();
         for(int i = 1; i < patches.length; i++){
             Patch patchB = patches[i];
 
             final int[] indexAArr = {-1};
             final int[] indexBArr = {-1};
-            final ArrayList<Diff> resultDiffs = new ArrayList<>();
+            final List<Diff> resultDiffs = new ArrayList<>();
             final int[] currIndex = {0};
 
             NextDiffResult ndResultA = getNextDiff(patchA, indexAArr[0], false);

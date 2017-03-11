@@ -405,6 +405,8 @@ public class PatchManager implements INotificationHandler {
                             batchingCtrl.patchBatchingQueue.clear();
                             batchingCtrl.patchBatchingQueue.add(consolidatedBatchedPatches);
 
+                            batchingCtrl.currDocumentVersion = fileChangeNotif.fileVersion;
+
                             break;
                         }
                         // > Otherwise try again after new changes are added.

@@ -161,7 +161,7 @@ public class SessionStorage {
 	 */
 	public Project getProject(Path absolutePath) {
 		synchronized (PROJECT_LIST) {
-			Long projectID = projectPathToID.get(absolutePath);
+			Long projectID = projectPathToID.get(absolutePath.normalize());
 			return projects.get(projectID);
 		}
 	}
@@ -213,7 +213,7 @@ public class SessionStorage {
 	public void setAbsoluteProjectPath(long projectID, Path absPath) {
 		synchronized (PROJECT_LIST) {
 			// Use forcePut to remove all previous entries at the same time
-			projectPathToID.forcePut(absPath, projectID);
+			projectPathToID.forcePut(absPath.normalize(), projectID);
 		}
 	}
 
@@ -273,7 +273,7 @@ public class SessionStorage {
 	public void setAbsoluteFilePath(Path absPath, long projectID, long fileID) {
 		synchronized (FILE_LIST) {
 			Project p = projects.get(projectID);
-			p.setAbsoluteFilePath(fileID, absPath);
+			p.setAbsoluteFilePath(fileID, absPath.normalize());
 		}
 	}
 
@@ -306,7 +306,7 @@ public class SessionStorage {
 	 */
 	public File getFile(Path absolutePath) {
 		for (Project p : projects.values()) {
-			File f = p.getFile(absolutePath);
+			File f = p.getFile(absolutePath.normalize());
 			if (f != null) {
 				return f;
 			}

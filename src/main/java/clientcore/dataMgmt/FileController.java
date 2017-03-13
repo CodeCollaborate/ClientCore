@@ -46,7 +46,7 @@ public class FileController {
 	 *            The ID of the file to map the path to
 	 */
 	public void putFileLocation(Path absolutePath, long projectID, long fileID) {
-        ss.setAbsoluteFilePath(absolutePath, projectID, fileID);
+        ss.setAbsoluteFilePath(absolutePath.normalize(), projectID, fileID);
 	}
 
 	/**
@@ -61,8 +61,8 @@ public class FileController {
 	 */
 	public void moveFile(long fileID, long projectID, Path newAbsolutePath, Path newRelativePath) {
 		ss.setAbsoluteFilePath(newAbsolutePath, projectID, fileID);
-        ss.getProject(projectID).getFile(fileID).setRelativePath(newRelativePath);
-        ss.getProject(projectID).getFile(fileID).setFilename(newAbsolutePath.getFileName().toString());
+        ss.getProject(projectID).getFile(fileID).setRelativePath(newRelativePath.normalize());
+        ss.getProject(projectID).getFile(fileID).setFilename(newAbsolutePath.normalize().getFileName().toString());
 	}
 
 }

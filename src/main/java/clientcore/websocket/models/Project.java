@@ -85,12 +85,10 @@ public class Project {
 		this.files.put(file.getFileID(), file);
 	}
 	
-	public void putAbsoluteFilePath(Path absolutePath, Long fileID) {
-		filePathToID.put(absolutePath, fileID);
-	}
-
-	public void changeFilePath(Long fileID, Path absolutePath) {
-		filePathToID.inverse().put(fileID, absolutePath);
+	public void setAbsoluteFilePath(Long fileID, Path absolutePath) {
+		if(hasFile(fileID)){
+			filePathToID.forcePut(absolutePath, fileID);
+		}
 	}
 	
 	public File removeFile(long fileID) {

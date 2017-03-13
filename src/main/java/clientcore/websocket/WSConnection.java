@@ -108,8 +108,6 @@ public class WSConnection {
         logger.info(String.format("Setting clientcore.websocket idle timeout to %d minutes", IDLE_TIMEOUT));
         session.setIdleTimeout(TimeUnit.MINUTES.toMillis(IDLE_TIMEOUT));
 
-        //TODO(wongb): D
-
         handleEvent(EventType.ON_CONNECT);
 
         Thread sendingThread = new Thread(this::messageLoop);

@@ -55,7 +55,7 @@ public class ProjectController {
 	 */
 	public void putProjectLocation(Path rootPath, long projectID) {
 		if (ss.getProject(projectID) != null) {
-			ss.putAbsoluteProjectPath(rootPath, projectID);
+			ss.setAbsoluteProjectPath(projectID, rootPath);
 		}
 	}
 
@@ -68,7 +68,7 @@ public class ProjectController {
 	 *            The new absolute path to the root of the project
 	 */
 	public void moveProject(long projectID, Path newRootPath) {
-		ss.changeProjectPath(projectID, newRootPath);
+		ss.setAbsoluteProjectPath(projectID, newRootPath);
 	}
 
 	/**
@@ -84,7 +84,7 @@ public class ProjectController {
 	 */
 	public void renameProject(long projectID, String newName, Path newRootPath) {
 		ss.getProject(projectID).setName(newName);
-		ss.changeProjectPath(projectID, newRootPath);
+		ss.setAbsoluteProjectPath(projectID, newRootPath);
 	}
 
 	/**

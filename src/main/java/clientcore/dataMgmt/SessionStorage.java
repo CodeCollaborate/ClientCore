@@ -210,15 +210,10 @@ public class SessionStorage {
 	 * @param absPath
 	 * @param projectID
 	 */
-	public void putAbsoluteProjectPath(Path absPath, long projectID) {
+	public void setAbsoluteProjectPath(long projectID, Path absPath) {
 		synchronized (PROJECT_LIST) {
-			projectPathToID.put(absPath, projectID);
-		}
-	}
-
-	public void changeProjectPath(long projectID, Path absPath) {
-		synchronized (PROJECT_LIST) {
-			projectPathToID.inverse().put(projectID, absPath);
+			// Use forcePut to remove all previous entries at the same time
+			projectPathToID.forcePut(absPath, projectID);
 		}
 	}
 
@@ -267,7 +262,7 @@ public class SessionStorage {
 
 	/**
 	 * Puts the absolute file path in a map to the file ID.
-	 * 
+	 *
 	 * @param absPath
 	 *            The absolute path of the file
 	 * @param projectID
@@ -275,10 +270,10 @@ public class SessionStorage {
 	 * @param fileID
 	 *            The ID of the file to map the path to
 	 */
-	public void putAbsoluteFilePath(Path absPath, long projectID, long fileID) {
+	public void setAbsoluteFilePath(Path absPath, long projectID, long fileID) {
 		synchronized (FILE_LIST) {
 			Project p = projects.get(projectID);
-			p.putAbsoluteFilePath(absPath, fileID);
+			p.setAbsoluteFilePath(fileID, absPath);
 		}
 	}
 

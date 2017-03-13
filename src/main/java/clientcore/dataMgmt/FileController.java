@@ -14,7 +14,7 @@ public class FileController {
 
 	/**
 	 * Stores the given file model in the storage used to construct this object.
-	 * 
+	 *
 	 * @param projectID
 	 *            The ID of the project to add the file model to
 	 * @param f
@@ -26,7 +26,7 @@ public class FileController {
 
 	/**
 	 * Deletes the file that matches the given file ID.
-	 * 
+	 *
 	 * @param fileID
 	 *            The ID of the file to delete
 	 */
@@ -37,7 +37,7 @@ public class FileController {
 	/**
 	 * If the file exists in storage, then this method maps the given absolute
 	 * path to the given file by its ID.
-	 * 
+	 *
 	 * @param absolutePath
 	 *            The absolute path of the file
 	 * @param projectID
@@ -46,15 +46,12 @@ public class FileController {
 	 *            The ID of the file to map the path to
 	 */
 	public void putFileLocation(Path absolutePath, long projectID, long fileID) {
-		Project p = ss.getProject(projectID);
-		if (p.hasFile(fileID)) {
-			ss.putAbsoluteFilePath(absolutePath, projectID, fileID);
-		}
+        ss.setAbsoluteFilePath(absolutePath, projectID, fileID);
 	}
 
 	/**
 	 * Re-maps the project to the provided path.
-	 * 
+	 *
 	 * @param fileID
 	 *            The ID of the file to re-map the path to
 	 * @param projectID
@@ -63,28 +60,9 @@ public class FileController {
 	 *            The absolute path the file has been moved to
 	 */
 	public void moveFile(long fileID, long projectID, Path newAbsolutePath, Path newRelativePath) {
-		Project p = ss.getProject(projectID);
-		p.changeFilePath(fileID, newAbsolutePath);
-		p.getFile(fileID).setRelativePath(newRelativePath);
-	}
-
-	/**
-	 * Re-maps the project to the provided path and sets the project model's
-	 * name to the new name.
-	 * 
-	 * @param fileID
-	 *            The ID of the file to rename
-	 * @param projectID
-	 *            The ID of the project that the file belongs to
-	 * @param newName
-	 *            The name to rename to file to
-	 * @param newAbsolutePath
-	 *            The new absolute path the file after renaming it
-	 */
-	public void renameFile(long fileID, long projectID, String newName, Path newAbsolutePath) {
-		Project p = ss.getProject(projectID);
-		p.changeFilePath(fileID, newAbsolutePath);
-		p.getFile(fileID).setFilename(newName);
+		ss.setAbsoluteFilePath(newAbsolutePath, projectID, fileID);
+        ss.getProject(projectID).getFile(fileID).setRelativePath(newRelativePath);
+        ss.getProject(projectID).getFile(fileID).setFilename(newAbsolutePath.getFileName().toString());
 	}
 
 }

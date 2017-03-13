@@ -160,7 +160,7 @@ public class PatchManager implements INotificationHandler {
                                 logger.error(String.format("PatchManager: Patch had more than 1 change: %s", Arrays.toString(((FileChangeResponse) response.getData()).changes)));
                             }
 
-                            // Remove the sent patches (Should only have 1, if consolidation works)
+                            // Remove the sent patches
                             for(int i = 0; i < patches.length; i++){
                                 batchingCtrl.patchBatchingQueue.remove(0);
                             }

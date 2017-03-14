@@ -486,13 +486,24 @@ public class SessionStorage {
 
 	/**
 	 * Remove a property change listener
-	 * 
+	 *
 	 * @param listener
 	 *            listener to remove
 	 */
 	public void removePropertyChangeListener(PropertyChangeListener listener) {
 		synchronized (this.listeners) {
 			this.listeners.remove(listener);
+		}
+	}
+
+	/**
+	 * Remove all property change listeners
+	 */
+	public List<PropertyChangeListener> removeAllPropertyChangeListeners() {
+		synchronized (this.listeners) {
+			List<PropertyChangeListener> listeners = new ArrayList<>(this.listeners);
+			this.listeners.clear();
+			return listeners;
 		}
 	}
 }

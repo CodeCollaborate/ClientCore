@@ -26,7 +26,7 @@ public class Notification extends AbstractServerMessage {
     @JsonCreator
     public Notification(@JsonProperty("Resource") String resource,
                         @JsonProperty("Method") String method,
-                        @JsonProperty("ResourceID") int resourceID,
+                        @JsonProperty("ResourceID") long resourceID,
                         @JsonProperty("Data") JsonNode jsonData){
         super(jsonData);
         this.resource = resource;

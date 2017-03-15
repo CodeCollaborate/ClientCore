@@ -12,15 +12,10 @@ public class FileChangeNotification implements INotificationData {
 	@JsonProperty("FileVersion")
 	public final long fileVersion;
 
-	@JsonProperty("BaseFileVersion")
-	public final long baseFileVersion;
-
 	public FileChangeNotification(@JsonProperty("Changes") String[] changes,
-								  @JsonProperty("FileVersion") long fileVersion,
-								  @JsonProperty("BaseFileVersion") long baseFileVersion) {
+								  @JsonProperty("FileVersion") long fileVersion) {
 		this.changes = changes;
 		this.fileVersion = fileVersion;
-		this.baseFileVersion = baseFileVersion;
 	}
 
 	@Override
@@ -31,7 +26,6 @@ public class FileChangeNotification implements INotificationData {
 		FileChangeNotification that = (FileChangeNotification) o;
 
 		if (fileVersion != that.fileVersion) return false;
-		if (baseFileVersion != that.baseFileVersion) return false;
 		// Probably incorrect - comparing Object[] arrays with Arrays.equals
 		return Arrays.equals(changes, that.changes);
 	}
@@ -40,7 +34,6 @@ public class FileChangeNotification implements INotificationData {
 	public int hashCode() {
 		int result = Arrays.hashCode(changes);
 		result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
-		result = 31 * result + (int) (baseFileVersion ^ (baseFileVersion >>> 32));
 		return result;
 	}
 }

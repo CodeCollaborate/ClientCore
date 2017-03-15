@@ -16,7 +16,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class UserBasedIntegrationTest {
 
-    protected static final String SERVER_URL = "wss://codecollaborate.obsessiveorange.com:8000/ws/";
+    protected static final String SERVER_URL = "ws://cody.csse.rose-hulman.edu:8000/ws/";
 
     void cleanupUser(Logger logger, String userID, String userPass, Semaphore waiter, IRequestSendErrorHandler errHandler) {
         logger.info("Cleaning up user " + userID);

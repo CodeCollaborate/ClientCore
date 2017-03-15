@@ -11,9 +11,9 @@ import java.util.List;
  */
 
 public class Diff {
-    private final boolean insertion;
-    private final int startIndex;
-    private final String changes;
+    private boolean insertion;
+    private int startIndex;
+    private String changes;
 
     public Diff(Diff diff) {
         this.insertion = diff.insertion;
@@ -66,6 +66,10 @@ public class Diff {
         }
     }
 
+    public Diff clone(){
+        return new Diff(insertion, startIndex, changes);
+    }
+
     public boolean isInsertion() {
         return insertion;
     }
@@ -80,6 +84,18 @@ public class Diff {
 
     public String getChanges() {
         return changes;
+    }
+
+    public void setInsertion(boolean insertion) {
+        this.insertion = insertion;
+    }
+
+    public void setStartIndex(int startIndex) {
+        this.startIndex = startIndex;
+    }
+
+    public void setChanges(String changes) {
+        this.changes = changes;
     }
 
     public int getLength() {
@@ -159,10 +175,6 @@ public class Diff {
         }
 
         return new Diff(this.insertion, newStartIndex, newChanges);
-    }
-
-    public Diff getUndo() {
-        return new Diff(!this.insertion, this.startIndex, this.changes);
     }
 
     public List<Diff> transform(boolean othersHavePrecedence, List<Diff> other) {

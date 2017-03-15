@@ -88,7 +88,7 @@ public class TestPatchManager {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
         PatchManager.notifyOnSend = true;
-        PatchManager.PATCH_TIMEOUT_MILLIS = 500;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 1000;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argumentCaptor = ArgumentCaptor.forClass(Request.class);
         final Semaphore sem = new Semaphore(0);
@@ -168,7 +168,7 @@ public class TestPatchManager {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
         PatchManager.notifyOnSend = true;
-        PatchManager.PATCH_TIMEOUT_MILLIS = 500;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 1000;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
 
@@ -210,7 +210,7 @@ public class TestPatchManager {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
         PatchManager.notifyOnSend = true;
-        PatchManager.PATCH_TIMEOUT_MILLIS = 500;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 1000;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
 
@@ -273,7 +273,7 @@ public class TestPatchManager {
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[5])}, null, null);
 
         try {
-            Thread.sleep(PATCH_TIMEOUT_MILLIS + 500);
+            Thread.sleep((long)(PATCH_TIMEOUT_MILLIS * 1.5));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -287,7 +287,6 @@ public class TestPatchManager {
             public boolean matches(Request argument) {
                 req[0] = argument;
                 try {
-                    System.out.println(mapper.writeValueAsString(argument));
                     return mapper.writeValueAsString(argument).contains(str);
                 } catch (JsonProcessingException e) {
                     Assert.fail("Failed to parse request");

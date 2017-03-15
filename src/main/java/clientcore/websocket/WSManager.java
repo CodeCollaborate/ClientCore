@@ -10,6 +10,7 @@ import clientcore.websocket.models.Notification;
 import clientcore.websocket.models.Request;
 import clientcore.websocket.models.Response;
 import clientcore.websocket.models.ServerMessageWrapper;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ public class WSManager implements IMessageHandler {
         this.requestHashMap = new HashMap<>();
         this.queuedAuthenticatedRequests = new ArrayList<>();
         this.socket = socket;
-        
+
         socket.registerIncomingMessageHandler(this);
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -167,9 +168,9 @@ public class WSManager implements IMessageHandler {
     }
 
     private void handleNotification(ServerMessageWrapper wrapper) {
-        Notification an;
+        Notification notif;
         try {
-            an = mapper.convertValue(wrapper.getMessageJson(), Notification.class);
+            notif = mapper.convertValue(wrapper.getMessageJson(), Notification.class);
         } catch (IllegalArgumentException e) {
             String notificationMessage = wrapper.getMessageJson().toString();
             logger.error(String.format("Malformed notification from server: %s", notificationMessage));
@@ -178,9 +179,9 @@ public class WSManager implements IMessageHandler {
 
         // parse body of notification
         try {
-            an.parseData();
+            notif.parseData();
         } catch (JsonProcessingException e) {
-            String notificationData = an.getJsonData().toString();
+            String notificationData = notif.getJsonData().toString();
             logger.error(String.format("Malformed notification data from server: %s", notificationData));
             return;
         } catch (ClassNotFoundException e) {
@@ -188,14 +189,18 @@ public class WSManager implements IMessageHandler {
             return;
         }
 
-        String key = an.getResource() + '.' + an.getMethod();
+        String key = notif.getResource() + '.' + notif.getMethod();
         INotificationHandler handler = notificationHandlerHashMap.get(key);
         if (handler == null) {
             String notificationMessage = wrapper.getMessageJson().toString();
             logger.warn("No handler registered for notification: " + notificationMessage);
             return;
         }
-        handler.handleNotification(an);
+        try {
+            handler.handleNotification(notif);
+        } catch (Exception e) {
+            logger.error(String.format("Notification handler for %s.%s threw an exception", notif.getResource(), notif.getMethod()), e);
+        }
     }
 
     private void handleResponse(ServerMessageWrapper wrapper) {
@@ -235,7 +240,12 @@ public class WSManager implements IMessageHandler {
             logger.warn("No handler specified for request: " + responseMessage);
             return;
         }
-        handler.handleResponse(resp);
+
+        try {
+            handler.handleResponse(resp);
+        } catch (Exception e) {
+            logger.error(String.format("Response handler for %s.%s threw an exception", request.resource, request.method), e);
+        }
     }
 
     @Override
@@ -269,9 +279,9 @@ public class WSManager implements IMessageHandler {
     public WSConnection.State getConnectionState() {
         return socket.getState();
     }
-    
+
     public OutputStream getLoggingOutputStream() {
-    	return loggerOutputStream;
+        return loggerOutputStream;
     }
 
     private class BatchingControl {

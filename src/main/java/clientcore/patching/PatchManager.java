@@ -361,119 +361,123 @@ public class PatchManager implements INotificationHandler {
 
             // Loop forever
             while (true) {
-                Notification notification;
+                try {
+                    Notification notification;
 
-                synchronized (notificationHandlerQueue) {
-                    try {
-                        // Unlock writeLock when notification queue is drained.
-                        if (notificationHandlerQueue.isEmpty()) {
-                            if (hasWriteLock) {
-                                handlingNotificationsLock.writeLock().unlock();
-                                hasWriteLock = false;
-                            }
-                            // Put this thread to sleep while waiting for more notifications.
-                            notificationHandlerQueue.wait();
-                        }
-
-                        notification = notificationHandlerQueue.take();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        continue;
-                    }
-                }
-
-                if (!hasWriteLock) {
-                    // Wait until all requests in flight have returned before processing notifications.
-                    handlingNotificationsLock.writeLock().lock();
-                    hasWriteLock = true;
-                }
-
-                FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
-                long fileID = notification.getResourceID();
-                BatchingControl batchingCtrl = getBatchingControl(fileID);
-
-                while (true) {
-                    long expectedModificationStamp;
-
-                    synchronized (batchingCtrl.patchBatchingQueue) {
-                        // Add all in batchingPre-Queue, to make sure we transform against current document state
-                        synchronized (batchingCtrl.patchBatchingPreQueue) {
-                            batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
-                            batchingCtrl.patchBatchingPreQueue.clear();
-                        }
-                        logger.debug(String.format("PatchManager-NotificationHandler: Drained batching pre-queue into batchingQueue: %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n"));
-
-                        // TODO: Remove this once debugging is done
-                        // At this point, all patches in the batching queues should be the same version.
-                        if (!batchingCtrl.patchBatchingQueue.isEmpty()) {
-                            long patchVersion = batchingCtrl.patchBatchingQueue.get(0).getBaseVersion();
-                            for (int i = 1; i < batchingCtrl.patchBatchingQueue.size(); i++) {
-                                if (patchVersion != batchingCtrl.patchBatchingQueue.get(i).getBaseVersion()) {
-                                    logger.fatal(String.format("PatchManager-NotificationHandler: Batching queue had patches of different versions: %s",
-                                            Arrays.asList(batchingCtrl.patchBatchingQueue)).replace("\n", "\\n"));
+                    synchronized (notificationHandlerQueue) {
+                        try {
+                            // Unlock writeLock when notification queue is drained.
+                            if (notificationHandlerQueue.isEmpty()) {
+                                if (hasWriteLock) {
+                                    handlingNotificationsLock.writeLock().unlock();
+                                    hasWriteLock = false;
                                 }
-                            }
-                        }
-
-                        expectedModificationStamp = batchingCtrl.expectedModificationStamp.get();
-
-                        // If file is of a greater version than this notification, continue to next notification
-                        if (batchingCtrl.currDocumentVersion >= fileChangeNotif.fileVersion) {
-                            logger.debug(String.format("PatchManager-NotificationHandler: Current document version (%d) is higher than or equal to file change notification's new version (%d); it appears to have been already patched. Skipping patch",
-                                    batchingCtrl.currDocumentVersion, fileChangeNotif.fileVersion));
-                            break;
-                        }
-
-                        // Else, patch the document
-                        // > Consolidate fileChangeNotif, and batchingQueue
-                        Patch consolidatedFileChangeNotification = Consolidator.consolidatePatches(Patch.getPatches(fileChangeNotif.changes));
-                        Patch consolidatedBatchedPatches = Consolidator.consolidatePatches(batchingCtrl.patchBatchingQueue);
-
-                        if (consolidatedBatchedPatches != null) {
-                            // > Transform fileChangeNotif against batchingQueue
-                            //     Others have priority, since they are still unversioned
-                            logger.debug(String.format("PatchManager-NotificationHandler: Transforming consolidatedFileChangeNotification %s against consolidatedBatchedPatches %s", consolidatedFileChangeNotification, consolidatedBatchedPatches).replace("\n", "\\n"));
-                            consolidatedFileChangeNotification = consolidatedFileChangeNotification.transform(true, consolidatedBatchedPatches);
-
-                            // > Reverse-Transform batching queue against fileChangeNotif
-                            logger.debug(String.format("PatchManager-NotificationHandler: Reverse-transforming consolidatedBatchedPatches %s against consolidatedFileChangeNotification %s", consolidatedBatchedPatches, consolidatedFileChangeNotification).replace("\n", "\\n"));
-                            consolidatedBatchedPatches = consolidatedBatchedPatches.transform(false, consolidatedFileChangeNotification);
-
-                            logger.debug(String.format("PatchManager-NotificationHandler: Transformation results: consolidatedBatchedPatches %s, consolidatedFileChangeNotification %s", consolidatedBatchedPatches, consolidatedFileChangeNotification).replace("\n", "\\n"));
-                        }
-
-                        // Update the actual file
-                        // Pass the transformed patches to the actual handler that will take care of writing to document or file
-                        logger.debug(String.format("PatchManager-NotificationHandler: Attempting to apply consolidatedFileChangeNotification %s", consolidatedFileChangeNotification).replace("\n", "\\n"));
-                        Long result = notifHandler.handleNotification(
-                                new Notification(notification.getResource(), notification.getMethod(), notification.getResourceID(),
-                                        new FileChangeNotification(consolidatedFileChangeNotification == null ? new String[]{} : new String[]{consolidatedFileChangeNotification.toString()},
-                                                fileChangeNotif.fileVersion
-                                        )
-                                )
-                                , expectedModificationStamp);
-
-                        // > If our optimistic write was successful
-                        if (result != null) {
-                            batchingCtrl.expectedModificationStamp.set(result);
-
-                            // >> Write reverse-transformed batching queue back.
-                            if (consolidatedBatchedPatches != null) {
-                                consolidatedBatchedPatches.setBaseVersion(fileChangeNotif.fileVersion);
-                                batchingCtrl.patchBatchingQueue.clear();
-                                batchingCtrl.patchBatchingQueue.add(consolidatedBatchedPatches);
+                                // Put this thread to sleep while waiting for more notifications.
+                                notificationHandlerQueue.wait();
                             }
 
-                            batchingCtrl.currDocumentVersion = fileChangeNotif.fileVersion;
-
-                            break;
-                        }
-                        // > Otherwise try again after new changes are added.
-                        else {
-                            logger.debug(String.format("PatchManager-NotificationHandler: Document changed between notification arrival and attempt to append. Retrying changes: %s", Arrays.asList(fileChangeNotif.changes)).replace("\n", "\\n"));
+                            notification = notificationHandlerQueue.take();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                             continue;
                         }
                     }
+
+                    if (!hasWriteLock) {
+                        // Wait until all requests in flight have returned before processing notifications.
+                        handlingNotificationsLock.writeLock().lock();
+                        hasWriteLock = true;
+                    }
+
+                    FileChangeNotification fileChangeNotif = (FileChangeNotification) notification.getData();
+                    long fileID = notification.getResourceID();
+                    BatchingControl batchingCtrl = getBatchingControl(fileID);
+
+                    while (true) {
+                        long expectedModificationStamp;
+
+                        synchronized (batchingCtrl.patchBatchingQueue) {
+                            // Add all in batchingPre-Queue, to make sure we transform against current document state
+                            synchronized (batchingCtrl.patchBatchingPreQueue) {
+                                batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
+                                batchingCtrl.patchBatchingPreQueue.clear();
+                            }
+                            logger.debug(String.format("PatchManager-NotificationHandler: Drained batching pre-queue into batchingQueue: %s", batchingCtrl.patchBatchingQueue).replace("\n", "\\n"));
+
+                            // TODO: Remove this once debugging is done
+                            // At this point, all patches in the batching queues should be the same version.
+                            if (!batchingCtrl.patchBatchingQueue.isEmpty()) {
+                                long patchVersion = batchingCtrl.patchBatchingQueue.get(0).getBaseVersion();
+                                for (int i = 1; i < batchingCtrl.patchBatchingQueue.size(); i++) {
+                                    if (patchVersion != batchingCtrl.patchBatchingQueue.get(i).getBaseVersion()) {
+                                        logger.fatal(String.format("PatchManager-NotificationHandler: Batching queue had patches of different versions: %s",
+                                                Arrays.asList(batchingCtrl.patchBatchingQueue)).replace("\n", "\\n"));
+                                    }
+                                }
+                            }
+
+                            expectedModificationStamp = batchingCtrl.expectedModificationStamp.get();
+
+                            // If file is of a greater version than this notification, continue to next notification
+                            if (batchingCtrl.currDocumentVersion >= fileChangeNotif.fileVersion) {
+                                logger.debug(String.format("PatchManager-NotificationHandler: Current document version (%d) is higher than or equal to file change notification's new version (%d); it appears to have been already patched. Skipping patch",
+                                        batchingCtrl.currDocumentVersion, fileChangeNotif.fileVersion));
+                                break;
+                            }
+
+                            // Else, patch the document
+                            // > Consolidate fileChangeNotif, and batchingQueue
+                            Patch consolidatedFileChangeNotification = Consolidator.consolidatePatches(Patch.getPatches(fileChangeNotif.changes));
+                            Patch consolidatedBatchedPatches = Consolidator.consolidatePatches(batchingCtrl.patchBatchingQueue);
+
+                            if (consolidatedBatchedPatches != null) {
+                                // > Transform fileChangeNotif against batchingQueue
+                                //     Others have priority, since they are still unversioned
+                                logger.debug(String.format("PatchManager-NotificationHandler: Transforming consolidatedFileChangeNotification %s against consolidatedBatchedPatches %s", consolidatedFileChangeNotification, consolidatedBatchedPatches).replace("\n", "\\n"));
+                                consolidatedFileChangeNotification = consolidatedFileChangeNotification.transform(true, consolidatedBatchedPatches);
+
+                                // > Reverse-Transform batching queue against fileChangeNotif
+                                logger.debug(String.format("PatchManager-NotificationHandler: Reverse-transforming consolidatedBatchedPatches %s against consolidatedFileChangeNotification %s", consolidatedBatchedPatches, consolidatedFileChangeNotification).replace("\n", "\\n"));
+                                consolidatedBatchedPatches = consolidatedBatchedPatches.transform(false, consolidatedFileChangeNotification);
+
+                                logger.debug(String.format("PatchManager-NotificationHandler: Transformation results: consolidatedBatchedPatches %s, consolidatedFileChangeNotification %s", consolidatedBatchedPatches, consolidatedFileChangeNotification).replace("\n", "\\n"));
+                            }
+
+                            // Update the actual file
+                            // Pass the transformed patches to the actual handler that will take care of writing to document or file
+                            logger.debug(String.format("PatchManager-NotificationHandler: Attempting to apply consolidatedFileChangeNotification %s", consolidatedFileChangeNotification).replace("\n", "\\n"));
+                            Long result = notifHandler.handleNotification(
+                                    new Notification(notification.getResource(), notification.getMethod(), notification.getResourceID(),
+                                            new FileChangeNotification(consolidatedFileChangeNotification == null ? new String[]{} : new String[]{consolidatedFileChangeNotification.toString()},
+                                                    fileChangeNotif.fileVersion
+                                            )
+                                    )
+                                    , expectedModificationStamp);
+
+                            // > If our optimistic write was successful
+                            if (result != null) {
+                                batchingCtrl.expectedModificationStamp.set(result);
+
+                                // >> Write reverse-transformed batching queue back.
+                                if (consolidatedBatchedPatches != null) {
+                                    consolidatedBatchedPatches.setBaseVersion(fileChangeNotif.fileVersion);
+                                    batchingCtrl.patchBatchingQueue.clear();
+                                    batchingCtrl.patchBatchingQueue.add(consolidatedBatchedPatches);
+                                }
+
+                                batchingCtrl.currDocumentVersion = fileChangeNotif.fileVersion;
+
+                                break;
+                            }
+                            // > Otherwise try again after new changes are added.
+                            else {
+                                logger.debug(String.format("PatchManager-NotificationHandler: Document changed between notification arrival and attempt to append. Retrying changes: %s", Arrays.asList(fileChangeNotif.changes)).replace("\n", "\\n"));
+                                continue;
+                            }
+                        }
+                    }
+                } catch(Exception e){
+                    logger.error("PatchManager-NotificationHandler: An exception was thrown; recovering", e);
                 }
             }
         }).start();

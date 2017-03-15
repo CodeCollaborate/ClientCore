@@ -36,7 +36,7 @@ public class Notification extends AbstractServerMessage {
 
     public Notification(String resource,
                         String method,
-                        int resourceID,
+                        long resourceID,
                         INotificationData data){
         super(null);
         this.resource = resource;

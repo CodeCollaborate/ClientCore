@@ -49,7 +49,7 @@ public class SessionStorage {
 	private Map<String, OnlineStatus> projectUserStatus = new HashMap<>();
 
 	// the map of permission clientcore.constants
-	private BiMap<String, Byte> permissionConstants = HashBiMap.create();
+	private BiMap<String, Integer> permissionConstants = HashBiMap.create();
 
 	// list of listeners for this class's properties
 	private final List<PropertyChangeListener> listeners = new ArrayList<>();
@@ -442,8 +442,8 @@ public class SessionStorage {
 	 * 
 	 * @return the permission clientcore.constants
 	 */
-	public BiMap<String, Byte> getPermissionConstants() {
-		BiMap<String, Byte> constants;
+	public BiMap<String, Integer> getPermissionConstants() {
+		BiMap<String, Integer> constants;
 		synchronized (PERMISSION_CONSTANTS) {
 			constants = permissionConstants;
 		}
@@ -456,8 +456,8 @@ public class SessionStorage {
 	 * @param permissionConstants
 	 *            permission clientcore.constants BiMap to set
 	 */
-	public void setPermissionConstants(BiMap<String, Byte> permissionConstants) {
-		BiMap<String, Byte> oldValue;
+	public void setPermissionConstants(BiMap<String, Integer> permissionConstants) {
+		BiMap<String, Integer> oldValue;
 		synchronized (PERMISSION_CONSTANTS) {
 			oldValue = this.permissionConstants;
 			this.permissionConstants = permissionConstants;

@@ -93,7 +93,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
 
 
     //    private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
-    private static Map<String, Byte> apiConstants;
+    private static Map<String, Integer> apiConstants;
 
     private Request req;
 
@@ -642,8 +642,8 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             return;
         }
 
-        Byte permByte = apiConstants.get(projPerm);
-        req = new ProjectGrantPermissionsRequest(proj.getProjectID(), grantUsername, permByte).getRequest(response -> {
+        int perm = apiConstants.get(projPerm);
+        req = new ProjectGrantPermissionsRequest(proj.getProjectID(), grantUsername, perm).getRequest(response -> {
             Assert.assertEquals("Failed to grant " + projPerm + " permission on " + proj.getName() + " to " + grantUsername, 200, response.getStatus());
             waiter.release();
         }, errHandler);
@@ -652,7 +652,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             otherWSMgr.registerNotificationHandler("Project", "GrantPermissions", notification -> { // Create notification handler
                 Assert.assertEquals("ProjectGrantPermissionNotification gave wrong project ID", proj.getProjectID(), notification.getResourceID());
                 Assert.assertEquals("ProjectGrantPermissionNotification gave wrong username", grantUsername, ((ProjectGrantPermissionsNotification) notification.getData()).grantUsername);
-                Assert.assertEquals("ProjectGrantPermissionNotification gave wrong permission level", permByte, ((ProjectGrantPermissionsNotification) notification.getData()).permissionLevel);
+                Assert.assertEquals("ProjectGrantPermissionNotification gave wrong permission level", perm, ((ProjectGrantPermissionsNotification) notification.getData()).permissionLevel);
 
                 otherWSMgr.deregisterNotificationHandler("Project", "GrantPermissions");
                 waiter.release();
@@ -1430,7 +1430,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private void testProjectLookup(WSManager wsMgr, String ownerID, Project proj) throws ConnectException, InterruptedException {
         Semaphore waiter = new Semaphore(0);
 
-        Byte permByte = apiConstants.get("owner");
+        Integer permByte = apiConstants.get("owner");
 
         req = new ProjectLookupRequest(new Long[]{proj.getProjectID()}).getRequest(response -> {
             Assert.assertEquals("Failed to lookup project", 200, response.getStatus());

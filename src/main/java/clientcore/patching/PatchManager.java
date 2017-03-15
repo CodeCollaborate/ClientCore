@@ -11,9 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -23,6 +21,7 @@ public class PatchManager implements INotificationHandler {
     static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
     // Threading controls
+    private ExecutorService executor = Executors.newCachedThreadPool();
     private final HashMap<Long, BatchingControl> batchingByFile = new HashMap<>();
     private final ReadWriteLock handlingNotificationsLock = new ReentrantReadWriteLock(true); // Fair lock, to make sure no thread gets starved.
     private final LinkedBlockingQueue<Notification> notificationHandlerQueue = new LinkedBlockingQueue<>();
@@ -33,6 +32,21 @@ public class PatchManager implements INotificationHandler {
 
     public PatchManager() {
         runNotificationHandlerThread();
+    }
+
+    /**
+     * Gets the currently-active ExecutorService
+     * @return the currently-active ExecutorService
+     */
+    public ExecutorService getExecutor() {
+        return executor;
+    }
+
+    /**
+     * Creates a new executor for this PatchManager instance.
+     */
+    public void resetExecutor() {
+        this.executor = Executors.newCachedThreadPool();
     }
 
     /**
@@ -91,10 +105,10 @@ public class PatchManager implements INotificationHandler {
         }
 
         // Run the transformAndSendPatch on a new thread to make sure the UI thread doesn't get blocked.
-        new Thread(() -> {
+        executor.submit(() -> {
             Thread.currentThread().setName("TransformAndSendPatch-" + System.currentTimeMillis());
             transformAndSendPatch(batchingCtrl, fileID, respHandler, sendErrHandler);
-        }).start();
+        });
     }
 
     /**

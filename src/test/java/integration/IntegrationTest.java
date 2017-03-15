@@ -91,7 +91,6 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private static Project proj2 = new Project(-1, "_testProject2", new HashMap<>());
     private static File file2 = new File(-1, "_testFile2", "_test2/file/path", 1, null, null);
 
-    private static Map<Project, HashSet<WSManager>> projToWS = new HashMap<>();
 
     //    private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
     private static Map<String, Byte> apiConstants;
@@ -1525,7 +1524,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private String generateDummyPatch(long baseVersion) {
         int versionNumChars = Long.toString(baseVersion).length();
 
-        return String.format("v%d:\n%d:+%d:newData%d", baseVersion, baseVersion, 7 + versionNumChars, baseVersion);
+        return String.format("v%d:\n%d:+%d:newData%d:\n5", baseVersion, baseVersion, 7 + versionNumChars, baseVersion);
     }
 
 }

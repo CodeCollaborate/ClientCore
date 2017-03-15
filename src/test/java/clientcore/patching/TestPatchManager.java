@@ -1,18 +1,17 @@
 package clientcore.patching;
 
-import clientcore.websocket.models.responses.FileChangeResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatcher;
 import clientcore.websocket.WSManager;
 import clientcore.websocket.models.Notification;
 import clientcore.websocket.models.Request;
 import clientcore.websocket.models.Response;
 import clientcore.websocket.models.notifications.FileChangeNotification;
 import clientcore.websocket.models.requests.FileChangeRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -20,11 +19,10 @@ import java.util.Collections;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import static clientcore.patching.PatchManager.PATCH_TIMEOUT_MILLIS;
 import static org.mockito.Matchers.argThat;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static clientcore.patching.PatchManager.PATCH_TIMEOUT_MILLIS;
 
 /**
  * Created by Benedict on 5/9/2016.
@@ -89,6 +87,8 @@ public class TestPatchManager {
     public void testNotificationHandler() throws IOException, ClassNotFoundException, InterruptedException {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
+        PatchManager.notifyOnSend = true;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 500;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argumentCaptor = ArgumentCaptor.forClass(Request.class);
         final Semaphore sem = new Semaphore(0);
@@ -101,12 +101,15 @@ public class TestPatchManager {
                 "v2:\n3:+5:test3:\n20",
         };
 
-        String patchStrFormat = "{\"Resource\": \"File\", \"Method\": \"Change\", \"ResourceID\": 1, \"Data\": {\"BaseFileVersion\": %d, \"FileVersion\": %d, \"Changes\": %s}}";
+        String patchStrFormat = "{\"Resource\": \"File\", \"Method\": \"Change\", \"ResourceID\": 1, \"Data\": {\"FileVersion\": %d, \"Changes\": %s}}";
 
         // Add first patch to batching queue
         patchMgr.sendPatch(1, getPatches(Arrays.copyOfRange(patches, 0, 1)), null, null);
 
-        Thread.sleep(100);
+        // Wait for patchMgr to have sent the request
+        synchronized (patchMgr) {
+            patchMgr.wait();
+        }
 
         // Expect that patch 1 will be transformed against 0, since 0 is in batching queue
         patchMgr.setNotifHandler((notification, expectedModificationStamp) -> {
@@ -123,12 +126,13 @@ public class TestPatchManager {
 
         // Generate and send notification
         Notification notif = mapper.readValue(
-                String.format(patchStrFormat, 0, 1, mapper.writeValueAsString(Arrays.copyOfRange(patches, 1, 2))),
+                String.format(patchStrFormat, 1, mapper.writeValueAsString(Arrays.copyOfRange(patches, 1, 2))),
                 Notification.class);
         notif.parseData();
         patchMgr.handleNotification(notif);
 
-        if (!sem.tryAcquire(10, TimeUnit.SECONDS)) {
+        // Wait for timeout of patch send, and start of notificaton handling
+        if (!sem.tryAcquire(2, TimeUnit.SECONDS)) {
             Assert.fail("Failed to acquire sem");
         }
 
@@ -148,95 +152,65 @@ public class TestPatchManager {
 
         // Generate and send notification
         notif = mapper.readValue(
-                String.format(patchStrFormat, 1, 2, mapper.writeValueAsString(Arrays.copyOfRange(patches, 2, 3))),
+                String.format(patchStrFormat, 2, mapper.writeValueAsString(Arrays.copyOfRange(patches, 2, 3))),
                 Notification.class);
         notif.parseData();
         patchMgr.handleNotification(notif);
 
-        if (!sem.tryAcquire(10, TimeUnit.SECONDS)) {
+        // Wait for timeout of patch send, and start of notificaton handling
+        if (!sem.tryAcquire(2, TimeUnit.SECONDS)) {
             Assert.fail("Failed to acquire sem");
         }
     }
 
-//    @Test
-//    public void testSynchronizationFinishRequestBeforeHandleNotification() throws IOException, ClassNotFoundException {
-//        final String[] testText = {"jhb"};
-//
-//        WSManager fakeWSMgr = mock(WSManager.class);
-//        PatchManager patchMgr = new PatchManager();
-//        patchMgr.setWsMgr(fakeWSMgr);
-//        patchMgr.setNotifHandler(new INotificationHandler() {
-//            @Override
-//            public void handleNotification(Notification n) {
-//                Patch[] patches = new Patch[((FileChangeNotification) n.getData()).changes.length];
-//                for (int i = 0; i < ((FileChangeNotification) n.getData()).changes.length; i++) {
-//                    patches[i] = new Patch(((FileChangeNotification) n.getData()).changes[i]);
-//                }
-//                testText[0] = patchMgr.applyPatch(testText[0], Arrays.asList(patches));
-//            }
-//        });
-//        ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
-//
-//
-//        String[] patches = new String[]{
-//                "v0:\n0:+1:j", // Becomes v1
-//                "v0:\n1:+1:h", // Becomes v3
-//                "v0:\n2:+1:b", // Becomes v3
-//        };
-//        String[] notifications = new String[]{
-//                "[\"v1:\\n1:+1:k\"]",
-//                "[\"v3:\\n1:+1:j\", \"v3:\\n2:+1:n\"]",
-//        };
-//
-//        // Send patch1
-//        // Receive notification1
-//        // Send patches 2, 3
-//        // Receive notifications 2, 3
-//        // Expect JKHBJN
-//
-//        Request[] req = new Request[1];
-//
-//        // Add all patches, expect only first one to be sent immediately
-//        patchMgr.sendPatch(1, 0, new Patch[]{new Patch(patches[0])}, null, null);
-//        patchMgr.sendPatch(1, 0, new Patch[]{new Patch(patches[1])}, null, null);
-//        patchMgr.sendPatch(1, 0, new Patch[]{new Patch(patches[2])}, null, null);
-//
-//        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v0:\\n0:+1:j\"]")));
-//
-//        Response resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
-//                0, 200, 1, "[]", "[\"v0:\\n0:+1:j\"]"),
-//                Response.class
-//        );
-//        resp.parseData(FileChangeRequest.class);
-//        req[0].getResponseHandler().handleResponse(resp);
-//        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v0:\\n0:+1:j\"]")));
-//
-//        Notification notif = mapper.readValue(String.format("{\"Type\":\"Notification\",\"ServerMessage\":{\"Resource\":\"File\",\"Method\":\"Change\",\"ResourceID\":%d,\"Data\":{\"FileVersion\":%s,\"Changes\":%s}}}",
-//                1, 2, notifications[0]),
-//                Notification.class
-//        );
-//        notif.parseData();
-//        patchMgr.handleNotification(notif);
-//
-//        Response resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
-//                0, 200, 1, "[]", "[\"v0:\\n0:+1:j\"]"),
-//                Response.class
-//        );
-//        resp.parseData(FileChangeRequest.class);
-//        req[0].getResponseHandler().handleResponse(resp);
-//
-//        Notification notif = mapper.readValue(String.format("{\"Type\":\"Notification\",\"ServerMessage\":{\"Resource\":\"File\",\"Method\":\"Change\",\"ResourceID\":%d,\"Data\":{\"FileVersion\":%s,\"Changes\":%s}}}",
-//                1, 2, notifications[0]),
-//                Notification.class
-//        );
-//        notif.parseData();
-//        patchMgr.handleNotification(notif);
-//    }
+    @Test
+    public void testResponseHandler() throws InterruptedException, IOException, ClassNotFoundException {
+        WSManager fakeWSMgr = mock(WSManager.class);
+        PatchManager patchMgr = new PatchManager();
+        PatchManager.notifyOnSend = true;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 500;
+        patchMgr.setWsMgr(fakeWSMgr);
+        ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
+
+        String[] patches = new String[]{
+                "v0:\n0:+5:test0:\n10",
+                "v0:\n1:+5:test1:\n15",
+                "v0:\n2:+5:test2:\n20"
+        };
+
+        Request[] req = new Request[1];
+        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
+
+        // Wait for patchMgr to have sent the request
+        synchronized (patchMgr) {
+            patchMgr.wait();
+        }
+
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v0:\\n0:+5:test0:\\n10\"]")));
+        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[1])}, null, null);
+        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[2])}, null, null);
+
+        Response resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
+                0, 200, 1, "[]", "[\"v0:\\n0:+5:test0:\\n10\"]"),
+                Response.class
+        );
+        resp.parseData(FileChangeRequest.class);
+        req[0].getResponseHandler().handleResponse(resp);
+
+        // Wait for patchMgr to have sent the request
+        synchronized (patchMgr) {
+            patchMgr.wait();
+        }
+
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v1:\\n1:+10:ttest2est1:\\n15\"]")));
+    }
 
     @Test
     public void testSendBatchedRequest() throws IOException, ClassNotFoundException, InterruptedException {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
+        PatchManager.notifyOnSend = true;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 500;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
 
@@ -251,7 +225,12 @@ public class TestPatchManager {
 
         Request[] req = new Request[1];
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
-        Thread.sleep(500); // Wait for transformAndSendPatch thread to spool up
+
+        // Wait for patchMgr to have sent the request
+        synchronized (patchMgr) {
+            patchMgr.wait();
+        }
+
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v0:\\n0:+5:test0:\\n10\"]")));
 
         Response resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
@@ -263,7 +242,12 @@ public class TestPatchManager {
 
         // Send 2 patches in same request
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[1]), new Patch(patches[2])}, null, null);
-        Thread.sleep(500); // Wait for transformAndSendPatch thread to spool up
+
+        // Wait for patchMgr to have sent the request
+        synchronized (patchMgr) {
+            patchMgr.wait();
+        }
+
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v1:\\n1:+10:ttest2est1:\\n15\"]")));
 
 
@@ -278,7 +262,11 @@ public class TestPatchManager {
         resp.parseData(FileChangeRequest.class);
         req[0].getResponseHandler().handleResponse(resp);
 
-        Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
+        // Wait for patchMgr to have sent the request
+        synchronized (patchMgr) {
+            patchMgr.wait();
+        }
+
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v2:\\n3:+10:ttest4est3:\\n25\"]")));
 
         // Test the auto-release after timeout
@@ -290,14 +278,7 @@ public class TestPatchManager {
             e.printStackTrace();
         }
 
-        Thread.sleep(100); // Wait for transformAndSendPatch thread to spool up
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v2:\\n3:+16:tttest15est4est3:\\n25\"]")));
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     private ArgumentMatcher<Request> createArgChecker(Request[] req, String str) {

@@ -1,7 +1,6 @@
 package clientcore.patching;
 
 import clientcore.websocket.*;
-import clientcore.websocket.models.File;
 import clientcore.websocket.models.Notification;
 import clientcore.websocket.models.Request;
 import clientcore.websocket.models.notifications.FileChangeNotification;
@@ -19,6 +18,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class PatchManager implements INotificationHandler {
     public static final Logger logger = LogManager.getLogger("clientcore/patching");
     static long PATCH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
+    public static boolean notifyOnSend = false;
 
     // Threading controls
     private ExecutorService executor = Executors.newCachedThreadPool();
@@ -179,11 +179,6 @@ public class PatchManager implements INotificationHandler {
                             for (int i = 0; i < patches.length; i++) {
                                 batchingCtrl.patchBatchingQueue.remove(0);
                             }
-
-                            // TODO: Evaluate if this is still necessary - might be able to be deleted.
-//                            // Add server-acknowledged patches to doneQueue (Should only have 1, if consolidation works)
-//                            batchingCtrl.patchDoneQueue.add(new Patch(((FileChangeResponse) response.getData()).changes[0]));
-//                            logger.debug(String.format("PatchManager: patch queue is currently %s, patch done queue is currently %s", batchingCtrl.patchBatchingQueue, batchingCtrl.patchDoneQueue).replace("\n", "\\n"));
                         }
 
                         // BELOW HANDLES CASE WHERE WE GET THE RESPONSE OF A HIGHER VERSION BEFORE A NOTIFICATION OF A PRIOR VERSION:
@@ -265,7 +260,12 @@ public class PatchManager implements INotificationHandler {
 
                                 if (consolidatedBatchedPatches != null) {
                                     // >> Write reverse-transformed batching queue back.
-                                    consolidatedBatchedPatches.setBaseVersion(((FileChangeResponse) response.getData()).fileVersion);
+                                    if (((FileChangeResponse) response.getData()).fileVersion >= consolidatedBatchedPatches.getBaseVersion()) {
+                                        consolidatedBatchedPatches.setBaseVersion(((FileChangeResponse) response.getData()).fileVersion);
+                                    } else {
+                                        logger.debug(String.format("PatchManager-ResponseHandler: ConsolidatedBatchedPatches (%s) baseVersion higher than response fileversion (%d)",
+                                                consolidatedBatchedPatches, ((FileChangeResponse) response.getData()).fileVersion).replace("\n", "\\n"));
+                                    }
                                     batchingCtrl.patchBatchingQueue.clear();
                                     batchingCtrl.patchBatchingQueue.add(consolidatedBatchedPatches);
                                 }
@@ -289,8 +289,12 @@ public class PatchManager implements INotificationHandler {
                             batchingCtrl.patchBatchingPreQueue.clear();
                         }
 
+                        logger.debug(String.format("PatchManager-ResponseHandler: Updating batchingQueue versions to at least %d: %s",
+                                batchingCtrl.currDocumentVersion, batchingCtrl.patchBatchingQueue).replace("\n", "\\n"));
                         for (Patch patch : batchingCtrl.patchBatchingQueue) {
-                            patch.setBaseVersion(batchingCtrl.currDocumentVersion);
+                            if (batchingCtrl.currDocumentVersion >= patch.getBaseVersion()) {
+                                patch.setBaseVersion(((FileChangeResponse) response.getData()).fileVersion);
+                            }
                         }
 
                         // TODO: Does this actually do the right thing anymore?
@@ -306,6 +310,11 @@ public class PatchManager implements INotificationHandler {
         );
 
         wsMgr.sendAuthenticatedRequest(req);
+        if (notifyOnSend) {
+            synchronized (PatchManager.this) {
+                PatchManager.this.notifyAll();
+            }
+        }
 
         // Wait for up to PATCH_TIMEOUT_MILLIS for the response. After which, assume network failure and try again.
         try {

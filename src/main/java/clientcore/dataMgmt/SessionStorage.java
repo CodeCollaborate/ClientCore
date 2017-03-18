@@ -234,9 +234,9 @@ public class SessionStorage {
 	public Project removeProject(long id) {
 		Project old;
 		synchronized (PROJECT_LIST) {
+			setUnsubscribed(id);
 			projectPathToID.inverse().remove(id);
 			old = this.projects.remove(id);
-			setUnsubscribed(id);
 		}
 		notifyListeners(PROJECT_LIST, old, null);
 		return old;

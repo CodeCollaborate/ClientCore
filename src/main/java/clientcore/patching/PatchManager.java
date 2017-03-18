@@ -137,6 +137,12 @@ public class PatchManager implements INotificationHandler {
         Patch[] patches;
         // Add all in pre-queue before taking snapshot
         synchronized (batchingCtrl.patchBatchingPreQueue) {
+            for(Patch patch : batchingCtrl.patchBatchingPreQueue){
+                if(patch.getBaseVersion() < batchingCtrl.currDocumentVersion){
+                    patch.setBaseVersion(batchingCtrl.currDocumentVersion);
+                }
+            }
+
             batchingCtrl.patchBatchingQueue.addAll(batchingCtrl.patchBatchingPreQueue);
             batchingCtrl.patchBatchingPreQueue.clear();
         }
@@ -162,6 +168,13 @@ public class PatchManager implements INotificationHandler {
         // Send patches
         // > Consolidate patches
         Patch consolidatedPatch = Consolidator.consolidatePatches(patches);
+
+        // If no diffs found, exit after unlocking semaphores and locks
+        if (consolidatedPatch.getDiffs().size() == 0) {
+            batchingCtrl.batchingSem.release();
+            handlingNotificationsLock.readLock().unlock();
+            return;
+        }
 
         // > Send (No need to transform, since we assume it has been done by either the response handler, or the notification handler
         Semaphore requestInFlightSem = new Semaphore(0);
@@ -220,12 +233,8 @@ public class PatchManager implements INotificationHandler {
 
                             // > TODO: Validate that transforming against accepted patches instead of sent patches is correct
                             // > Transform missing patches against doneQueue (Others have priority, since they were newer)
-                            Patch consolidatedDonePatches = Consolidator.consolidatePatches(
-                                    Patch.getPatches(((FileChangeResponse) response.getData()).changes)
-                            );
-
-                            logger.debug(String.format("PatchManager-ResponseHandler: Transforming consolidatedMissingPatches %s against consolidatedDonePatches %s", consolidatedMissingPatches, consolidatedDonePatches).replace("\n", "\\n"));
-                            consolidatedMissingPatches = consolidatedMissingPatches.transform(true, consolidatedDonePatches);
+                            logger.debug(String.format("PatchManager-ResponseHandler: Transforming consolidatedMissingPatches %s against consolidatedDonePatches %s", consolidatedMissingPatches, consolidatedPatch).replace("\n", "\\n"));
+                            consolidatedMissingPatches = consolidatedMissingPatches.transform(true, consolidatedPatch);
                             // NOTE: There is no need to do reverse transformations here, since these done patches are never used again.
 
                             // > Transform against batching queue (Others have priority, since they have not been sent to server)

@@ -210,7 +210,7 @@ public class TestPatchManager {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
         PatchManager.notifyOnSend = true;
-        PatchManager.PATCH_TIMEOUT_MILLIS = 1000;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 5000;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
 
@@ -260,10 +260,10 @@ public class TestPatchManager {
                 Response.class
         );
         resp.parseData(FileChangeRequest.class);
-        req[0].getResponseHandler().handleResponse(resp);
 
         // Wait for patchMgr to have sent the request
         synchronized (patchMgr) {
+            req[0].getResponseHandler().handleResponse(resp);
             patchMgr.wait();
         }
 

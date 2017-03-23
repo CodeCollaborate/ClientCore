@@ -1,5 +1,7 @@
 package clientcore.patching;
 
+import clientcore.websocket.IFileChangeNotificationHandler;
+import clientcore.websocket.INotificationHandler;
 import clientcore.websocket.WSManager;
 import clientcore.websocket.models.Notification;
 import clientcore.websocket.models.Request;
@@ -20,6 +22,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static clientcore.patching.PatchManager.PATCH_TIMEOUT_MILLIS;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -212,7 +215,8 @@ public class TestPatchManager {
         PatchManager.notifyOnSend = true;
         PatchManager.PATCH_TIMEOUT_MILLIS = 5000;
         patchMgr.setWsMgr(fakeWSMgr);
-        ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
+        IFileChangeNotificationHandler notifHandler = mock(IFileChangeNotificationHandler.class);
+        patchMgr.setNotifHandler(notifHandler);
 
         String[] patches = new String[]{
                 "v0:\n0:+5:test0:\n10",
@@ -221,6 +225,7 @@ public class TestPatchManager {
                 "v2:\n3:+5:test3:\n25",
                 "v2:\n4:+5:test4:\n30",
                 "v2:\n5:+6:test15:\n35",
+                "v2:\n6:+6:test25:\n41",
         };
 
         Request[] req = new Request[1];
@@ -279,6 +284,34 @@ public class TestPatchManager {
         }
 
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v2:\\n3:+16:tttest15est4est3:\\n25\"]")));
+
+        // Verify that missingPatches are applied, and new patches are transformed.
+        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[6])}, null, null);
+
+        // Test that missingPatches are applied if they are of a higher file version than the version the request was previously sent against (Version 2 at the moment)
+        resp = mapper.readValue(String.format("{\"Tag\":%d,\"Status\":%d,\"Data\":{\"FileVersion\":%d,\"MissingPatches\":%s,\"Changes\":%s}}",
+                0, 200, 5, "[\"v1:\\n0:+5:test0:\\n10\", \"v2:\\n1:+5:test1:\\n15\", \"v3:\\n2:+6:test21:\\n20\"]", "[\"v4:\\n3:+16:tttest15est4est3:\\n25\"]"),
+                Response.class
+        );
+        resp.parseData(FileChangeRequest.class);
+
+        // Wait for patchMgr to have processed the response, and sent the next one.
+        synchronized (patchMgr) {
+            req[0].getResponseHandler().handleResponse(resp);
+            patchMgr.wait();
+        }
+
+        verify(notifHandler).handleNotification(argThat(new ArgumentMatcher<Notification>(){
+            @Override
+            public boolean matches(Notification argument) {
+                String[] changes = ((FileChangeNotification) argument.getData()).changes;
+
+                return changes.length == 1 && changes[0].equals("v2:\n1:+11:ttest21est1:\n37");
+            }
+        }), any());
+
+        // Verify that only the v2, v3 patches were transformed against.
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v5:\\n17:+6:test25:\\n52\"]")));
     }
 
     private ArgumentMatcher<Request> createArgChecker(Request[] req, String str) {

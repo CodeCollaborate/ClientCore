@@ -205,7 +205,9 @@ public class PatchManager implements INotificationHandler {
                             // > Consolidate missing patches that are based on versions above current document version
                             int firstNewPatchIndex = 0;
                             for (; firstNewPatchIndex < missingPatches.length; firstNewPatchIndex++) {
-                                if (batchingCtrl.currDocumentVersion >= missingPatches[firstNewPatchIndex].getBaseVersion()) {
+                                // >> If missing patch is based on our current document version or higher, we want to apply it;
+                                //      these patches have not been applied (or the current document version would be greater)
+                                if (missingPatches[firstNewPatchIndex].getBaseVersion() >= batchingCtrl.currDocumentVersion) {
                                     break;
                                 }
                             }
@@ -234,6 +236,7 @@ public class PatchManager implements INotificationHandler {
                             // > TODO: Validate that transforming against accepted patches instead of sent patches is correct
                             // > Transform missing patches against doneQueue (Others have priority, since they were newer)
                             logger.debug(String.format("PatchManager-ResponseHandler: Transforming consolidatedMissingPatches %s against consolidatedDonePatches %s", consolidatedMissingPatches, consolidatedPatch).replace("\n", "\\n"));
+                            long missingPatchesBaseVersion = consolidatedMissingPatches.getBaseVersion();
                             consolidatedMissingPatches = consolidatedMissingPatches.transform(true, consolidatedPatch);
                             // NOTE: There is no need to do reverse transformations here, since these done patches are never used again.
 
@@ -249,6 +252,8 @@ public class PatchManager implements INotificationHandler {
                                 consolidatedBatchedPatches = consolidatedBatchedPatches.transform(false, consolidatedMissingPatches);
                             }
 
+                            // > Reset MissingPatches version, so it can be applied against the current document.
+                            consolidatedMissingPatches.setBaseVersion(missingPatchesBaseVersion);
                             logger.debug(String.format("PatchManager-ResponseHandler: Consolidation results: consolidatedBatchedPatches %s, consolidatedMissingPatches %s", consolidatedBatchedPatches, consolidatedMissingPatches).replace("\n", "\\n"));
 
                             // > Apply missing consolidated patch to document, update document baseVersion to be this response's version

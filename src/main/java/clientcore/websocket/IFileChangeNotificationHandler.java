@@ -3,5 +3,5 @@ package clientcore.websocket;
 import clientcore.websocket.models.Notification;
 
 public interface IFileChangeNotificationHandler {
-    Long handleNotification(Notification notification, long expectedModificationStamp);
+    Long handleNotification(Notification notification, Long expectedModificationStamp);
 }

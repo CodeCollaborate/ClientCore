@@ -237,7 +237,7 @@ public class Diff {
                                 + "] on predessors [" + others + "]");
                     }
                 }
-                // CASE 3: IndexA = IndexB
+                // CASE 3: IndexA > IndexB
                 else if (other.startIndex > current.startIndex) {
                     // CASE 3a, 3c: Ins - Ins, Rmv - Ins
                     if ((other.insertion && current.insertion) || (!other.insertion && current.insertion)) {
@@ -319,7 +319,7 @@ public class Diff {
             String changes1 = current.changes.substring(0, length1);
             String changes2 = current.changes.substring(length1);
             Diff diff1 = new Diff(current.insertion, current.startIndex, changes1);
-            Diff diff2 = new Diff(current.insertion, current.startIndex + other.getLength(),
+            Diff diff2 = new Diff(current.insertion, other.startIndex + other.getLength(),
                     changes2);
 
             newIntermediateDiffs.add(diff1);

@@ -148,18 +148,6 @@ public class TestConsolidator {
         }
     }
 
-    @Test
-    public void testConsolidate(){
-        Patch consolidatedPatch = Consolidator.consolidatePatches(Patch.getPatches(new String[]{
-                "v0:\n1:+4:abcd:\n4",
-                "v0:\n2:+4:efgh:\n8"
-        }));
-
-        Assert.assertNotNull(consolidatedPatch);
-        Assert.assertEquals("v0:\n1:+8:aefghbcd:\n4",
-                consolidatedPatch.toString());
-    }
-
     private class OverallConsolidationTest {
         String desc;
         String baseText;

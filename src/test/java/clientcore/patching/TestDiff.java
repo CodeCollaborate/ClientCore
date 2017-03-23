@@ -349,7 +349,7 @@ public class TestDiff {
         result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(2, result.size());
         Assert.assertEquals("4:-1:l", result.get(0).toString());
-        Assert.assertEquals("8:-7:ongStr2", result.get(1).toString());
+        Assert.assertEquals("9:-7:ongStr2", result.get(1).toString());
 
         // Test else case: no change
         diff1 = new Diff("8:+4:str1");

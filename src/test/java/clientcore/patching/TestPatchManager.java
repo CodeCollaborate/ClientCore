@@ -31,7 +31,7 @@ import static org.mockito.Mockito.verify;
  * Created by Benedict on 5/9/2016.
  */
 public class TestPatchManager {
-    ObjectMapper mapper = new ObjectMapper();
+    private ObjectMapper mapper = new ObjectMapper();
 
     private Patch[] getPatches(String[] patchStrs) {
         Patch[] result = new Patch[patchStrs.length];
@@ -91,7 +91,7 @@ public class TestPatchManager {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
         PatchManager.notifyOnSend = true;
-        PatchManager.PATCH_TIMEOUT_MILLIS = 1000;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 2500;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argumentCaptor = ArgumentCaptor.forClass(Request.class);
         final Semaphore sem = new Semaphore(0);
@@ -106,11 +106,10 @@ public class TestPatchManager {
 
         String patchStrFormat = "{\"Resource\": \"File\", \"Method\": \"Change\", \"ResourceID\": 1, \"Data\": {\"FileVersion\": %d, \"Changes\": %s}}";
 
-        // Add first patch to batching queue
-        patchMgr.sendPatch(1, getPatches(Arrays.copyOfRange(patches, 0, 1)), null, null);
-
         // Wait for patchMgr to have sent the request
         synchronized (patchMgr) {
+            // Add first patch to batching queue
+            patchMgr.sendPatch(1, getPatches(Arrays.copyOfRange(patches, 0, 1)), null, null);
             patchMgr.wait();
         }
 
@@ -134,8 +133,8 @@ public class TestPatchManager {
         notif.parseData();
         patchMgr.handleNotification(notif);
 
-        // Wait for timeout of patch send, and start of notificaton handling
-        if (!sem.tryAcquire(2, TimeUnit.SECONDS)) {
+        // Wait for timeout of patch send, and start of notification handling
+        if (!sem.tryAcquire((long)(PATCH_TIMEOUT_MILLIS * 1.5), TimeUnit.MILLISECONDS)) {
             Assert.fail("Failed to acquire sem");
         }
 
@@ -161,7 +160,7 @@ public class TestPatchManager {
         patchMgr.handleNotification(notif);
 
         // Wait for timeout of patch send, and start of notificaton handling
-        if (!sem.tryAcquire(2, TimeUnit.SECONDS)) {
+        if (!sem.tryAcquire((long)(PATCH_TIMEOUT_MILLIS * 1.5), TimeUnit.MILLISECONDS)) {
             Assert.fail("Failed to acquire sem");
         }
     }
@@ -171,7 +170,7 @@ public class TestPatchManager {
         WSManager fakeWSMgr = mock(WSManager.class);
         PatchManager patchMgr = new PatchManager();
         PatchManager.notifyOnSend = true;
-        PatchManager.PATCH_TIMEOUT_MILLIS = 1000;
+        PatchManager.PATCH_TIMEOUT_MILLIS = 2500;
         patchMgr.setWsMgr(fakeWSMgr);
         ArgumentCaptor<Request> argument = ArgumentCaptor.forClass(Request.class);
 
@@ -182,10 +181,10 @@ public class TestPatchManager {
         };
 
         Request[] req = new Request[1];
-        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
 
         // Wait for patchMgr to have sent the request
         synchronized (patchMgr) {
+            patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
             patchMgr.wait();
         }
 
@@ -198,10 +197,10 @@ public class TestPatchManager {
                 Response.class
         );
         resp.parseData(FileChangeRequest.class);
-        req[0].getResponseHandler().handleResponse(resp);
 
         // Wait for patchMgr to have sent the request
         synchronized (patchMgr) {
+            req[0].getResponseHandler().handleResponse(resp);
             patchMgr.wait();
         }
 
@@ -229,10 +228,10 @@ public class TestPatchManager {
         };
 
         Request[] req = new Request[1];
-        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
 
         // Wait for patchMgr to have sent the request
         synchronized (patchMgr) {
+            patchMgr.sendPatch(1, new Patch[]{new Patch(patches[0])}, null, null);
             patchMgr.wait();
         }
 
@@ -245,11 +244,11 @@ public class TestPatchManager {
         resp.parseData(FileChangeRequest.class);
         req[0].getResponseHandler().handleResponse(resp);
 
-        // Send 2 patches in same request
-        patchMgr.sendPatch(1, new Patch[]{new Patch(patches[1]), new Patch(patches[2])}, null, null);
 
         // Wait for patchMgr to have sent the request
         synchronized (patchMgr) {
+            // Send 2 patches in same request
+            patchMgr.sendPatch(1, new Patch[]{new Patch(patches[1]), new Patch(patches[2])}, null, null);
             patchMgr.wait();
         }
 

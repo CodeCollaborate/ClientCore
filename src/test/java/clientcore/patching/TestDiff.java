@@ -382,12 +382,19 @@ public class TestDiff {
         Diff diff1, diff2;
         List<Diff> result;
 
-        // Test case 1: If IndexB + LenB > IndexA, shorten B by overlap (from end)
+        // Test case 1a: If IndexB + LenB > IndexA, but IndexB + LenB <= IndexA + LenA
         diff1 = new Diff("6:-4:str1");
         diff2 = new Diff("4:-4:str2");
         result = diff2.transform(true, Collections.singletonList(diff1));
         Assert.assertEquals(1, result.size());
         Assert.assertEquals("4:-2:st", result.get(0).toString());
+
+        // Test case 1b: If IndexB + LenB > IndexA, and IndexB + LenB > IndexA + LenA
+        diff1 = new Diff("6:-4:str1");
+        diff2 = new Diff("4:-8:ststr1r3");
+        result = diff2.transform(true, Collections.singletonList(diff1));
+        Assert.assertEquals(1, result.size());
+        Assert.assertEquals("4:-4:str3", result.get(0).toString());
 
         // Test else case: No change if no overlap
         diff1 = new Diff("8:-4:str1");

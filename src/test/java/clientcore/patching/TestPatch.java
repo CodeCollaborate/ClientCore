@@ -297,4 +297,13 @@ public class TestPatch {
 
         }
     }
+
+    @Test
+    public void testExtraCases(){
+        Patch patch1 = new Patch("v287:\n111:-1:p:\n224");
+        Patch patch2 = new Patch("v287:\n38:+1:k,\n38:-184:plplpllplplpl%2C%0Aplplplplplplplplplplplplplplplplplplplplplplplplplplplplplplplp%2Cl%2Clplplplplplplpl%2Ckmkmkmkmkmkkm%0A%09kmmkmkmkmkmkmkmkmkmkmkmkkmmkmkmkmkmkkmmkkmmmkkmmkmkkkmmkmkkmmkkmmkkomkkm:\n224");
+
+        System.out.println(patch2.toString().replace("\n", "\\n"));
+        System.out.println(patch2.transform(true, patch1).toString().replace("\n", "\\n"));
+    }
 }

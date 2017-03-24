@@ -65,7 +65,7 @@ public class Diff implements Comparable<Diff> {
         }
     }
 
-    public Diff clone(){
+    public Diff clone() {
         return new Diff(insertion, startIndex, changes);
     }
 
@@ -103,7 +103,7 @@ public class Diff implements Comparable<Diff> {
 
     @Override
     public int compareTo(Diff o) {
-        if(this.startIndex == o.startIndex) {
+        if (this.startIndex == o.startIndex) {
             if (this.isInsertion() == o.isInsertion()) {
                 return this.changes.compareTo(o.changes);
             } else if (this.insertion && !o.insertion) {
@@ -345,9 +345,15 @@ public class Diff implements Comparable<Diff> {
 
     private void transformType7(List<Diff> newIntermediateDiffs, Diff current, Diff other) {
         if ((current.startIndex + current.getLength()) > other.startIndex) {
-            int nonOverlap = other.startIndex - current.startIndex;
-            String newChanges = current.changes.substring(0,
-                    current.getLength() - nonOverlap);
+            String newChanges = "";
+            if ((current.startIndex + current.getLength()) <= other.startIndex + other.getLength()) {
+                int nonOverlap = other.startIndex - current.startIndex;
+                newChanges = current.changes.substring(0,
+                        nonOverlap);
+            } else {
+                int nonOverlap = other.startIndex - current.startIndex;
+                newChanges = current.changes.substring(0, nonOverlap) + current.changes.substring(nonOverlap + other.getLength());
+            }
             Diff newDiff = new Diff(current.insertion, current.startIndex, newChanges);
             newIntermediateDiffs.add(newDiff);
         } else {

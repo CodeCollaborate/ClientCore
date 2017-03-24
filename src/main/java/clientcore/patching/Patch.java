@@ -128,7 +128,9 @@ public class Patch {
             sb.append(",\n");
         }
 
-        sb.delete(sb.length() - 2, sb.length());
+        if (!diffs.isEmpty()){
+            sb.delete(sb.length() - 2, sb.length());
+        }
         sb.append(":\n");
         sb.append(this.docLength);
 

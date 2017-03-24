@@ -176,6 +176,19 @@ public class PatchManager implements INotificationHandler {
             return;
         }
 
+        Diff prev = null;
+        for(Diff diff : consolidatedPatch.getDiffs()){
+            if (prev == null){
+                prev = diff;
+                continue;
+            }
+
+            if (prev.compareTo(diff) > 0){
+                logger.error(String.format("Diffs were not sorted: [%s]", consolidatedPatch.getDiffs()));
+                break;
+            }
+        }
+
         // > Send (No need to transform, since we assume it has been done by either the response handler, or the notification handler
         Semaphore requestInFlightSem = new Semaphore(0);
         Request req = new FileChangeRequest(fileID, new String[]{consolidatedPatch.toString()}).getRequest(

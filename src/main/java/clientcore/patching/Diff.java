@@ -28,7 +28,6 @@ public class Diff implements Comparable<Diff> {
     }
 
     public Diff(String str) {
-
         if (!str.matches("\\d+:(\\+|-)\\d+:.+")) {
             throw new IllegalArgumentException("Illegal patch format; should be %d:-%d:%s or %d:+%d:%s");
         }

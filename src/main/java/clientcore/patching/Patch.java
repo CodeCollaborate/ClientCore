@@ -41,6 +41,9 @@ public class Patch {
         diffs = new ArrayList<>();
         String[] diffStrs = parts[1].split(",\n");
         for (String diffStr : diffStrs) {
+            if(diffStr.isEmpty()){
+                continue;
+            }
             diffs.add(new Diff(diffStr));
         }
 

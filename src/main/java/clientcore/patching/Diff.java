@@ -10,7 +10,7 @@ import java.util.List;
  * Created by Benedict Wong on 5/8/2016.
  */
 
-public class Diff {
+public class Diff implements Comparable<Diff> {
     private boolean insertion;
     private int startIndex;
     private String changes;
@@ -100,6 +100,21 @@ public class Diff {
 
     public int getLength() {
         return this.changes.length();
+    }
+
+    @Override
+    public int compareTo(Diff o) {
+        if(this.startIndex == o.startIndex) {
+            if (this.isInsertion() == o.isInsertion()) {
+                return this.changes.compareTo(o.changes);
+            } else if (this.insertion && !o.insertion) {
+                return -1;
+            } else {
+                return 1;
+            }
+        } else {
+            return Integer.compare(this.startIndex, o.startIndex);
+        }
     }
 
     @Override

@@ -183,7 +183,7 @@ public class PatchManager implements INotificationHandler {
                 continue;
             }
 
-            if (prev.compareTo(diff) > 0){
+            if (prev.compareTo(diff) < 0){
                 logger.error(String.format("Diffs were not sorted: [%s]", consolidatedPatch.getDiffs()));
                 break;
             }
@@ -324,7 +324,6 @@ public class PatchManager implements INotificationHandler {
                             }
                         }
 
-                        // TODO: Does this actually do the right thing anymore?
                         // Fire actual response handler
                         if (respHandler != null) {
                             respHandler.handleResponse(response);

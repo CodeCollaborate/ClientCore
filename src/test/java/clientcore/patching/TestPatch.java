@@ -300,8 +300,8 @@ public class TestPatch {
 
     @Test
     public void testExtraCases(){
-        Patch patch1 = new Patch("v287:\n111:-1:p:\n224");
-        Patch patch2 = new Patch("v287:\n38:+1:k,\n38:-184:plplpllplplpl%2C%0Aplplplplplplplplplplplplplplplplplplplplplplplplplplplplplplplp%2Cl%2Clplplplplplplpl%2Ckmkmkmkmkmkkm%0A%09kmmkmkmkmkmkmkmkmkmkmkmkkmmkmkmkmkmkkmmkkmmmkkmmkmkkkmmkmkkmmkkmmkkomkkm:\n224");
+        Patch patch1 = new Patch("v557:\n38:+1:m,\n38:-309:%0A%09Hello%2C+my+name+is+Ben.+This+is+a+test+of+whether+this+works+properly.%0A%09%0A%09Wow+eclipse+is+dumb.+It+changed+my+%22Properly%22+word+to+a+entire+public+main+method%0A%09testing%0A%09System.out.println%28%22Hellow+this+is+a+test%22%29%3B%0A%09%0A%09if+%28true+%3D%3D+false%29+%7B%0A%09%09do+all+the+things%0A%09%092+%3D+1%0A%09%09This+is+definitely+coherent.++DEFINITELY%0A%09%7D:\n349");
+        Patch patch2 = new Patch("v557:\n346:-1:%7D:\n349");
 
         System.out.println(patch2.toString().replace("\n", "\\n"));
         System.out.println(patch2.transform(true, patch1).toString().replace("\n", "\\n"));

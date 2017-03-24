@@ -3,7 +3,7 @@
   <groupId>org.code.toboggan</groupId>
   <artifactId>org.code.toboggan.clientcore</artifactId>
   <versioning>
-    <release>2.0.5-hotfix04</release>
+    <release>2.0.5-hotfix05</release>
     <versions>
       <version>1.0.0.alpha</version>
       <version>2.0.0</version>
@@ -29,7 +29,8 @@
       <version>2.0.5-hotfix02</version>
       <version>2.0.5-hotfix03</version>
       <version>2.0.5-hotfix04</version>
+      <version>2.0.5-hotfix05</version>
     </versions>
-    <lastUpdated>20170324004648</lastUpdated>
+    <lastUpdated>20170324021204</lastUpdated>
   </versioning>
 </metadata>

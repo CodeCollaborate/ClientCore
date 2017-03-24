@@ -279,7 +279,7 @@ public class PatchManager implements INotificationHandler {
 
                             // > Attempt to optimistically change the file
                             //     Pass the transformed patches to the actual handler that will take care of writing to document or file
-                            Long result = notifHandler.handleNotification(notification, expectedModificationStamp);
+                            Long result = notifHandler.handleNotification(notification, missingPatches, expectedModificationStamp);
 
                             // > If our optimistic write was successful
                             if (result != null) {
@@ -479,7 +479,7 @@ public class PatchManager implements INotificationHandler {
                                                     fileChangeNotif.fileVersion
                                             )
                                     )
-                                    , expectedModificationStamp);
+                                    , Patch.getPatches(fileChangeNotif.changes), expectedModificationStamp);
 
                             // > If our optimistic write was successful
                             if (result != null) {

@@ -114,11 +114,12 @@ public class TestPatchManager {
         }
 
         // Expect that patch 1 will be transformed against 0, since 0 is in batching queue
-        patchMgr.setNotifHandler((notification, expectedModificationStamp) -> {
+        patchMgr.setNotifHandler((notification, originalPatches, expectedModificationStamp) -> {
             Patch transformedPatch = new Patch(patches[1]);
             transformedPatch = transformedPatch.transform(true, new Patch(patches[0]));
 
             Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
+            Assert.assertEquals("Original patches was not empty", 1, originalPatches.length);
             Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);
 
             sem.release();
@@ -128,7 +129,7 @@ public class TestPatchManager {
 
         // Generate and send notification
         Notification notif = mapper.readValue(
-                String.format(patchStrFormat, 1, mapper.writeValueAsString(Arrays.copyOfRange(patches, 1, 2))),
+                String.format(patchStrFormat, 1, mapper.writeValueAsString(Arrays.copyOfRange(patches, 1, 2)), "[]"),
                 Notification.class);
         notif.parseData();
         patchMgr.handleNotification(notif);
@@ -139,12 +140,13 @@ public class TestPatchManager {
         }
 
         // Expect that patch 2 will be transformed against 0, since 0 is still in batching queue
-        patchMgr.setNotifHandler((notification, expectedModificationStamp) -> {
+        patchMgr.setNotifHandler((notification, originalPatches, expectedModificationStamp) -> {
             Patch transformedPatch = new Patch(patches[2]);
             Patch queuedPatch = new Patch(patches[0]).transform(false, new Patch(patches[1]));
             transformedPatch = transformedPatch.transform(true, queuedPatch);
 
             Assert.assertEquals(1, ((FileChangeNotification) notification.getData()).changes.length);
+            Assert.assertEquals("Original patches was not empty", 1, originalPatches.length);
             Assert.assertEquals(transformedPatch.toString(), ((FileChangeNotification) notification.getData()).changes[0]);
 
             sem.release();
@@ -300,14 +302,11 @@ public class TestPatchManager {
             patchMgr.wait();
         }
 
-        verify(notifHandler).handleNotification(argThat(new ArgumentMatcher<Notification>(){
-            @Override
-            public boolean matches(Notification argument) {
-                String[] changes = ((FileChangeNotification) argument.getData()).changes;
+        verify(notifHandler).handleNotification(argThat(argument -> {
+            String[] changes = ((FileChangeNotification) argument.getData()).changes;
 
-                return changes.length == 1 && changes[0].equals("v2:\n1:+11:ttest21est1:\n37");
-            }
-        }), any());
+            return changes.length == 1 && changes[0].equals("v2:\n1:+11:ttest21est1:\n37");
+        }), argThat(originalPatches -> originalPatches.length == 3), any());
 
         // Verify that only the v2, v3 patches were transformed against.
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "[\"v5:\\n17:+6:test25:\\n52\"]")));

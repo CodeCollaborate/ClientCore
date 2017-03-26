@@ -1,5 +1,8 @@
 package clientcore.patching;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -8,6 +11,8 @@ import java.util.List;
  * Created by wongb on 3/9/17.
  */
 public class Consolidator {
+    public static final Logger logger = LogManager.getLogger("clientcore/consolidator");
+
     public static Patch consolidatePatches(Collection<Patch> patches) {
         return consolidatePatches(patches.toArray(new Patch[patches.size()]));
     }

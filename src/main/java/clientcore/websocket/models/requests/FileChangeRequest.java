@@ -13,9 +13,9 @@ public class FileChangeRequest implements IRequestData {
     private long fileID;
 
     @JsonProperty("Changes")
-    private String[] changes;
+    private String changes;
 
-    public FileChangeRequest(long fileID, String[] changes) {
+    public FileChangeRequest(long fileID, String changes) {
         this.fileID = fileID;
         this.changes = changes;
     }
@@ -31,11 +31,11 @@ public class FileChangeRequest implements IRequestData {
         return fileID;
     }
 
-    public String[] getChanges() {
+    public String getChanges() {
         return changes;
     }
 
-    public void setChanges(String[] changes) {
+    public void setChanges(String changes) {
         this.changes = changes;
     }
 }

@@ -1,6 +1,9 @@
 package clientcore.patching;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IllegalFormatException;
 import java.util.List;
 
@@ -13,9 +16,9 @@ public class Patch {
     private List<Diff> diffs;
     private final int docLength;
 
-    public static Patch[] getPatches(String[] patchStrs){
+    public static Patch[] getPatches(String[] patchStrs) {
         Patch[] patches = new Patch[patchStrs.length];
-        for(int i = 0; i < patchStrs.length; i++){
+        for (int i = 0; i < patchStrs.length; i++) {
             patches[i] = new Patch(patchStrs[i]);
         }
         return patches;
@@ -32,7 +35,7 @@ public class Patch {
     public Patch(String str) {
         String[] parts = str.split(":\n");
 
-        if(parts.length < 3) {
+        if (parts.length < 3) {
             throw new IllegalArgumentException("Invalid patch format: Not enough sections");
         }
 
@@ -41,7 +44,7 @@ public class Patch {
         diffs = new ArrayList<>();
         String[] diffStrs = parts[1].split(",\n");
         for (String diffStr : diffStrs) {
-            if(diffStr.isEmpty()){
+            if (diffStr.isEmpty()) {
                 continue;
             }
             diffs.add(new Diff(diffStr));
@@ -52,7 +55,7 @@ public class Patch {
         this.simplify();
     }
 
-    public Patch clone(){
+    public Patch clone() {
         return new Patch(baseVersion, diffs, docLength);
     }
 
@@ -128,7 +131,7 @@ public class Patch {
             sb.append(",\n");
         }
 
-        if (!diffs.isEmpty()){
+        if (!diffs.isEmpty()) {
             sb.delete(sb.length() - 2, sb.length());
         }
         sb.append(":\n");
@@ -155,39 +158,5 @@ public class Patch {
         result = 31 * result + (diffs != null ? diffs.hashCode() : 0);
         result = 31 * result + docLength;
         return result;
-    }
-
-    public Patch transform(boolean othersHavePrecedence, List<Patch> patches) {
-        return transform(othersHavePrecedence, patches.toArray(new Patch[patches.size()]));
-    }
-
-    public Patch transform(boolean othersHavePrecedence, Patch... patches) {
-        List<Diff> intermediateDiffs = diffs;
-        long maxVersionSeen = baseVersion-1;
-
-        for (Patch patch : patches) {
-            // Must be able to transform backwards as well?
-            List<Diff> newIntermediateDiffs = new ArrayList<>();
-
-            for (Diff diff : intermediateDiffs) {
-                newIntermediateDiffs.addAll(diff.transform(othersHavePrecedence, patch.diffs));
-            }
-
-            intermediateDiffs = newIntermediateDiffs;
-            maxVersionSeen = Math.max(patch.baseVersion, maxVersionSeen);
-        }
-
-        int newDocLen = this.docLength;
-        for (Patch patch : patches){
-            for(Diff diff : patch.getDiffs()){
-                if (diff.isInsertion()){
-                    newDocLen += diff.getLength();
-                } else {
-                    newDocLen -= diff.getLength();
-                }
-            }
-        }
-
-        return new Patch(maxVersionSeen+1, intermediateDiffs, newDocLen);
     }
 }

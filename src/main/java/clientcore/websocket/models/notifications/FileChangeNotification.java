@@ -7,12 +7,12 @@ import java.util.Arrays;
 
 public class FileChangeNotification implements INotificationData {
 	@JsonProperty("Changes")
-	public final String[] changes;
+	public final String changes;
 
 	@JsonProperty("FileVersion")
 	public final long fileVersion;
 
-	public FileChangeNotification(@JsonProperty("Changes") String[] changes,
+	public FileChangeNotification(@JsonProperty("Changes") String changes,
 								  @JsonProperty("FileVersion") long fileVersion) {
 		this.changes = changes;
 		this.fileVersion = fileVersion;
@@ -27,12 +27,12 @@ public class FileChangeNotification implements INotificationData {
 
 		if (fileVersion != that.fileVersion) return false;
 		// Probably incorrect - comparing Object[] arrays with Arrays.equals
-		return Arrays.equals(changes, that.changes);
+		return changes.equals(that.changes);
 	}
 
 	@Override
 	public int hashCode() {
-		int result = Arrays.hashCode(changes);
+		int result = changes.hashCode();
 		result = 31 * result + (int) (fileVersion ^ (fileVersion >>> 32));
 		return result;
 	}

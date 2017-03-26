@@ -10,7 +10,6 @@ import java.util.List;
 public class TestPatch {
     @Test
     public void TestInit() {
-
         String patchString = "v1:\n3:-8:deletion,\n2:+6:insert:\n11";
 
         // Test List<Diff> init
@@ -92,30 +91,6 @@ public class TestPatch {
         newPatch = patch.convertToLF("\r\ntes\r\nt");
         Assert.assertEquals(3, newPatch.getDiffs().size());
         Assert.assertEquals("v0:\n2:+5:test%0A,\n7:+5:test%0A,\n0:+5:test%0A:\n6", newPatch.toString());
-    }
-
-    @Test
-    public void TestTransform() {
-        String patch1String, patch2String, patch3String, expectedString;
-        Patch patch1, patch2, patch3;
-
-        patch1String = "v1:\n0:-1:a:\n10";
-        patch2String = "v0:\n3:-8:deletion,\n3:+6:insert:\n10";
-        patch1 = new Patch(patch1String);
-        patch2 = new Patch(patch2String);
-        expectedString = "v2:\n2:-8:deletion,\n2:+6:insert:\n9";
-        Patch result = patch2.transform(true, patch1);
-        Assert.assertEquals(expectedString, result.toString());
-
-        patch1String = "v1:\n0:-1:a:\n10";
-        patch2String = "v2:\n0:-1:b:\n10";
-        patch3String = "v0:\n3:-8:deletion,\n3:+6:insert:\n10";
-        patch1 = new Patch(patch1String);
-        patch2 = new Patch(patch2String);
-        patch3 = new Patch(patch3String);
-        expectedString = "v3:\n1:-8:deletion,\n1:+6:insert:\n8";
-        result = patch3.transform(true, patch1, patch2);
-        Assert.assertEquals(expectedString, result.toString());
     }
 
     @Test
@@ -296,14 +271,5 @@ public class TestPatch {
                     test.expected, patch.toString());
 
         }
-    }
-
-    @Test
-    public void testExtraCases(){
-        Patch patch1 = new Patch("v557:\n38:+1:m,\n38:-309:%0A%09Hello%2C+my+name+is+Ben.+This+is+a+test+of+whether+this+works+properly.%0A%09%0A%09Wow+eclipse+is+dumb.+It+changed+my+%22Properly%22+word+to+a+entire+public+main+method%0A%09testing%0A%09System.out.println%28%22Hellow+this+is+a+test%22%29%3B%0A%09%0A%09if+%28true+%3D%3D+false%29+%7B%0A%09%09do+all+the+things%0A%09%092+%3D+1%0A%09%09This+is+definitely+coherent.++DEFINITELY%0A%09%7D:\n349");
-        Patch patch2 = new Patch("v557:\n346:-1:%7D:\n349");
-
-        System.out.println(patch2.toString().replace("\n", "\\n"));
-        System.out.println(patch2.transform(true, patch1).toString().replace("\n", "\\n"));
     }
 }

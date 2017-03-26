@@ -984,10 +984,10 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         }
     }
 
-    private void registerFileChangeNotificationHandler(WSManager wsMgr, File file, String[] changes, Semaphore waiter) {
+    private void registerFileChangeNotificationHandler(WSManager wsMgr, File file, String changes, Semaphore waiter) {
         wsMgr.registerNotificationHandler("File", "Change", notification -> { // Create notification handler
             Assert.assertEquals("FileChangeNotification gave wrong file ID", file.getFileID(), notification.getResourceID());
-            Assert.assertArrayEquals("FileChangeNotification gave wrong changes", changes, ((FileChangeNotification) notification.getData()).changes);
+            Assert.assertEquals("FileChangeNotification gave wrong changes", changes, ((FileChangeNotification) notification.getData()).changes);
             Assert.assertEquals("FileChangeNotification gave wrong file version", file.getFileVersion() + 1, ((FileChangeNotification) notification.getData()).fileVersion);
 
             wsMgr.deregisterNotificationHandler("File", "Change");
@@ -998,7 +998,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
     private void testFileChange(WSManager wsMgr, File file, WSManager[] expectNotification) throws InterruptedException, ConnectException {
         Semaphore waiter = new Semaphore(0);
 
-        String[] changes = new String[]{generateDummyPatch(file.getFileVersion())};
+        String changes = generateDummyPatch(file.getFileVersion());
         req = new FileChangeRequest(file.getFileID(), changes).getRequest(response -> {
             Assert.assertEquals("Failed to change File1", 200, response.getStatus());
             Assert.assertEquals("FileChangeResponse gave wrong version for File1", file.getFileVersion() + 1, ((FileChangeResponse) response.getData()).fileVersion);
@@ -1023,7 +1023,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         /*
          * Check authentication
          */
-        String[] changes = new String[]{generateDummyPatch(1)};
+        String changes = generateDummyPatch(1);
         req = new FileChangeRequest(file1.getFileID(), changes).getRequest(response -> {
             Assert.assertNotEquals("Authenticated method succeeded with no auth info", 200, response.getStatus());
 

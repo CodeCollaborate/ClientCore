@@ -303,11 +303,12 @@ public class TestPatchManager {
             patchMgr.wait();
         }
 
+        // Verify that the patch manager attempts to apply the missing patches, and returns the applied missing patches.
         verify(notifHandler).handleNotification(argThat(argument -> {
             String changes = ((FileChangeNotification) argument.getData()).changes;
 
             return changes.equals("v2:\n1:+11:ttest21est1:\n37");
-        }), argThat(originalPatches -> originalPatches.length == 3), any());
+        }), argThat(originalPatches -> originalPatches.length == 2), any());
 
         // Verify that only the v2, v3 patches were transformed against.
         verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v5:\\n17:+6:test25:\\n42\"")));

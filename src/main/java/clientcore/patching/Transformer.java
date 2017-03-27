@@ -48,8 +48,12 @@ public class Transformer {
                 }
             } else {
                 // Last no-op
-                Diff prev = patchX.getDiffs().get(patchX.getDiffs().size() - 1);
-                noOpXLen[0] = patchX.getDocLength() - (prev.getStartIndex() + (prev.isInsertion() ? 0 : prev.getLength()));
+                if (patchX.getDiffs().size() != 0) {
+                    Diff prev = patchX.getDiffs().get(patchX.getDiffs().size() - 1);
+                    noOpXLen[0] = patchX.getDocLength() - (prev.getStartIndex() + (prev.isInsertion() ? 0 : prev.getLength()));
+                } else {
+                    noOpXLen[0] = patchX.getDocLength();
+                }
                 diffX[0] = null;
             }
         };
@@ -71,8 +75,12 @@ public class Transformer {
                 }
             } else {
                 // Last no-op
-                Diff prev = patchY.getDiffs().get(patchY.getDiffs().size() - 1);
-                noOpYLen[0] = patchY.getDocLength() - (prev.getStartIndex() + (prev.isInsertion() ? 0 : prev.getLength()));
+                if (patchY.getDiffs().size() != 0) {
+                    Diff prev = patchY.getDiffs().get(patchY.getDiffs().size() - 1);
+                    noOpYLen[0] = patchY.getDocLength() - (prev.getStartIndex() + (prev.isInsertion() ? 0 : prev.getLength()));
+                } else {
+                    noOpXLen[0] = patchX.getDocLength();
+                }
                 diffY[0] = null;
             }
         };

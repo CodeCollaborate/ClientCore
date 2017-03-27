@@ -539,8 +539,15 @@ public class PatchManager implements INotificationHandler {
                 }
 
                 noOpLength = diff.getStartIndex();
-                if (prevDiff != null) {
-                    noOpLength = Math.max(0, Math.min(diff.getStartIndex() - prevEndIndex, diff.getStartIndex() - prevDiff.getStartIndex()));
+                if (prevDiff != null){
+                    if (prevDiff.isInsertion() || prevDiff.getStartIndex() == diff.getStartIndex()){
+                        noOpLength = diff.getStartIndex() - prevDiff.getStartIndex();
+                    } else {
+                        if(prevDiff.getStartIndex() + prevDiff.getLength() > diff.getStartIndex()){
+                            throw new IllegalArgumentException("Attempted to modify diff within range of previous deletion");
+                        }
+                        noOpLength = diff.getStartIndex() - (prevDiff.getStartIndex() + prevDiff.getLength());
+                    }
                 }
 
                 // Copy any text that is untouched

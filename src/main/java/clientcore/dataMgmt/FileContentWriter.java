@@ -24,9 +24,6 @@ public class FileContentWriter {
     // The number of patches to flush to disc at a time
     static final int WRITE_THRESHOLD = 5;
 
-    // The mapping of fileIds to IFileWritingQueues for keeping file queues separate.
-    protected Map<Long, IFileWritingQueue> fileBuffers;
-
     // The PatchManager to use for clientcore.patching the files on the disc
     private PatchManager patchManager;
 
@@ -35,7 +32,6 @@ public class FileContentWriter {
      * @param patchManager the PatchManager to use to patch files on the disc
      */
     protected FileContentWriter(PatchManager patchManager) {
-        fileBuffers = new HashMap<>();
         this.patchManager = patchManager;
     }
 
@@ -70,14 +66,6 @@ public class FileContentWriter {
             } catch (IOException e) {
                 logger.error("Error writing to file: " + absolutePath);
             }
-
-//            if (!fileBuffers.containsKey(fileId))
-//                fileBuffers.put(fileId, new FixedSizeWritingQueue(patchManager));
-//
-//            IFileWritingQueue fsq = fileBuffers.get(fileId);
-//            for (Patch patch : patches){
-//                fsq.offerPatch(patch, absolutePath);
-//            }
         }
     }
 }

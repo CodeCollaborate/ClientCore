@@ -14,7 +14,8 @@ public class Transformer {
 
     public static TransformResult transformPatches(Patch patchX, Patch patchY) {
         if (patchX.getDocLength() != patchY.getDocLength()) {
-            logger.error("Base document lengths for patch X [%d] was different from that of patch Y [%d]");
+            logger.error(String.format("Base document lengths for patch X [%d] was different from that of patch Y [%d]", patchX.getDocLength(), patchY.getDocLength()));
+            throw new IllegalArgumentException(String.format("Base document lengths for patch X [%d] was different from that of patch Y [%d]", patchX.getDocLength(), patchY.getDocLength()));
         }
 
         List<Diff> patchXPrime = new ArrayList<>();
@@ -79,7 +80,7 @@ public class Transformer {
                     Diff prev = patchY.getDiffs().get(patchY.getDiffs().size() - 1);
                     noOpYLen[0] = patchY.getDocLength() - (prev.getStartIndex() + (prev.isInsertion() ? 0 : prev.getLength()));
                 } else {
-                    noOpXLen[0] = patchX.getDocLength();
+                    noOpYLen[0] = patchY.getDocLength();
                 }
                 diffY[0] = null;
             }

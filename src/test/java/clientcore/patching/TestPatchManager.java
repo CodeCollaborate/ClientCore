@@ -224,10 +224,10 @@ public class TestPatchManager {
                 "v0:\n0:+5:test0:\n10",
                 "v1:\n1:+5:test1:\n15",
                 "v1:\n2:+5:test2:\n20",
-                "v2:\n3:+5:test3:\n25",
-                "v2:\n4:+5:test4:\n30",
-                "v2:\n5:+6:test15:\n35",
-                "v2:\n6:+6:test25:\n41",
+                "v2:\n3:+5:test3:\n15",
+                "v2:\n4:+5:test4:\n20",
+                "v2:\n5:+6:test15:\n25",
+                "v2:\n6:+6:test25:\n31",
         };
 
         Request[] req = new Request[1];
@@ -274,7 +274,7 @@ public class TestPatchManager {
             patchMgr.wait();
         }
 
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v2:\\n3:+10:ttest4est3:\\n25\"")));
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v2:\\n3:+10:ttest4est3:\\n15\"")));
 
         // Test the auto-release after timeout
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[5])}, null, null);
@@ -285,7 +285,7 @@ public class TestPatchManager {
             e.printStackTrace();
         }
 
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v2:\\n3:+16:tttest15est4est3:\\n25\"")));
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v2:\\n3:+16:tttest15est4est3:\\n15\"")));
 
         // Verify that missingPatches are applied, and new patches are transformed.
         patchMgr.sendPatch(1, new Patch[]{new Patch(patches[6])}, null, null);
@@ -310,7 +310,7 @@ public class TestPatchManager {
         }), argThat(originalPatches -> originalPatches.length == 3), any());
 
         // Verify that only the v2, v3 patches were transformed against.
-        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v5:\\n17:+6:test25:\\n52\"")));
+        verify(fakeWSMgr).sendAuthenticatedRequest(argThat(createArgChecker(req, "\"v5:\\n17:+6:test25:\\n42\"")));
     }
 
     private ArgumentMatcher<Request> createArgChecker(Request[] req, String str) {
@@ -319,6 +319,7 @@ public class TestPatchManager {
             public boolean matches(Request argument) {
                 req[0] = argument;
                 try {
+                    System.out.println("Argument matcher got argument: " + mapper.writeValueAsString(argument));
                     return mapper.writeValueAsString(argument).contains(str);
                 } catch (JsonProcessingException e) {
                     Assert.fail("Failed to parse request");

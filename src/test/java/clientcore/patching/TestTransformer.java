@@ -93,10 +93,12 @@ public class TestTransformer {
         for (TransformationTest test : tests) {
             Transformer.TransformResult result = null;
 
-            try{
+            try {
                 result = Transformer.transformPatches(test.patchA, test.patchB);
-            } catch(Exception e){
-                Assert.fail(String.format("TestConsolidator[%s]: Transforming threw exception: %s", test.desc, e));
+            } catch (Exception e) {
+                System.err.printf("TestConsolidator[%s]: Transforming threw exception: %s", test.desc, e);
+                e.printStackTrace();
+                Assert.fail();
             }
             Assert.assertEquals(String.format("TestConsolidator[%s]: Patch A' was incorrect; expected [%s], got [%s]",
                     test.desc, test.expectedPatchAPrime.toString().replace("\n", "\\n"),
@@ -112,11 +114,13 @@ public class TestTransformer {
             );
 
             // If is reversible (does not require precedence, try running it in reverse
-            if(test.canReverse){
-                try{
+            if (test.canReverse) {
+                try {
                     result = Transformer.transformPatches(test.patchB, test.patchA);
-                } catch(Exception e){
-                    Assert.fail(String.format("TestConsolidator[%s-Reverse]: Transforming threw exception: %s", test.desc, e));
+                } catch (Exception e) {
+                    System.err.printf("TestConsolidator[%s-Reverse]: Transforming threw exception: %s", test.desc, e);
+                    e.printStackTrace();
+                    Assert.fail();
                 }
                 Assert.assertEquals(String.format("TestConsolidator[%s-Reverse]: Patch B' was incorrect; expected [%s], got [%s]",
                         test.desc, test.expectedPatchAPrime.toString().replace("\n", "\\n"),
@@ -132,6 +136,41 @@ public class TestTransformer {
                 );
             }
         }
+    }
+
+
+    @Test
+    public void testEmptyDiffs() {
+        TransformationTest[] tests = {
+                new TransformationTest(
+                        "DiffA empty",
+                        new Patch("v1:\n:\n8"),
+                        new Patch("v1:\n6:+4:str2:\n8"),
+                        "baseText",
+                        new Patch("v2:\n:\n12"),
+                        new Patch("v2:\n6:+4:str2:\n8"),
+                        true
+                ),
+                new TransformationTest(
+                        "DiffB empty",
+                        new Patch("v1:\n0:+4:str1:\n8"),
+                        new Patch("v1:\n:\n8"),
+                        "baseText",
+                        new Patch("v2:\n0:+4:str1:\n8"),
+                        new Patch("v2:\n:\n12"),
+                        true
+                ),
+                new TransformationTest(
+                        "Both empty",
+                        new Patch("v1:\n:\n8"),
+                        new Patch("v1:\n:\n8"),
+                        "baseText",
+                        new Patch("v2:\n:\n8"),
+                        new Patch("v2:\n:\n8"),
+                        true
+                )
+        };
+        runTests(tests);
     }
 
     @Test

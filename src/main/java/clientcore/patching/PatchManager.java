@@ -183,7 +183,7 @@ public class PatchManager implements INotificationHandler {
                 continue;
             }
 
-            if (prev.compareTo(diff) < 0) {
+            if (prev.compareTo(diff) > 0) {
                 logger.error(String.format("Diffs were not sorted: [%s]", consolidatedPatch.getDiffs()));
                 break;
             }
@@ -476,7 +476,7 @@ public class PatchManager implements INotificationHandler {
                             logger.debug(String.format("PatchManager-NotificationHandler: Attempting to apply consolidatedFileChangeNotification %s", consolidatedFileChangeNotification).replace("\n", "\\n"));
                             Long result = notifHandler.handleNotification(
                                     new Notification(notification.getResource(), notification.getMethod(), notification.getResourceID(),
-                                            new FileChangeNotification(consolidatedFileChangeNotification == null ? null : consolidatedFileChangeNotification.toString(),
+                                            new FileChangeNotification(consolidatedFileChangeNotification.toString(),
                                                     fileChangeNotif.fileVersion
                                             )
                                     )

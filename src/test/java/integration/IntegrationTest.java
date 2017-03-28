@@ -138,6 +138,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         testProjectSubscribe(ws1, proj1);
         testProjectSubscribe(ws2, proj2);
         testProjectSubscribeInvalid();
+        testProjectGrantPermissionInvalid();
         testProjectGrantPermission(ws1, proj1, user2ID[0], "read", new WSManager[]{ws2});
         testProjectCrossSubscribeInvalid();
         testProjectSubscribe(ws2, proj1);
@@ -661,6 +662,21 @@ public class IntegrationTest extends UserBasedIntegrationTest {
 
         wsMgr.sendRequest(req);
         if (!waiter.tryAcquire(1 + expectNotification.length, 5, TimeUnit.SECONDS)) {
+            Assert.fail("Acquire timed out");
+        }
+    }
+
+    private void testProjectGrantPermissionInvalid() throws InterruptedException {
+        Semaphore waiter = new Semaphore(0);
+
+        int perm = apiConstants.get("read");
+        req = new ProjectGrantPermissionsRequest(proj1.getProjectID(), user1ID[0], perm).getRequest(response -> {
+            Assert.assertNotEquals("Changed own permissions", 200, response.getStatus());
+            waiter.release();
+        }, errHandler);
+
+        ws1.sendRequest(req);
+        if (!waiter.tryAcquire(5, TimeUnit.SECONDS)) {
             Assert.fail("Acquire timed out");
         }
     }

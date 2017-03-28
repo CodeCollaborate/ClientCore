@@ -465,7 +465,7 @@ public class SessionStorage {
 		notifyListeners(PERMISSION_CONSTANTS, oldValue, permissionConstants);
 	}
 
-	private void notifyListeners(String identifier, Object oldValue, Object newValue) {
+	void notifyListeners(String identifier, Object oldValue, Object newValue) {
 		synchronized (this.listeners) {
 			for (PropertyChangeListener listener : this.listeners) {
 				listener.propertyChange(new PropertyChangeEvent(this, identifier, oldValue, newValue));
@@ -506,5 +506,9 @@ public class SessionStorage {
 			this.listeners.clear();
 			return listeners;
 		}
+	}
+
+	public final String getProjectPermissionListIdentifer(long projectID){
+		return String.format("projectpermissionlist-%d", projectID);
 	}
 }

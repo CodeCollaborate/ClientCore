@@ -1,12 +1,11 @@
 package clientcore.dataMgmt;
 
-import java.nio.file.Path;
-
+import clientcore.websocket.models.Permission;
+import clientcore.websocket.models.Project;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import clientcore.websocket.models.Permission;
-import clientcore.websocket.models.Project;
+import java.nio.file.Path;
 
 /**
  * A controller that performs high level operations on the storage class
@@ -102,6 +101,7 @@ public class ProjectController {
 		Project proj = ss.getProject(projectID);
 		if (proj != null) {
 			proj.getPermissions().put(name, p);
+			ss.notifyListeners(ss.getProjectPermissionListIdentifer(projectID), null, p);
 		} else {
 			logger.warn("Tried to add permission to a nonexistent project");
 		}
@@ -120,7 +120,8 @@ public class ProjectController {
 	public void removePermission(long projectID, String name) {
 		Project proj = ss.getProject(projectID);
 		if (proj != null) {
-			proj.getPermissions().remove(name);
+			Permission p = proj.getPermissions().remove(name);
+			ss.notifyListeners(ss.getProjectPermissionListIdentifer(projectID), p, null);
 		} else {
 			logger.warn("Tried to remove permission from a nonexistent project");
 		}

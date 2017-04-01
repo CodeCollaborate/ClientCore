@@ -102,6 +102,11 @@ public class PatchManager implements INotificationHandler {
         synchronized (batchingCtrl.patchBatchingPreQueue) {
             logger.debug(String.format("PatchManager: Adding %s to batching pre-queue; batching pre-queue currently %s", Arrays.toString(patches), batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n"));
             Collections.addAll(batchingCtrl.patchBatchingPreQueue, patches);
+
+            // Consolidate patches to save memory
+            Patch consolidatedPreQueuePatch = Consolidator.consolidatePatches(batchingCtrl.patchBatchingPreQueue);
+            batchingCtrl.patchBatchingPreQueue.clear();
+            batchingCtrl.patchBatchingPreQueue.add(consolidatedPreQueuePatch);
         }
     }
 

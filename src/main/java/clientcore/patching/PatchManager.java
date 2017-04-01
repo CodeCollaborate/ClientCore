@@ -2,6 +2,7 @@ package clientcore.patching;
 
 import clientcore.websocket.*;
 import clientcore.websocket.models.Notification;
+import clientcore.websocket.models.Permission;
 import clientcore.websocket.models.Request;
 import clientcore.websocket.models.notifications.FileChangeNotification;
 import clientcore.websocket.models.requests.FileChangeRequest;
@@ -85,6 +86,23 @@ public class PatchManager implements INotificationHandler {
             }
         }
         return batchingByFile.get(fileID);
+    }
+
+    /**
+     * Saves a patch locally. Will not be sent. This is used for read-only editing mode.
+     *
+     * @param fileID  the fileID to which the patch corresponds to
+     * @param patches the list of patches to send
+     */
+    public void savePatch(long fileID, Patch[] patches) {
+        BatchingControl batchingCtrl = getBatchingControl(fileID);
+
+        // Add to batching pre-queue, and then transfer to main BatchingQueue
+        // This avoids deadlocking the UI, or running the transformAndSendPatch on UI threads.
+        synchronized (batchingCtrl.patchBatchingPreQueue) {
+            logger.debug(String.format("PatchManager: Adding %s to batching pre-queue; batching pre-queue currently %s", Arrays.toString(patches), batchingCtrl.patchBatchingPreQueue).replace("\n", "\\n"));
+            Collections.addAll(batchingCtrl.patchBatchingPreQueue, patches);
+        }
     }
 
     /**

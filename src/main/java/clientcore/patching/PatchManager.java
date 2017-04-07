@@ -217,7 +217,10 @@ public class PatchManager implements INotificationHandler {
         Request req = new FileChangeRequest(fileID, consolidatedPatch.toString()).getRequest(
                 response -> {
                     if (response.getStatus() == 400){
-                        throw new IllegalStateException("Synchronization broken");
+                        // Fire actual response handler
+                        if (respHandler != null) {
+                            respHandler.handleResponse(response);
+                        }
                     } else if (response.getStatus() == 200) {
                         synchronized (batchingCtrl.patchBatchingQueue) {
                             logger.debug(String.format("PatchManager: Removing patches %s; patch queue is currently %s", batchingCtrl.patchBatchingQueue.subList(0, patches.length), batchingCtrl.patchBatchingQueue).replace("\n", "\\n"));

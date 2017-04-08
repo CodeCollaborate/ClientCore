@@ -63,37 +63,37 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class IntegrationTest extends UserBasedIntegrationTest {
-    private static final Logger logger = LogManager.getLogger("integrationTest");
+    private final Logger logger = LogManager.getLogger("integrationTest");
 
-    private static final String[] user1ID = new String[]{"_testUser1"};
-    private static final String user1Pass = "_testPass1";
-    private static final String user1FirstName = "_testFirstName1";
-    private static final String user1LastName = "_testLastName1";
-    private static final String[] user1Email = new String[]{"_testEmail1@testDomain.com"};
-    private static final String[] user2ID = new String[]{"_testUser2"};
-    private static final String user2Pass = "_testPass2";
-    private static final String user2FirstName = "_testFirstName2";
-    private static final String user2LastName = "_testLastName2";
-    private static final String[] user2Email = new String[]{"_testEmail2@testDomain.com"};
-    private static final String[] user3ID = new String[]{"_testUser3"};
-    private static final String user3Pass = "_testPass3";
-    private static final String user3FirstName = "_testFirstName3";
-    private static final String user3LastName = "_testLastName3";
-    private static final String[] user3Email = new String[]{"_testEmail3@testDomain.com"};
-    private static final String fileData1 = "FileData1: _test data1\ntest data 2";
-    private static final String fileData2 = "FileData2: _test data1\ntest data 2";
-    private static final IRequestSendErrorHandler errHandler = () -> Assert.fail("Failed to send message");
-    private static WSManager ws1 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
-    private static WSManager ws2 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
-    private static WSManager ws3 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
-    private static Project proj1 = new Project(-1, "_testProject1", new HashMap<>());
-    private static File file1 = new File(-1, "_testFile1", "_test1/file/path", 1, null, null);
-    private static Project proj2 = new Project(-1, "_testProject2", new HashMap<>());
-    private static File file2 = new File(-1, "_testFile2", "_test2/file/path", 1, null, null);
+    private final String[] user1ID = new String[]{"_testUser1"};
+    private final String user1Pass = "_testPass1";
+    private final String user1FirstName = "_testFirstName1";
+    private final String user1LastName = "_testLastName1";
+    private final String[] user1Email = new String[]{"_testEmail1@testDomain.com"};
+    private final String[] user2ID = new String[]{"_testUser2"};
+    private final String user2Pass = "_testPass2";
+    private final String user2FirstName = "_testFirstName2";
+    private final String user2LastName = "_testLastName2";
+    private final String[] user2Email = new String[]{"_testEmail2@testDomain.com"};
+    private final String[] user3ID = new String[]{"_testUser3"};
+    private final String user3Pass = "_testPass3";
+    private final String user3FirstName = "_testFirstName3";
+    private final String user3LastName = "_testLastName3";
+    private final String[] user3Email = new String[]{"_testEmail3@testDomain.com"};
+    private final String fileData1 = "FileData1: _test data1\ntest data 2";
+    private final String fileData2 = "FileData2: _test data1\ntest data 2";
+    private final IRequestSendErrorHandler errHandler = () -> Assert.fail("Failed to send message");
+    private WSManager ws1 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
+    private WSManager ws2 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
+    private WSManager ws3 = new WSManager(new ConnectionConfig(SERVER_URL, false, 1));
+    private Project proj1 = new Project(-1, "_testProject1", new HashMap<>());
+    private File file1 = new File(-1, "_testFile1", "_test1/file/path", 1, null, null);
+    private Project proj2 = new Project(-1, "_testProject2", new HashMap<>());
+    private File file2 = new File(-1, "_testFile2", "_test2/file/path", 1, null, null);
 
 
-    //    private static WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
-    private static Map<String, Integer> apiConstants;
+    //    private WSManager wsMgr = new WSManager(new ConnectionConfig(SERVER_URL, false, 5));
+    private Map<String, Integer> apiConstants;
 
     private Request req;
 
@@ -391,7 +391,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.assertEquals("Incorrect first name returned when looking up user 2", userFirstName, ((UserLookupResponse) response.getData()).users[0].getFirstName());
             Assert.assertEquals("Incorrect last name returned when looking up user 2", userLastName, ((UserLookupResponse) response.getData()).users[0].getLastName());
             Assert.assertEquals("Incorrect email returned when looking up user 2", userEmail, ((UserLookupResponse) response.getData()).users[0].getEmail());
-            Assert.assertEquals("Incorrect username returned when looking up user 2", userID, ((UserLookupResponse) response.getData()).users[0].getUsername());
+            Assert.assertEquals("Incorrect username returned when looking up user 2", userID.toLowerCase(), ((UserLookupResponse) response.getData()).users[0].getUsername());
 
             waiter.release();
         }, errHandler);
@@ -652,7 +652,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         for (WSManager otherWSMgr : expectNotification) {
             otherWSMgr.registerNotificationHandler("Project", "GrantPermissions", notification -> { // Create notification handler
                 Assert.assertEquals("ProjectGrantPermissionNotification gave wrong project ID", proj.getProjectID(), notification.getResourceID());
-                Assert.assertEquals("ProjectGrantPermissionNotification gave wrong username", grantUsername, ((ProjectGrantPermissionsNotification) notification.getData()).grantUsername);
+                Assert.assertEquals("ProjectGrantPermissionNotification gave wrong username", grantUsername.toLowerCase(), ((ProjectGrantPermissionsNotification) notification.getData()).grantUsername);
                 Assert.assertEquals("ProjectGrantPermissionNotification gave wrong permission level", perm, ((ProjectGrantPermissionsNotification) notification.getData()).permissionLevel);
 
                 otherWSMgr.deregisterNotificationHandler("Project", "GrantPermissions");
@@ -1193,7 +1193,7 @@ public class IntegrationTest extends UserBasedIntegrationTest {
         for (WSManager otherWSMgr : expectNotification) {
             otherWSMgr.registerNotificationHandler("Project", "RevokePermissions", notification -> { // Create notification handler
                 Assert.assertEquals("ProjectRevokePermissionNotification gave wrong project ID", proj1.getProjectID(), notification.getResourceID());
-                Assert.assertEquals("ProjectRevokePermissionNotification gave wrong username", revokeUsername, ((ProjectRevokePermissionsNotification) notification.getData()).revokeUsername);
+                Assert.assertEquals("ProjectRevokePermissionNotification gave wrong username", revokeUsername.toLowerCase(), ((ProjectRevokePermissionsNotification) notification.getData()).revokeUsername);
 
                 otherWSMgr.deregisterNotificationHandler("Project", "RevokePermissions");
                 waiter.release();
@@ -1454,9 +1454,9 @@ public class IntegrationTest extends UserBasedIntegrationTest {
             Assert.assertEquals("Incorrect number of projects returned", 1, ((ProjectLookupResponse) response.getData()).projects.length);
             Assert.assertEquals("Incorrect ProjectID returned", proj.getProjectID(), ((ProjectLookupResponse) response.getData()).projects[0].getProjectID());
             Assert.assertEquals("Incorrect project name returned", proj.getName(), ((ProjectLookupResponse) response.getData()).projects[0].getName());
-            Assert.assertEquals("Incorrect project permissions name for owner returned", ownerID, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID).getUsername());
-            Assert.assertEquals("Incorrect project permissions level for owner returned", (int) permByte, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID).getPermissionLevel());
-            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", ownerID, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID).getGrantedBy());
+            Assert.assertEquals("Incorrect project permissions name for owner returned", ownerID.toLowerCase(), ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID.toLowerCase()).getUsername());
+            Assert.assertEquals("Incorrect project permissions level for owner returned", (int) permByte, ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID.toLowerCase()).getPermissionLevel());
+            Assert.assertEquals("Incorrect project permissions granted by field for owner returned", ownerID.toLowerCase(), ((ProjectLookupResponse) response.getData()).projects[0].getPermissions().get(ownerID.toLowerCase()).getGrantedBy());
 
             waiter.release();
         }, errHandler);

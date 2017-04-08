@@ -263,7 +263,7 @@ public class WSManager implements IMessageHandler {
     }
 
     public void setAuthInfo(String userID, String userToken) {
-        this.userID = userID;
+        this.userID = userID.toLowerCase();
         this.userToken = userToken;
         this.sendAllAuthenticatedRequests();
     }

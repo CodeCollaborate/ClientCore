@@ -74,7 +74,7 @@ public class SessionStorage {
 		String oldValue;
 		synchronized (USERNAME) {
 			oldValue = this.username;
-			this.username = username;
+			this.username = username.toLowerCase();
 		}
 		notifyListeners(USERNAME, oldValue, username);
 	}

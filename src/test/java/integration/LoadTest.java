@@ -15,7 +15,7 @@ public class LoadTest {
 
     @Before
     public void setup(){
-        for (int i = 0; i < 10; i++){
+        for (int i = 0; i < 50; i++){
             IntegrationTest test = new IntegrationTest();
             integrationTests.add(test);
             test.setup();
